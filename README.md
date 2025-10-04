@@ -45,7 +45,7 @@ bash run-cifar100.sh
 ---
 ## References
 
-Thi is a fork from the official code for the paper accepted to IEEE Transactions on Neural Networks and Learning Systems (TNNLS)
+This is a fork from the official code for the paper accepted to IEEE Transactions on Neural Networks and Learning Systems (TNNLS)
 
 ```bibtext
 @article{zhang2025fed,
