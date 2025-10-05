@@ -14,7 +14,7 @@ tau: 1 # 5
 #batch_size: 128 # local batch size
 batch_size: 1 # local batch size
 optimizer: adamw
-local_lr: 0.01 # local learning rate (BERT standard)
+local_lr: 2e-05 # local learning rate (BERT standard)
 local_momentum: 0.5 # SGD Momentum default 0.5
 decay_weight: 0.99 # learning rate decay weight default 0.5
 global_momentum: 0.9 # global momentum
