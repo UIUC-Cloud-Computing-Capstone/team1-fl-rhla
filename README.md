@@ -27,6 +27,9 @@ conda activate env.fl && export KMP_DUPLICATE_LIB_OK=TRUE
 
 First, set up the HuggingFace Accelerate configuration:
 
+(Optional) If your system uses multiple GPUs, uncomment the "Multiple GPUs" config options in `accelerate_default_config.yaml`
+
+Copy the accelerate config to the huggingface directory: 
 
 ```bash
 cp accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_config.yaml
