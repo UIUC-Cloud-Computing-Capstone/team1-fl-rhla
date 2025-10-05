@@ -160,5 +160,5 @@ dependencies:
     - yarl==1.9.2
     - zipp==3.23.0
     - hf-xet==1.1.10
-#prefix: /home/yourhomepath/anaconda3/envs/env.fl
-prefix: /Users/liamlian/anaconda3/envs/env.fl
+prefix: /home/yourhomepath/anaconda3/envs/env.fl
+#prefix: /Users/liamlian/anaconda3/envs/env.fl

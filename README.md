@@ -10,8 +10,16 @@ Then update `prefix: /home/yourhomepath/anaconda3/envs/env.fl` in the `environme
 
 Then activate the environment using the provided file:
 
+Default:
+
 ```bash
 conda env create --name env.fl --file=environment.yml
+conda activate env.fl
+```
+
+Mac:
+```bash
+conda env create --name env.fl --file=environment-macos.yml
 conda activate env.fl
 ```
 
@@ -19,8 +27,15 @@ conda activate env.fl
 
 First, set up the HuggingFace Accelerate configuration:
 
+Default:
+
 ```bash
 cp accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_config.yaml
+```
+
+Mac: 
+```
+cp accelerate_macos_config.yaml ~/.cache/huggingface/accelerate/default_config.yaml
 ```
 
 Next, launch the training script for the CIFAR-100 dataset:
