@@ -20,7 +20,7 @@ conda activate env.fl
 Mac:
 ```bash
 conda env create --name env.fl --file=environment-macos.yml
-conda activate env.fl
+conda activate env.fl && export KMP_DUPLICATE_LIB_OK=TRUE
 ```
 
 ### 🚀 Running the Code
