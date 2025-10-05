@@ -4,7 +4,11 @@
 
 ### ⚙️ Environment Setup
 
-Ensure you have [Conda](https://docs.conda.io/) installed. Then, create and activate the environment using the provided file:
+Ensure you have [Conda](https://docs.conda.io/) installed. 
+
+Then update `prefix: /home/yourhomepath/anaconda3/envs/env.fl` in the `environment.yml` file based on your path. 
+
+Then activate the environment using the provided file:
 
 ```bash
 conda env create --name env.fl --file=environment.yml
