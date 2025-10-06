@@ -3,7 +3,7 @@ _base_ : ['../../base_ffm.yaml']
 ############## base differential #############
 #num_users: 100 # number of users: K
 # TODO Liam: for dev, change later
-num_users: 10000 # number of users: K
+num_users: 100 # number of users: K
 num_selected_users: 10 # number of selected users: 100, for shakespeare, it is 10, femnist 20
 round: 500 # rounds of training
 tau: 1 # 5
