@@ -300,6 +300,7 @@ class FlowerClient(fl.client.NumPyClient):
             logging.warning(f"Unknown model architecture: {model_name}, using default hidden size")
             return VIT_BASE_HIDDEN_SIZE
     
+    # TODO Liam: do not create dummy base model params, use the actual model params
     def _create_base_model_params(self, hidden_size: int, num_classes: int) -> List[np.ndarray]:
         """
         Create base model parameters.
