@@ -79,25 +79,58 @@ wait_for_server() {
     return 1
 }
 
+# Function to detect terminal emulator
+detect_terminal() {
+    if command -v osascript >/dev/null 2>&1; then
+        echo "osascript"  # macOS Terminal
+    elif command -v gnome-terminal >/dev/null 2>&1; then
+        echo "gnome-terminal"
+    elif command -v xterm >/dev/null 2>&1; then
+        echo "xterm"
+    elif command -v konsole >/dev/null 2>&1; then
+        echo "konsole"
+    else
+        echo "unknown"
+    fi
+}
+
+# Function to open terminal window
+open_terminal() {
+    local title="$1"
+    local command="$2"
+    local terminal=$(detect_terminal)
+    
+    case $terminal in
+        "osascript")
+            osascript -e "tell application \"Terminal\" to do script \"cd '$(pwd)' && echo '=== $title ===' && $command\""
+            ;;
+        "gnome-terminal")
+            gnome-terminal --title="$title" -- bash -c "cd '$(pwd)' && echo '=== $title ===' && $command; exec bash"
+            ;;
+        "xterm")
+            xterm -title "$title" -e bash -c "cd '$(pwd)' && echo '=== $title ===' && $command; exec bash" &
+            ;;
+        "konsole")
+            konsole --new-tab -e bash -c "cd '$(pwd)' && echo '=== $title ===' && $command; exec bash" &
+            ;;
+        *)
+            print_warning "Unknown terminal emulator. Starting processes in background instead."
+            eval "$command" &
+            ;;
+    esac
+}
+
 # Function to start the Flower server
 start_server() {
-    print_info "Starting Flower server..."
+    print_info "Starting Flower server in new terminal window..."
     print_info "Configuration: $NUM_ROUNDS rounds, $LOG_LEVEL logging"
     
-    # Start server in background
-    python flower_server.py \
-        --num_rounds $NUM_ROUNDS \
-        --log_level $LOG_LEVEL \
-        --server_port $DEFAULT_SERVER_PORT \
-        --config_name $DEFAULT_CONFIG_NAME \
-        > server.log 2>&1 &
-    
-    SERVER_PID=$!
-    echo $SERVER_PID > server.pid
+    # Start server in new terminal window
+    open_terminal "Flower Server" "python flower_server.py --num_rounds $NUM_ROUNDS --log_level $LOG_LEVEL --server_port $DEFAULT_SERVER_PORT --config_name $DEFAULT_CONFIG_NAME"
     
     # Wait for server to be ready
     if wait_for_server; then
-        print_success "Server started with PID: $SERVER_PID"
+        print_success "Server started in new terminal window"
         return 0
     else
         print_error "Failed to start server"
@@ -107,75 +140,39 @@ start_server() {
 
 # Function to start Flower clients
 start_clients() {
-    print_info "Starting $NUM_CLIENTS Flower clients..."
+    print_info "Starting $NUM_CLIENTS Flower clients in separate terminal windows..."
     
-    # Create clients directory for logs
-    mkdir -p client_logs
-    
-    # Start clients in background
+    # Start clients in separate terminal windows
     for i in $(seq 0 $((NUM_CLIENTS - 1))); do
-        print_info "Starting client $i..."
+        print_info "Starting client $i in new terminal..."
         
-        python flower_client.py \
-            --client_id $i \
-            --log_level $LOG_LEVEL \
-            --config_name $DEFAULT_CONFIG_NAME \
-            --server_address localhost \
-            --server_port $DEFAULT_SERVER_PORT \
-            > client_logs/client_$i.log 2>&1 &
-        
-        CLIENT_PID=$!
-        echo $CLIENT_PID >> client_pids.txt
+        open_terminal "Flower Client $i" "python flower_client.py --client_id $i --log_level $LOG_LEVEL --config_name $DEFAULT_CONFIG_NAME --server_address localhost --server_port $DEFAULT_SERVER_PORT"
         
         # Small delay between client starts
         sleep 1
     done
     
-    print_success "All $NUM_CLIENTS clients started"
+    print_success "All $NUM_CLIENTS clients started in separate terminal windows"
 }
 
 # Function to monitor the training
 monitor_training() {
-    print_info "Monitoring training progress..."
-    print_info "Press Ctrl+C to stop all processes"
-    
-    # Show server log in real-time
-    tail -f server.log &
-    TAIL_PID=$!
+    print_info "All processes started in separate terminal windows!"
+    print_warning "Press Ctrl+C in each terminal window to stop individual processes"
+    print_info "Or run: pkill -f 'python.*flower' to stop all processes"
     
     # Wait for user interrupt
-    trap 'cleanup_and_exit' INT
+    trap 'echo ""; print_warning "Use Ctrl+C in each terminal window to stop processes, or run: pkill -f \"python.*flower\""; exit 0' INT
     
-    # Monitor server process
-    while kill -0 $SERVER_PID 2>/dev/null; do
-        sleep 5
+    # Keep script running
+    while true; do
+        sleep 10
     done
-    
-    print_warning "Server process ended"
-    cleanup_and_exit
 }
 
 # Function to cleanup and exit
 cleanup_and_exit() {
     print_info "Cleaning up processes..."
-    
-    # Kill tail process
-    kill $TAIL_PID 2>/dev/null || true
-    
-    # Kill server
-    if [ -f server.pid ]; then
-        SERVER_PID=$(cat server.pid)
-        kill $SERVER_PID 2>/dev/null || true
-        rm -f server.pid
-    fi
-    
-    # Kill all clients
-    if [ -f client_pids.txt ]; then
-        while read pid; do
-            kill $pid 2>/dev/null || true
-        done < client_pids.txt
-        rm -f client_pids.txt
-    fi
     
     # Clean up any remaining Flower processes
     cleanup_flower_processes
@@ -199,9 +196,10 @@ show_usage() {
     echo "  $0 5 20              # Start 5 clients, 20 rounds, INFO logging"
     echo "  $0 5 20 DEBUG        # Start 5 clients, 20 rounds, DEBUG logging"
     echo ""
-    echo "Logs:"
-    echo "  Server logs: server.log"
-    echo "  Client logs: client_logs/client_X.log"
+    echo "Terminal Windows:"
+    echo "  Each process runs in its own terminal window"
+    echo "  Server: 'Flower Server' window"
+    echo "  Clients: 'Flower Client X' windows"
 }
 
 # Main execution
@@ -253,6 +251,7 @@ main() {
     echo "Log level:         $LOG_LEVEL"
     echo "Server port:       $DEFAULT_SERVER_PORT"
     echo "Config file:       $DEFAULT_CONFIG_NAME"
+    echo "Mode:              Separate Terminal Windows"
     echo "=========================================="
     echo ""
     
