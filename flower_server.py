@@ -79,6 +79,58 @@ def setup_server_logging(log_level: str = "INFO") -> None:
     )
 
 
+class CustomFedAvgStrategy(fl.server.strategy.FedAvg):
+    """
+    Custom FedAvg strategy that passes round information to clients.
+    """
+    
+    def configure_fit(self, server_round: int, parameters, client_manager):
+        """Configure the next round of training."""
+        # Get the default configuration from parent
+        config = {}
+        if hasattr(self, 'on_fit_config_fn') and self.on_fit_config_fn is not None:
+            config = self.on_fit_config_fn(server_round)
+        
+        # Add server round to the configuration
+        config["server_round"] = server_round
+        
+        # Get client instructions from parent
+        client_instructions = super().configure_fit(server_round, parameters, client_manager)
+        
+        # Update each instruction with the round information
+        for instruction in client_instructions:
+            if hasattr(instruction, 'config'):
+                if instruction.config is None:
+                    instruction.config = config.copy()
+                else:
+                    instruction.config.update(config)
+        
+        return client_instructions
+    
+    def configure_evaluate(self, server_round: int, parameters, client_manager):
+        """Configure the next round of evaluation."""
+        # Get the default configuration from parent
+        config = {}
+        if hasattr(self, 'on_evaluate_config_fn') and self.on_evaluate_config_fn is not None:
+            config = self.on_evaluate_config_fn(server_round)
+        
+        # Add server round to the configuration
+        config["server_round"] = server_round
+        
+        # Get client instructions from parent
+        client_instructions = super().configure_evaluate(server_round, parameters, client_manager)
+        
+        # Update each instruction with the round information
+        for instruction in client_instructions:
+            if hasattr(instruction, 'config'):
+                if instruction.config is None:
+                    instruction.config = config.copy()
+                else:
+                    instruction.config.update(config)
+        
+        return client_instructions
+
+
 def create_fedavg_strategy(num_rounds: int, 
                           fraction_fit: float = 1.0,
                           fraction_evaluate: float = 0.0,
@@ -86,7 +138,7 @@ def create_fedavg_strategy(num_rounds: int,
                           min_evaluate_clients: int = 0,
                           min_available_clients: int = 1) -> fl.server.strategy.FedAvg:
     """
-    Create a FedAvg strategy with specified parameters.
+    Create a FedAvg strategy with specified parameters and round information.
     
     Args:
         num_rounds: Number of training rounds
@@ -97,14 +149,31 @@ def create_fedavg_strategy(num_rounds: int,
         min_available_clients: Minimum number of available clients
         
     Returns:
-        Configured FedAvg strategy
+        Configured FedAvg strategy with round information
     """
+    
+    def fit_config_fn(server_round: int):
+        """Configuration function for fit that includes round information."""
+        return {
+            "server_round": server_round,
+            "local_epochs": 3,  # From your YAML config tau: 3
+            "learning_rate": 0.01,  # From your YAML config local_lr: 0.01
+        }
+    
+    def evaluate_config_fn(server_round: int):
+        """Configuration function for evaluate that includes round information."""
+        return {
+            "server_round": server_round,
+        }
+    
     return fl.server.strategy.FedAvg(
         fraction_fit=fraction_fit,
         fraction_evaluate=fraction_evaluate,
         min_fit_clients=min_fit_clients,
         min_evaluate_clients=min_evaluate_clients,
         min_available_clients=min_available_clients,
+        on_fit_config_fn=fit_config_fn,
+        on_evaluate_config_fn=evaluate_config_fn,
     )
 
 

@@ -462,10 +462,13 @@ class FlowerClient(fl.client.NumPyClient):
             
             # Extract and validate configuration
             server_round = config.get('server_round', 0)
+            # Use tau from config for local epochs, with fallback to config parameter
             local_epochs = max(1, config.get('local_epochs', self.args.get('tau', DEFAULT_LOCAL_EPOCHS)))
             learning_rate = max(DEFAULT_MIN_LEARNING_RATE, 
                               config.get('learning_rate', self.args.get('local_lr', DEFAULT_LEARNING_RATE)))
             
+            # Debug: Print the entire config to see what's being passed
+            logging.info(f"Client {self.client_id} received config: {config}")
             logging.info(f"Client {self.client_id} starting training for round {server_round} "
                         f"(epochs={local_epochs}, lr={learning_rate:.4f})")
             

@@ -4,8 +4,8 @@
 # Training Parameters
 round: 500                    # Number of federated learning rounds
 num_users: 100               # Total number of clients
-num_selected_users: 10       # Number of clients selected per round
-tau: 1                       # Local training epochs per round
+num_selected_users: 1       # Number of clients selected per round
+tau: 3                       # Local training epochs per round
 batch_size: 128              # Local batch size
 local_lr: 0.01               # Local learning rate
 optimizer: adamw             # Optimizer type
