@@ -12,6 +12,7 @@ Version: 1.0.0
 
 # Standard library imports
 import argparse
+import copy
 import logging
 import os
 import sys
@@ -37,7 +38,15 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from algorithms.solver.fl_utils import (
     setup_multiprocessing
 )
+from algorithms.solver.shared_utils import (
+    load_data, get_data_loader_list, get_dataset_fim, 
+    vit_collate_fn, test_collate_fn, create_client_dataset, 
+    create_client_dataloader, get_model_update, get_norm_updates,
+    update_delta_norms, get_train_loss, get_norm
+)
+from algorithms.solver.local_solver import LocalUpdate
 from utils.data_pre_process import load_partition
+from utils.model_utils import model_setup
 
 # Constants
 DATASET_LOADING_AVAILABLE = True
@@ -322,6 +331,9 @@ class FlowerClient(fl.client.NumPyClient):
         if not hasattr(self, 'args_loaded'):
             self.args_loaded = None
         
+        # Initialize heterogeneous group configuration if needed
+        self._initialize_heterogeneous_config()
+        
         # Create actual model and parameters
         self.model = self._create_actual_model()
         self.model_params = self._model_to_numpy_params()
@@ -459,13 +471,13 @@ class FlowerClient(fl.client.NumPyClient):
         return True
     
     def _load_dataset_with_partition(self, dataset_args: DatasetArgs) -> Optional[Tuple]:
-        """Load dataset using load_partition function."""
+        """Load dataset using shared load_data function."""
         
         logging.info(f"Loading dataset: {dataset_args.dataset} with model: {dataset_args.model}")
         logging.info(f"Non-IID configuration: {dataset_args.noniid_type}, {dataset_args.pat_num_cls} classes per client")
 
-        # Call load_partition to get the actual dataset with non-IID partitioning
-        args_loaded, dataset_train, dataset_test, _, _, dict_users, dataset_fim = load_partition(dataset_args)
+        # Use shared load_data function for consistency
+        args_loaded, dataset_train, dataset_test, dict_users, dataset_fim = load_data(dataset_args)
 
         # Debug prints
         print('dataset_train length: ', len(dataset_train))
@@ -544,7 +556,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _create_actual_model(self):
         """
-        Create actual model using AutoModelForImageClassification.from_pretrained.
+        Create actual model using shared model_setup function.
         
         Returns:
             PyTorch model instance
@@ -552,50 +564,92 @@ class FlowerClient(fl.client.NumPyClient):
         Raises:
             ValueError: If model configuration is invalid
         """
+        # Ensure required attributes are present for model_setup
+        self._ensure_model_setup_attributes()
         
-        # Get dataset and model information
-        num_classes = self.dataset_info.get('num_classes', 100)
-        model_name = self.dataset_info.get('model_name', 'google/vit-base-patch16-224-in21k')
-            
-        # Validate inputs
-        if num_classes <= 0:
-            raise ValueError(f"Invalid number of classes: {num_classes}")
-            
-        # Create label mappings for the model
-        label2id = {f"class_{i}": i for i in range(num_classes)}
-        id2label = {i: f"class_{i}" for i in range(num_classes)}
-            
-        # Create the actual model using AutoModelForImageClassification
-        if 'vit' in model_name.lower():
-            model = AutoModelForImageClassification.from_pretrained(
-                model_name,
-                label2id=label2id,
-                id2label=id2label,
-                ignore_mismatched_sizes=True,
-                num_labels=num_classes
-            )
-        else:
-            raise ValueError(f"Unsupported model type: {model_name}")
-            
-        # Apply LoRA if specified
-        if self.args.get('peft') == 'lora':
-            lora_config = LoraConfig(
-                r=self.args.get('lora_rank', LORA_RANK),
-                lora_alpha=self.args.get('lora_alpha', LORA_ALPHA),
-                target_modules=self.args.get('lora_target_modules', LORA_TARGET_MODULES),
-                lora_dropout=self.args.get('lora_dropout', LORA_DROPOUT),
-                bias=self.args.get('lora_bias', LORA_BIAS),
-                modules_to_save=["classifier"] if 'vit' in model_name.lower() else None,
-            )
-            model = get_peft_model(model, lora_config)
+        # Use shared model_setup function for consistency with original implementation
+        args_with_model, model, global_model, model_dim = model_setup(self.args)
         
-        # Set device
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = model.to(device)
+        # Update args with model dimension
+        self.args.dim = model_dim
         
-        logging.info(f"Created actual model for {num_classes} classes "
-                        f"(model={model_name}, peft={self.args.get('peft', 'none')})")
+        logging.info(f"Created model using shared model_setup: {model_dim} dimensions "
+                    f"(model={self.args.get('model', 'unknown')}, peft={self.args.get('peft', 'none')})")
         return model
+    
+    def _ensure_model_setup_attributes(self):
+        """Ensure required attributes are present for model_setup function."""
+        # Add missing attributes that model_setup expects
+        if not hasattr(self.args, 'label2id'):
+            num_classes = self.dataset_info.get('num_classes', 100)
+            self.args.label2id = {f"class_{i}": i for i in range(num_classes)}
+        
+        if not hasattr(self.args, 'id2label'):
+            num_classes = self.dataset_info.get('num_classes', 100)
+            self.args.id2label = {i: f"class_{i}" for i in range(num_classes)}
+        
+        if not hasattr(self.args, 'logger'):
+            self.args.logger = self._create_simple_logger()
+        
+        if not hasattr(self.args, 'accelerator'):
+            # Create a simple accelerator-like object for compatibility
+            class SimpleAccelerator:
+                def is_local_main_process(self):
+                    return True
+            self.args.accelerator = SimpleAccelerator()
+        
+        if not hasattr(self.args, 'log_path'):
+            self.args.log_path = f"./logs/client_{self.client_id}"
+        
+        # Set device with memory management
+        device = self._get_optimal_device()
+        
+        # Ensure other required attributes
+        required_attrs = {
+            'device': device,
+            'seed': getattr(self.args, 'seed', 1),
+            'gpu_id': getattr(self.args, 'gpu_id', -1),
+        }
+        
+        for attr, default_value in required_attrs.items():
+            if not hasattr(self.args, attr):
+                setattr(self.args, attr, default_value)
+    
+    def _get_optimal_device(self):
+        """Get optimal device with memory management."""
+        # Force CPU for memory-constrained environments
+        if hasattr(self.args, 'force_cpu') and self.args.force_cpu:
+            logging.info("Forcing CPU usage due to configuration")
+            return torch.device('cpu')
+        
+        # Check for MPS (Metal Performance Shaders) on macOS
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            # Set MPS memory management
+            os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = '0.0'
+            logging.info("Using MPS with memory management enabled")
+            return torch.device('mps')
+        
+        # Check for CUDA
+        if torch.cuda.is_available():
+            # Set CUDA memory management
+            torch.cuda.empty_cache()
+            logging.info("Using CUDA with memory management enabled")
+            return torch.device('cuda')
+        
+        # Fallback to CPU
+        logging.info("Using CPU device")
+        return torch.device('cpu')
+    
+    def _create_simple_logger(self):
+        """Create a simple logger for compatibility."""
+        class SimpleLogger:
+            def info(self, msg, main_process_only=False):
+                logging.info(msg)
+            def warning(self, msg, main_process_only=False):
+                logging.warning(msg)
+            def error(self, msg, main_process_only=False):
+                logging.error(msg)
+        return SimpleLogger()
     
     def _model_to_numpy_params(self) -> List[np.ndarray]:
         """Convert model parameters to numpy arrays."""
@@ -627,6 +681,101 @@ class FlowerClient(fl.client.NumPyClient):
         Returns:
             Total training loss
         """
+        # Check if we should use LocalUpdate for heterogeneous training
+        if self._should_use_local_update():
+            return self._train_with_local_update(local_epochs, learning_rate, server_round)
+        else:
+            return self._train_with_standard_approach(local_epochs, learning_rate, server_round)
+    
+    def _should_use_local_update(self) -> bool:
+        """Check if we should use LocalUpdate for heterogeneous training."""
+        # Use LocalUpdate if we have heterogeneous group configuration
+        return (hasattr(self.args, 'heterogeneous_group') and 
+                hasattr(self.args, 'user_groupid_list') and
+                hasattr(self.args, 'block_ids_list') and
+                self.args.get('peft') == 'lora')
+    
+    # TODO Liam: this is a bit weird
+    def _train_with_local_update(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
+        """
+        Train using LocalUpdate class for heterogeneous federated learning.
+        
+        Args:
+            local_epochs: Number of local training epochs
+            learning_rate: Learning rate for training
+            server_round: Current server round
+            
+        Returns:
+            Total training loss
+        """
+        # Ensure block_ids_list is initialized
+        if not hasattr(self.args, 'block_ids_list'):
+            from algorithms.solver.shared_utils import update_block_ids_list
+            update_block_ids_list(self.args)
+            logging.info(f"Initialized block_ids_list for client {self.client_id}")
+        
+        # Apply memory management
+        self._apply_memory_management()
+        
+        # Prepare training data with reduced batch size if needed
+        client_indices_list = self._get_client_data_indices()
+        client_dataset = self._create_client_dataset(client_indices_list)
+        dataloader = self._create_training_dataloader(client_dataset)
+        
+        logging.info(f"Client {self.client_id} using LocalUpdate for heterogeneous training")
+        
+        # Create LocalUpdate instance
+        local_solver = LocalUpdate(args=self.args)
+        
+        # Get client group ID for heterogeneous training
+        hete_group_id = self._get_client_group_id()
+        
+        try:
+            # Use LocalUpdate for training
+            local_model, local_loss, no_weight_lora = local_solver.lora_tuning(
+                model=copy.deepcopy(self.model),
+                ldr_train=dataloader,
+                args=self.args,
+                client_index=self.client_id,
+                client_real_id=self.client_id,
+                round=server_round,
+                hete_group_id=hete_group_id
+            )
+            
+            # Update model with trained parameters
+            self.model.load_state_dict(local_model)
+            
+            # Log results
+            if local_loss is not None:
+                logging.info(f"Client {self.client_id} LocalUpdate training completed: loss={local_loss:.4f}")
+                return float(local_loss)  # Ensure float type
+            else:
+                logging.warning(f"Client {self.client_id} LocalUpdate training returned no loss")
+                return 0.0
+                
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower():
+                logging.error(f"Memory error during training: {e}")
+                logging.info("Falling back to standard training approach")
+                return self._train_with_standard_approach(local_epochs, learning_rate, server_round)
+            else:
+                raise e
+        finally:
+            # Clean up memory
+            self._cleanup_memory()
+    
+    def _train_with_standard_approach(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
+        """
+        Train using standard Flower client approach.
+        
+        Args:
+            local_epochs: Number of local training epochs
+            learning_rate: Learning rate for training
+            server_round: Current server round
+            
+        Returns:
+            Total training loss
+        """
         # Prepare training data
         client_indices_list = self._get_client_data_indices()
         client_dataset = self._create_client_dataset(client_indices_list)
@@ -642,7 +791,63 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Log final results
         self._log_training_results(client_indices_list, total_loss, local_epochs)
-        return total_loss
+        return float(total_loss)  # Ensure float type
+    
+    def _get_client_group_id(self) -> int:
+        """Get the heterogeneous group ID for this client."""
+        if hasattr(self.args, 'user_groupid_list') and self.client_id < len(self.args.user_groupid_list):
+            return self.args.user_groupid_list[self.client_id]
+        return 0  # Default to group 0
+    
+    def _apply_memory_management(self):
+        """Apply memory management settings."""
+        # Reduce batch size for memory-constrained environments
+        original_batch_size = self.args.get('batch_size', 32)
+        if original_batch_size > 16:
+            self.args.batch_size = 16
+            logging.info(f"Reduced batch size from {original_batch_size} to {self.args.batch_size} for memory management")
+        
+        # Clear cache if using CUDA
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Set memory-efficient settings
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            # Already set in _get_optimal_device()
+            pass
+    
+    def _cleanup_memory(self):
+        """Clean up memory after training."""
+        # Clear cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Force garbage collection
+        import gc
+        gc.collect()
+    
+    def _initialize_heterogeneous_config(self) -> None:
+        """Initialize heterogeneous group configuration if needed."""
+        # Only initialize if we have heterogeneous group configuration
+        if hasattr(self.args, 'heterogeneous_group'):
+            from algorithms.solver.shared_utils import get_group_cnt, user_groupid_list, update_block_ids_list
+            
+            # Initialize user group ID list if not present
+            if not hasattr(self.args, 'user_groupid_list'):
+                # Calculate group counts
+                group_cnt = get_group_cnt(self.args)
+                
+                # Create user group ID list
+                user_groupid_list(self.args, group_cnt)
+                
+                logging.info(f"Initialized heterogeneous groups: {group_cnt}")
+            
+            # Initialize block IDs list if not present
+            if not hasattr(self.args, 'block_ids_list'):
+                update_block_ids_list(self.args)
+                logging.info(f"Initialized block IDs list: {len(self.args.block_ids_list)} clients")
+            
+            logging.info(f"Client {self.client_id} assigned to group {self._get_client_group_id()}")
     
     def _setup_optimizer(self, learning_rate: float) -> None:
         """Setup optimizer for training."""
@@ -688,25 +893,19 @@ class FlowerClient(fl.client.NumPyClient):
             raise ValueError(ERROR_NO_DATA_INDICES.format(client_id=self.client_id))
         return list(client_indices)
     
-    def _create_training_dataloader(self, client_dataset) -> 'DataLoader':
-        """Create DataLoader for training."""
-        from torch.utils.data import DataLoader
-        batch_size = self.dataset_info.get('batch_size', DEFAULT_BATCH_SIZE)
+    def _create_training_dataloader(self, client_dataset):
+        """Create DataLoader for training using shared utilities."""
         collate_fn = self._get_collate_function()
         
-        return DataLoader(
-            client_dataset,
-            batch_size=batch_size,
-            shuffle=self.args.get('shuffle_training', DEFAULT_SHUFFLE_TRAINING),
-            drop_last=self.args.get('drop_last', DEFAULT_DROP_LAST),
-            num_workers=self.args.get('num_workers', DEFAULT_NUM_WORKERS),
-            collate_fn=collate_fn
-        )
+        # Use shared create_client_dataloader function
+        return create_client_dataloader(client_dataset, self.args, collate_fn)
     
     def _get_collate_function(self):
         """Get the appropriate collate function based on dataset type."""
         if self._is_cifar100_dataset():
-            return self._get_vit_collate_fn()
+            return vit_collate_fn
+        elif self._is_ledgar_dataset():
+            return getattr(self.args_loaded, 'data_collator', None)
         return None  # Use default collate
     
     def _is_cifar100_dataset(self) -> bool:
@@ -714,34 +913,10 @@ class FlowerClient(fl.client.NumPyClient):
         return (hasattr(self.args_loaded, 'dataset') and 
                 self.args_loaded.dataset == 'cifar100')
     
-    def _get_vit_collate_fn(self):
-        """Get the appropriate collate function for ViT models with CIFAR-100."""
-        def vit_collate_fn(examples):
-            """Collate function for ViT models that handles the CIFAR-100 dataset format."""
-            # Find the pixel_values tensor in the example
-            pixel_values = None
-            labels = None
-            
-            for example in examples:
-                for i, item in enumerate(example):
-                    if isinstance(item, torch.Tensor) and len(item.shape) == 3:  # (C, H, W)
-                        if pixel_values is None:
-                            pixel_values = []
-                        pixel_values.append(item)
-                    elif isinstance(item, (int, float)) or (isinstance(item, torch.Tensor) and item.dim() == 0):
-                        if labels is None:
-                            labels = []
-                        labels.append(int(item) if isinstance(item, torch.Tensor) else item)
-            
-            if pixel_values is None or labels is None:
-                raise ValueError(f"Could not find pixel_values or labels in dataset format: {[type(x) for x in examples[0]]}")
-            
-            pixel_values = torch.stack(pixel_values)
-            labels = torch.tensor(labels)
-            
-            return {"pixel_values": pixel_values, "labels": labels}
-        
-        return vit_collate_fn
+    def _is_ledgar_dataset(self) -> bool:
+        """Check if the dataset is LEDGAR."""
+        return (hasattr(self.args_loaded, 'dataset') and 
+                'ledgar' in self.args_loaded.dataset)
     
     def _train_single_epoch_with_gradients(self, dataloader, epoch: int, server_round: int) -> float:
         """Train for a single epoch with actual gradients and parameter updates."""
@@ -822,7 +997,7 @@ class FlowerClient(fl.client.NumPyClient):
 
     def _create_client_dataset(self, client_indices: List[int]):
         """
-        Create a client-specific dataset subset from the loaded dataset using DatasetSplit.
+        Create a client-specific dataset subset using shared utilities.
 
         Args:
             client_indices: List of indices for this client's data
@@ -830,12 +1005,8 @@ class FlowerClient(fl.client.NumPyClient):
         Returns:
             Dataset subset for this client
         """
-        
-        # Import DatasetSplit from utils
-        from utils.data_pre_process import DatasetSplit
-
-        # Create client-specific dataset subset
-        client_dataset = DatasetSplit(self.dataset_train, client_indices, self.args_loaded)
+        # Use shared create_client_dataset function
+        client_dataset = create_client_dataset(self.dataset_train, client_indices, self.args_loaded)
 
         logging.debug(f"Client {self.client_id} created dataset subset with {len(client_dataset)} samples")
         return client_dataset
@@ -873,7 +1044,7 @@ class FlowerClient(fl.client.NumPyClient):
         """Get evaluation dataset (test only)."""
         return self.dataset_test
     
-    def _create_evaluation_dataloader(self, eval_dataset) -> 'DataLoader':
+    def _create_evaluation_dataloader(self, eval_dataset):
         """Create DataLoader for evaluation."""
         from torch.utils.data import DataLoader
         batch_size = len(eval_dataset)  # Use full dataset for evaluation
@@ -888,7 +1059,7 @@ class FlowerClient(fl.client.NumPyClient):
             collate_fn=collate_fn
         )
     
-    def _perform_evaluation(self, eval_dataloader: 'DataLoader', server_round: int) -> Tuple[float, float]:
+    def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
         """Perform evaluation on all batches."""
         metrics = {'total_loss': 0.0, 'total_correct': 0, 'total_samples': 0, 'num_batches': 0}
         
@@ -1044,7 +1215,7 @@ class FlowerClient(fl.client.NumPyClient):
         logging.info(LOG_TRAINING_COMPLETED.format(client_id=self.client_id, loss=avg_loss))
         
         metrics = self._create_training_metrics(avg_loss, local_epochs, learning_rate)
-        return self.get_parameters(config), num_examples, metrics
+        return self.get_parameters(config), int(num_examples), metrics
     
     def _extract_training_config(self, config: Dict[str, Any]) -> Tuple[int, int, float]:
         """Extract and validate training configuration."""
@@ -1097,8 +1268,8 @@ class FlowerClient(fl.client.NumPyClient):
         self.training_history['rounds'].append(server_round)
     
     def _create_training_metrics(self, avg_loss: float, local_epochs: int, learning_rate: float) -> Dict[str, Any]:
-        """Create training metrics dictionary."""
-        return {
+        """Create training metrics dictionary with proper types for Flower."""
+        metrics = {
             'loss': avg_loss,
             'num_epochs': local_epochs,
             'client_id': self.client_id,
@@ -1106,6 +1277,7 @@ class FlowerClient(fl.client.NumPyClient):
             'data_loaded': self.dataset_info.get('data_loaded', False),
             'noniid_type': self.dataset_info.get('noniid_type', 'unknown')
         }
+        return self._ensure_flower_compatible_types(metrics)
     
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[float, int, Dict[str, Any]]:
         """
@@ -1132,7 +1304,7 @@ class FlowerClient(fl.client.NumPyClient):
         ))
         
         metrics = self._create_evaluation_metrics(accuracy)
-        return loss, num_examples, metrics
+        return float(loss), int(num_examples), metrics
     
     def _extract_server_round(self, config: Dict[str, Any]) -> int:
         """Extract server round from config."""
@@ -1156,13 +1328,50 @@ class FlowerClient(fl.client.NumPyClient):
         return accuracy, loss, num_examples
     
     def _create_evaluation_metrics(self, accuracy: float) -> Dict[str, Any]:
-        """Create evaluation metrics dictionary."""
-        return {
+        """Create evaluation metrics dictionary with proper types for Flower."""
+        metrics = {
             'accuracy': accuracy,
             'client_id': self.client_id,
             'data_loaded': self.dataset_info.get('data_loaded', False),
             'noniid_type': self.dataset_info.get('noniid_type', 'unknown')
         }
+        return self._ensure_flower_compatible_types(metrics)
+    
+    def _ensure_flower_compatible_types(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure all values in metrics dictionary are Flower-compatible types.
+        
+        Flower expects: int, float, str, bytes, bool, list[int], list[float], list[str], list[bytes], list[bool]
+        """
+        compatible_metrics = {}
+        for key, value in metrics.items():
+            if isinstance(value, (np.integer, np.int8, np.int16, np.int32, np.int64)):
+                compatible_metrics[key] = int(value)
+            elif isinstance(value, (np.floating, np.float16, np.float32, np.float64)):
+                compatible_metrics[key] = float(value)
+            elif isinstance(value, (np.bool_,)):
+                compatible_metrics[key] = bool(value)
+            elif isinstance(value, (np.str_,)):
+                compatible_metrics[key] = str(value)
+            elif isinstance(value, (int, float, str, bytes, bool)):
+                compatible_metrics[key] = value
+            elif isinstance(value, list):
+                # Handle lists of numpy types
+                if all(isinstance(item, (np.integer, np.int8, np.int16, np.int32, np.int64)) for item in value):
+                    compatible_metrics[key] = [int(item) for item in value]
+                elif all(isinstance(item, (np.floating, np.float16, np.float32, np.float64)) for item in value):
+                    compatible_metrics[key] = [float(item) for item in value]
+                elif all(isinstance(item, (np.bool_,)) for item in value):
+                    compatible_metrics[key] = [bool(item) for item in value]
+                elif all(isinstance(item, (np.str_,)) for item in value):
+                    compatible_metrics[key] = [str(item) for item in value]
+                else:
+                    compatible_metrics[key] = value
+            else:
+                # Convert to string as fallback
+                compatible_metrics[key] = str(value)
+        
+        return compatible_metrics
 
 
 # =============================================================================
@@ -1337,6 +1546,13 @@ def parse_arguments() -> argparse.Namespace:
         help="Logging level"
     )
     
+    # Memory management
+    parser.add_argument(
+        "--force_cpu", 
+        action="store_true", 
+        help="Force CPU usage (disable GPU/MPS for memory-constrained environments)"
+    )
+    
     return parser.parse_args()
 
 
@@ -1392,6 +1608,11 @@ def _load_and_merge_config(args) -> 'Config':
     # Merge command line arguments into config
     for arg_name in vars(args):
         setattr(config, arg_name, getattr(args, arg_name))
+    
+    # Handle force_cpu option
+    if hasattr(args, 'force_cpu') and args.force_cpu:
+        config.force_cpu = True
+        logging.info("Force CPU mode enabled")
     
     return config
 

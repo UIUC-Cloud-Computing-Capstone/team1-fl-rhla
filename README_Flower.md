@@ -22,6 +22,10 @@ python flower_server.py --server_address 0.0.0.0 --server_port 8080 --config_nam
 # Terminal 2 - Client
 
 python flower_client.py --server_address localhost --server_port 8080 --client_id 0 --config_name experiments/flower/cifar100_vit_lora/fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_noniid-pat_20_dir-noprior-s50-e50.yaml --log_level INFO
+
+# To force cpu:
+python flower_client.py --server_address localhost --server_port 8080 --client_id 0 --config_name experiments/flower/cifar100_vit_lora/fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_noniid-pat_20_dir-noprior-s50-e50.yaml --log_level INFO --force_cpu
+
 ```
 
 ### 🎯 Automated Setup (for experiment)
