@@ -102,17 +102,13 @@ def ffm_fedavg_depthffm_fim(args):
         dataset = DatasetSplit(dataset_train, dict_users[i], args)
         if 'vit' in args.model:
             ldr_train = DataLoader(dataset, shuffle=True, collate_fn=vit_collate_fn, batch_size=args.batch_size)
-        elif 'sst2' in args.dataset or 'qqp' in args.dataset or 'qnli' in args.dataset or 'ledgar' in args.dataset:
+        elif 'ledgar' in args.dataset:
             ldr_train = DataLoader(dataset, shuffle=True, collate_fn=args.data_collator, batch_size=args.batch_size)
-        elif 'belebele' in args.dataset:
-            ldr_train = DataLoader(dataset, shuffle=True, collate_fn=DataCollatorForMultipleChoice(tokenizer=args.tokenizer), batch_size=args.batch_size)
         data_loader_list.append(ldr_train)
     if 'vit' in args.model:
         dataset_fim = DataLoader(dataset_fim, collate_fn=test_collate_fn, batch_size=args.batch_size)
-    elif 'sst2' in args.dataset or 'qqp' in args.dataset or 'qnli' in args.dataset or 'ledgar' in args.dataset:
+    elif 'ledgar' in args.dataset:
         dataset_fim = DataLoader(dataset_fim, shuffle=True, collate_fn=args.data_collator, batch_size=args.batch_size)
-    elif 'belebele' in args.dataset:
-        dataset_fim = DataLoader(dataset_fim, shuffle=True, collate_fn=DataCollatorForMultipleChoice(tokenizer=args.tokenizer), batch_size=args.batch_size)
     
     # heterogenity
     group_num = len(args.heterogeneous_group)

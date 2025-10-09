@@ -151,16 +151,16 @@ def load_partition(args):
                 
                 dataset_fim = dataset_fim.with_transform(preprocess_val)
 
-            elif args.model_heterogeneity == 'depthffm_fim_external':
-                #############
-                ## proxy ####
-                #############
-                dataset_fim = load_dataset('TNILab/cifar100_proxydata')
-                dataset_fim = dataset_fim.rename_column('label', 'fine_label')
-                dataset_fim = dataset_fim.rename_column('image', 'img')
-                dataset_fim = dataset_fim['train']
+            # elif args.model_heterogeneity == 'depthffm_fim_external':
+            #     #############
+            #     ## proxy ####
+            #     #############
+            #     dataset_fim = load_dataset('TNILab/cifar100_proxydata')
+            #     dataset_fim = dataset_fim.rename_column('label', 'fine_label')
+            #     dataset_fim = dataset_fim.rename_column('image', 'img')
+            #     dataset_fim = dataset_fim['train']
 
-                dataset_fim = dataset_fim.with_transform(preprocess_proxy)
+            #     dataset_fim = dataset_fim.with_transform(preprocess_proxy)
 
         dataset_train = dataset["train"].with_transform(preprocess_train)
         dataset_test = dataset["test"].with_transform(preprocess_val)
