@@ -25,8 +25,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import yaml
-from transformers import AutoModelForImageClassification, AutoModelForSequenceClassification
-from peft import LoraConfig, get_peft_model
 
 # Suppress Flower deprecation warnings for cleaner output
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="flwr")
@@ -45,7 +43,6 @@ from algorithms.solver.shared_utils import (
     update_delta_norms, get_train_loss, get_norm
 )
 from algorithms.solver.local_solver import LocalUpdate
-from utils.data_pre_process import load_partition
 from utils.model_utils import model_setup
 
 # Constants
