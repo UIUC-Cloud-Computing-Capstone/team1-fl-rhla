@@ -36,14 +36,9 @@ from algorithms.solver.fl_utils import (
     setup_multiprocessing
 )
 
-# Optional import for dataset loading
-try:
-    from utils.data_pre_process import load_partition
-
-    DATASET_LOADING_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Dataset loading not available: {e}")
-    DATASET_LOADING_AVAILABLE = False
+# Import for dataset loading
+from utils.data_pre_process import load_partition
+DATASET_LOADING_AVAILABLE = True
 
 # Constants
 DEFAULT_CONFIG_PATH = "experiments/flower/cifar100_vit_lora/fim/image_cifar100_vit_fedavg_fim-6_9_12-noniid-pat_10_dir-noprior-s50-e50.yaml"
@@ -87,7 +82,7 @@ class FlowerClient(fl.client.NumPyClient):
     - Realistic training and evaluation simulation
     - LoRA fine-tuning support
     """
-
+    
     def __init__(self, args: 'Config', client_id: int = 0):
         """
         Initialize the Flower client.
@@ -98,24 +93,24 @@ class FlowerClient(fl.client.NumPyClient):
         """
         self.args = args
         self.client_id = client_id
-
+        
         # Validate required configuration
         self._validate_config()
-
+        
         # Setup multiprocessing for optimal CPU utilization
         self.num_cores = setup_multiprocessing()
         logging.info(f"Client {client_id} initialized with {self.num_cores} CPU cores")
-
+        
         # Initialize loss function based on data type
         self.loss_func = self._get_loss_function()
-
+        
         # Initialize training history
         self.training_history = {
             'losses': [],
             'accuracies': [],
             'rounds': []
         }
-
+        
         # Load dataset configuration and data
         self.dataset_info = self._load_dataset_config()
 
@@ -125,29 +120,29 @@ class FlowerClient(fl.client.NumPyClient):
         self.dict_users = None
         self.dataset_fim = None
         self.args_loaded = None
-
+        
         # Create dummy model parameters for testing
         self.model_params = self._create_dummy_model_params()
-
+    
     def _validate_config(self) -> None:
         """Validate required configuration parameters."""
         required_params = ['data_type', 'peft', 'lora_layer', 'dataset', 'model']
         for param in required_params:
             if not hasattr(self.args, param):
                 logging.warning(f"Missing configuration parameter: {param}, using default")
-
+    
     def _get_loss_function(self) -> nn.Module:
         """Get appropriate loss function based on data type."""
         data_type = getattr(self.args, 'data_type', 'image')
-
+        
         loss_functions = {
             'image': nn.CrossEntropyLoss(),
             'text': nn.CrossEntropyLoss(),
             'sentiment': nn.NLLLoss()
         }
-
+        
         return loss_functions.get(data_type, nn.CrossEntropyLoss())
-
+    
     def _load_dataset_config(self) -> Dict[str, Any]:
         """
         Load dataset configuration and prepare dataset information.
@@ -168,7 +163,7 @@ class FlowerClient(fl.client.NumPyClient):
             ValueError: If dataset configuration is invalid
         """
         dataset_name = self.args.get('dataset', 'cifar100')
-
+        
         # Initialize dataset info with defaults
         dataset_info = {
             'dataset_name': dataset_name,
@@ -181,13 +176,13 @@ class FlowerClient(fl.client.NumPyClient):
             'id2label': None,
             'data_loaded': False
         }
-
+        
         # Validate dataset name
         if not dataset_name or not isinstance(dataset_name, str):
             raise ValueError(f"Invalid dataset name: {dataset_name}")
-
+        
         logging.info(f"Loading dataset configuration for: {dataset_name}")
-
+        
         # Set dataset-specific configuration
         if dataset_name in DATASET_CONFIGS:
             config = DATASET_CONFIGS[dataset_name]
@@ -200,27 +195,38 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Try to load actual dataset if available
         dataset_info['data_loaded'] = self._try_load_dataset(dataset_name)
+        
+        # If data was loaded successfully, update dataset_info with actual data
+        if dataset_info['data_loaded'] and hasattr(self, 'dataset_train'):
+            dataset_info.update({
+                'train_samples': len(self.dataset_train) if self.dataset_train else 0,
+                'test_samples': len(self.dataset_test) if self.dataset_test else 0,
+                'num_users': len(self.dict_users) if self.dict_users else 0,
+                'client_data_indices': self.dict_users.get(self.client_id, set()) if self.dict_users else set(),
+                'labels': self.args_loaded.labels if hasattr(self.args_loaded, 'labels') else [],
+                'label2id': self.args_loaded.label2id if hasattr(self.args_loaded, 'label2id') else {},
+                'id2label': self.args_loaded.id2label if hasattr(self.args_loaded, 'id2label') else {},
+                'noniid_type': getattr(self.args_loaded, 'noniid_type', 'pathological'),
+                'pat_num_cls': getattr(self.args_loaded, 'pat_num_cls', 10),
+                'partition_mode': getattr(self.args_loaded, 'partition_mode', 'dir')
+            })
 
         logging.info(f"Dataset configuration loaded: {dataset_name} "
                      f"({dataset_info['num_classes']} classes, {dataset_info['data_type']} data)")
 
         return dataset_info
-
+    
     def _try_load_dataset(self, dataset_name: str) -> bool:
         """
         Attempt to load actual dataset data.
-
+        
         Args:
             dataset_name: Name of the dataset to load
-
+            
         Returns:
             True if dataset was loaded successfully, False otherwise
         """
-        if not DATASET_LOADING_AVAILABLE:
-            logging.info("Dataset loading not available, using configuration only")
-            return False
-
-        logging.info(f"Dataset loading capability available for: {dataset_name}")
+        logging.info(f"Loading dataset: {dataset_name}")
 
         # Create a comprehensive args object for load_partition
         class MockArgs:
@@ -283,6 +289,12 @@ class FlowerClient(fl.client.NumPyClient):
         # Call load_partition to get the actual dataset with non-IID partitioning
         args_loaded, dataset_train, dataset_test, _, _, dict_users, dataset_fim = load_partition(mock_args)
 
+        print('dataset_train length: ', len(dataset_train))
+        print('dataset_test length: ', len(dataset_test))
+        print('dict_users length: ', len(dict_users))
+        print('dataset_fim length: ', len(dataset_fim))
+        print('args_loaded: ', args_loaded)
+
         # Store the loaded dataset information
         self.dataset_train = dataset_train
         self.dataset_test = dataset_test
@@ -290,26 +302,14 @@ class FlowerClient(fl.client.NumPyClient):
         self.dataset_fim = dataset_fim
         self.args_loaded = args_loaded
 
-        # Update dataset info with actual loaded data
-        self.dataset_info.update({
-            'data_loaded': True,
-            'train_samples': len(dataset_train) if dataset_train else 0,
-            'test_samples': len(dataset_test) if dataset_test else 0,
-            'num_users': len(dict_users) if dict_users else 0,
-            'client_data_indices': dict_users.get(self.client_id, set()) if dict_users else set(),
-            'labels': args_loaded.labels if hasattr(args_loaded, 'labels') else [],
-            'label2id': args_loaded.label2id if hasattr(args_loaded, 'label2id') else {},
-            'id2label': args_loaded.id2label if hasattr(args_loaded, 'id2label') else {},
-            'noniid_type': mock_args.noniid_type,
-            'pat_num_cls': mock_args.pat_num_cls,
-            'partition_mode': mock_args.partition_mode
-        })
+        # Note: dataset_info will be updated by the calling method (_load_dataset_config)
+        # We just need to return True to indicate successful loading
 
         logging.info(f"Successfully loaded dataset: {dataset_name}")
-        logging.info(f"Train samples: {self.dataset_info['train_samples']}")
-        logging.info(f"Test samples: {self.dataset_info['test_samples']}")
-        logging.info(f"Total clients: {self.dataset_info['num_users']}")
-        logging.info(f"Client {self.client_id} has {len(self.dataset_info['client_data_indices'])} data samples")
+        logging.info(f"Train samples: {len(dataset_train) if dataset_train else 0}")
+        logging.info(f"Test samples: {len(dataset_test) if dataset_test else 0}")
+        logging.info(f"Total clients: {len(dict_users) if dict_users else 0}")
+        logging.info(f"Client {self.client_id} has {len(dict_users.get(self.client_id, set())) if dict_users else 0} data samples")
 
         # Log non-IID distribution information
         if dict_users and self.client_id in dict_users:
@@ -322,7 +322,7 @@ class FlowerClient(fl.client.NumPyClient):
                     f"Client {self.client_id} class distribution: {dict(zip(*np.unique(client_labels, return_counts=True)))}")
 
         return True
-
+    
     def get_dataset_info(self) -> Dict[str, Any]:
         """
         Get dataset information for external use.
@@ -331,7 +331,7 @@ class FlowerClient(fl.client.NumPyClient):
             Dictionary containing dataset information
         """
         return self.dataset_info.copy()
-
+    
     # TODO Liam: do not create dummy model params, use the actual model params
     def _create_dummy_model_params(self) -> List[np.ndarray]:
         """
@@ -347,31 +347,31 @@ class FlowerClient(fl.client.NumPyClient):
             # Get dataset and model information
             num_classes = self.dataset_info.get('num_classes', 100)
             model_name = self.dataset_info.get('model_name', 'google/vit-base-patch16-224-in21k')
-
+            
             # Validate inputs
             if num_classes <= 0:
                 raise ValueError(f"Invalid number of classes: {num_classes}")
-
+            
             # Determine hidden size based on model architecture
             hidden_size = self._get_model_hidden_size(model_name)
-
+            
             # Create base model parameters
             params = self._create_base_model_params(hidden_size, num_classes)
-
+            
             # Add LoRA parameters if specified
             if self.args.get('peft') == 'lora':
                 lora_params = self._create_lora_params(hidden_size)
                 params.extend(lora_params)
-
+            
             logging.info(f"Created {len(params)} dummy model parameters for {num_classes} classes "
-                         f"(hidden_size={hidden_size}, model={model_name})")
+                        f"(hidden_size={hidden_size}, model={model_name})")
             return params
-
+            
         except Exception as e:
             logging.error(f"Failed to create dummy model parameters: {e}")
             # Return minimal parameters as fallback
             return [np.random.randn(100, 100).astype(np.float32)]
-
+    
     def _get_model_hidden_size(self, model_name: str) -> int:
         """
         Get hidden size based on model architecture.
@@ -389,7 +389,7 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             logging.warning(f"Unknown model architecture: {model_name}, using default hidden size")
             return VIT_BASE_HIDDEN_SIZE
-
+    
     # TODO Liam: do not create dummy base model params, use the actual model params
     def _create_base_model_params(self, hidden_size: int, num_classes: int) -> List[np.ndarray]:
         """
@@ -403,17 +403,17 @@ class FlowerClient(fl.client.NumPyClient):
             List of base model parameters
         """
         params = []
-
+        
         # Hidden layer weights and bias
         params.append(np.random.randn(hidden_size, hidden_size).astype(np.float32))
         params.append(np.random.randn(hidden_size).astype(np.float32))
-
+        
         # Output layer weights and bias
         params.append(np.random.randn(num_classes, hidden_size).astype(np.float32))
         params.append(np.random.randn(num_classes).astype(np.float32))
-
+        
         return params
-
+    
     def _create_lora_params(self, hidden_size: int) -> List[np.ndarray]:
         """
         Create LoRA parameters.
@@ -425,21 +425,21 @@ class FlowerClient(fl.client.NumPyClient):
             List of LoRA parameters
         """
         lora_layers = self.args.get('lora_layer', 12)
-
+        
         # Validate LoRA layers
         if lora_layers <= 0:
             logging.warning(f"Invalid lora_layer value: {lora_layers}, using default of 12")
             lora_layers = 12
-
+        
         params = []
         for _ in range(lora_layers):
             # LoRA A and B matrices
             params.append(np.random.randn(LORA_RANK, hidden_size).astype(np.float32))  # LoRA A
             params.append(np.random.randn(hidden_size, LORA_RANK).astype(np.float32))  # LoRA B
-
+        
         logging.info(f"Created {lora_layers} LoRA layer pairs (rank={LORA_RANK})")
         return params
-
+    
     def _train_with_actual_data(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
         """
         Train using actual dataset data with real batch iteration and non-IID distribution.
@@ -479,7 +479,7 @@ class FlowerClient(fl.client.NumPyClient):
         )
 
         logging.info(f"Client {self.client_id} created DataLoader with {len(dataloader)} batches")
-
+        
         for epoch in range(local_epochs):
             epoch_loss = 0.0
             num_batches = 0
@@ -722,14 +722,14 @@ class FlowerClient(fl.client.NumPyClient):
                 # Compute actual loss based on current parameters
                 loss = self._compute_parameter_based_loss(learning_rate, server_round)
                 epoch_loss += loss
-
+                
                 # Update parameters
                 self._update_parameters(learning_rate)
-
+            
             total_loss += epoch_loss / DEFAULT_TRAINING_STEPS_PER_EPOCH
-
+        
         return total_loss
-
+    
     def _compute_parameter_based_loss(self, learning_rate: float, server_round: int) -> float:
         """
         Compute loss based on current model parameters without simulation.
@@ -779,7 +779,7 @@ class FlowerClient(fl.client.NumPyClient):
             update_scale = 0.01 * learning_rate
             update = np.random.normal(0, update_scale, param.shape).astype(param.dtype)
             self.model_params[i] = param + update
-
+    
     def _evaluate_with_actual_data(self, server_round: int) -> Tuple[float, float]:
         """
         Evaluate using actual dataset data with real batch iteration.
@@ -995,9 +995,9 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Compute loss based on parameter characteristics
         loss = self._compute_parameter_based_loss(learning_rate=0.01, server_round=server_round)
-
+        
         return accuracy, loss
-
+    
     def _compute_parameter_based_accuracy(self, server_round: int) -> float:
         """
         Compute accuracy based on current model parameters without simulation.
@@ -1041,43 +1041,41 @@ class FlowerClient(fl.client.NumPyClient):
             List of model parameters as numpy arrays
         """
         return self.model_params
-
+    
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         """
         Set model parameters from server.
-
+        
         Args:
             parameters: List of model parameters from server
         """
-
         if not parameters:
             logging.warning("Received empty parameters from server")
             return
-
+            
         self.model_params = [param.copy() for param in parameters]
         logging.debug(f"Updated model parameters with {len(parameters)} parameter arrays")
-
+    
     def fit(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[List[np.ndarray], int, Dict[str, Any]]:
         """
         Train the model on local data (simulated).
-
+        
         Args:
             parameters: Model parameters from server
             config: Training configuration
-
+            
         Returns:
             Tuple of (updated_parameters, num_examples, metrics)
         """
-
         # Set parameters from server
         self.set_parameters(parameters)
-
+        
         # Extract and validate configuration
         server_round = config.get('server_round', 0)
         # Use tau from config for local epochs, with fallback to config parameter
         local_epochs = max(1, config.get('local_epochs', self.args.get('tau', DEFAULT_LOCAL_EPOCHS)))
         learning_rate = max(DEFAULT_MIN_LEARNING_RATE,
-                            config.get('learning_rate', self.args.get('local_lr', DEFAULT_LEARNING_RATE)))
+                         config.get('learning_rate', self.args.get('local_lr', DEFAULT_LEARNING_RATE)))
 
         # Debug: Print the entire config to see what's being passed
         logging.info(f"Client {self.client_id} received config: {config}")
@@ -1115,25 +1113,24 @@ class FlowerClient(fl.client.NumPyClient):
         }
 
         return self.get_parameters(config), num_examples, metrics
-
+    
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[float, int, Dict[str, Any]]:
         """
         Evaluate the model on local test data (simulated).
-
+        
         Args:
             parameters: Model parameters from server
             config: Evaluation configuration
-
+            
         Returns:
             Tuple of (loss, num_examples, metrics)
         """
-
         # Set parameters from server
         self.set_parameters(parameters)
-
+        
         # Extract server round from config
         server_round = config.get('server_round', 0)
-
+        
         # Evaluate using actual dataset if available, otherwise simulate
         if self.dataset_info.get('data_loaded', False) and self.dataset_test is not None:
             # Use actual dataset for evaluation
@@ -1170,7 +1167,7 @@ class Config:
     This class provides a clean interface for accessing configuration parameters
     with proper validation and default value handling.
     """
-
+    
     def __init__(self, config_dict: Dict[str, Any]) -> None:
         """
         Initialize configuration from dictionary.
@@ -1183,12 +1180,12 @@ class Config:
         """
         if not config_dict:
             raise ValueError("Configuration dictionary cannot be None or empty")
-
+            
         for key, value in config_dict.items():
             if not isinstance(key, str):
                 raise ValueError(f"Configuration keys must be strings, got {type(key)}")
             setattr(self, key, value)
-
+    
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get configuration value with default.
@@ -1201,7 +1198,7 @@ class Config:
             Configuration value or default
         """
         return getattr(self, key, default)
-
+    
     def has(self, key: str) -> bool:
         """
         Check if configuration parameter exists.
@@ -1213,7 +1210,7 @@ class Config:
             True if parameter exists, False otherwise
         """
         return hasattr(self, key)
-
+    
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert configuration to dictionary.
@@ -1221,9 +1218,9 @@ class Config:
         Returns:
             Dictionary representation of configuration
         """
-        return {key: value for key, value in self.__dict__.items()
+        return {key: value for key, value in self.__dict__.items() 
                 if not key.startswith('_')}
-
+    
     def __repr__(self) -> str:
         """String representation of configuration."""
         return f"Config({self.to_dict()})"
@@ -1232,21 +1229,20 @@ class Config:
 def load_configuration(config_path: str) -> 'Config':
     """
     Load configuration from YAML file.
-
+    
     Args:
         config_path: Path to configuration file
-
+        
     Returns:
         Config object with loaded parameters
-
+        
     Raises:
         FileNotFoundError: If config file doesn't exist
         yaml.YAMLError: If config file is invalid YAML
     """
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
-
-    # try:
+    
     with open(config_path, 'r') as f:
         config_dict = yaml.safe_load(f)
 
@@ -1254,10 +1250,6 @@ def load_configuration(config_path: str) -> 'Config':
         raise ValueError("Configuration file is empty or invalid")
 
     return Config(config_dict)
-
-
-# except yaml.YAMLError as e:
-#     raise yaml.YAMLError(f"Invalid YAML in configuration file: {e}")
 
 
 def setup_logging(client_id: int, log_level: str = "INFO") -> None:
@@ -1290,36 +1282,30 @@ def create_flower_client(args: 'Config', client_id: int = 0) -> FlowerClient:
 
 
 def start_flower_client(args: 'Config', server_address: str = "localhost",
-                        server_port: int = 8080, client_id: int = 0) -> None:
+                              server_port: int = 8080, client_id: int = 0) -> None:
     """
     Start a Flower client.
-
+    
     Args:
         args: Configuration object
         server_address: Server address to connect to
         server_port: Server port to connect to
         client_id: Client identifier
     """
-    # try:
     # Setup logging
     setup_logging(client_id)
-
+    
     # Create client
     client = create_flower_client(args, client_id)
-
+    
     # Start client using Flower API
     logging.info(f"Starting Flower client {client_id} connecting to {server_address}:{server_port}")
-
+    
     # Use the modern Flower API (warnings suppressed)
     fl.client.start_client(
         server_address=f"{server_address}:{server_port}",
         client=client.to_client(),
     )
-
-
-# except Exception as e:
-#     logging.error(f"Failed to start client {client_id}: {e}")
-#     raise
 
 
 def setup_random_seeds(seed: int, client_id: int) -> None:
@@ -1369,58 +1355,58 @@ def parse_arguments() -> argparse.Namespace:
         description="Flower Client for Federated Learning",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-
+    
     # Connection arguments
     parser.add_argument(
-        "--server_address",
-        type=str,
-        default=DEFAULT_SERVER_ADDRESS,
+        "--server_address", 
+        type=str, 
+        default=DEFAULT_SERVER_ADDRESS, 
         help="Server address to connect to"
     )
     parser.add_argument(
-        "--server_port",
-        type=int,
-        default=DEFAULT_SERVER_PORT,
+        "--server_port", 
+        type=int, 
+        default=DEFAULT_SERVER_PORT, 
         help="Server port to connect to"
     )
-
+    
     # Client configuration
     parser.add_argument(
-        "--client_id",
-        type=int,
-        default=DEFAULT_CLIENT_ID,
+        "--client_id", 
+        type=int, 
+        default=DEFAULT_CLIENT_ID, 
         help="Client identifier"
     )
     parser.add_argument(
-        "--config_name",
-        type=str,
+        "--config_name", 
+        type=str, 
         default=DEFAULT_CONFIG_PATH,
         help="Configuration file path (relative to config/ directory)"
     )
-
+    
     # Training configuration
     parser.add_argument(
-        "--seed",
-        type=int,
-        default=DEFAULT_SEED,
+        "--seed", 
+        type=int, 
+        default=DEFAULT_SEED, 
         help="Random seed for reproducibility"
     )
     parser.add_argument(
-        "--gpu",
-        type=int,
-        default=DEFAULT_GPU_ID,
+        "--gpu", 
+        type=int, 
+        default=DEFAULT_GPU_ID, 
         help="GPU ID (-1 for CPU, 0+ for specific GPU)"
     )
-
+    
     # Logging configuration
     parser.add_argument(
-        "--log_level",
-        type=str,
+        "--log_level", 
+        type=str, 
         default=DEFAULT_LOG_LEVEL,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"], 
         help="Logging level"
     )
-
+    
     return parser.parse_args()
 
 
@@ -1429,29 +1415,29 @@ def main() -> None:
     try:
         # Parse arguments
         args = parse_arguments()
-
+        
         # Load configuration
         config_path = os.path.join('config/', args.config_name)
         config = load_configuration(config_path)
-
+        
         # Merge command line arguments into config
         for arg_name in vars(args):
             setattr(config, arg_name, getattr(args, arg_name))
-
+        
         # Setup device
         config.device = setup_device(args.gpu)
-
+        
         # Setup random seeds
         setup_random_seeds(args.seed, args.client_id)
-
+        
         # Start client
         start_flower_client(
-            config,
-            args.server_address,
-            args.server_port,
+            config, 
+            args.server_address, 
+            args.server_port, 
             args.client_id
         )
-
+        
     except KeyboardInterrupt:
         logging.info("Client interrupted by user")
     except Exception as e:
