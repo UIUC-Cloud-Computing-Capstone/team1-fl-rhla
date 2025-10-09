@@ -39,6 +39,58 @@ partition_mode: dir # uni, dir
 fim_every_iter: 50
 fim_prior_epoch: 50
 
+
+#####################################
+########### LoRA Configuration ######
+#####################################
+lora_rank: 64
+lora_alpha: 16
+lora_dropout: 0.1
+lora_target_modules: ["query", "value"]
+lora_bias: "none"
+
+#####################################
+########### Training Configuration ##
+#####################################
+num_workers: 0  # Avoid multiprocessing issues in federated setting
+shuffle_training: true
+drop_last: true
+shuffle_eval: false
+drop_last_eval: false
+logging_batches: 3  # Number of batches to log during training
+eval_batches: 3     # Number of batches to log during evaluation
+
+#####################################
+########### Model Configuration #####
+#####################################
+vit_base_hidden_size: 768
+vit_large_hidden_size: 1024
+flattened_size_cifar: 150528  # 3*224*224 for CIFAR-100 with ViT
+
+#####################################
+########### Client Configuration ####
+#####################################
+server_address: "localhost"
+server_port: 8080
+client_id: 0
+seed: 1
+gpu_id: -1
+log_level: "INFO"
+training_steps_per_epoch: 10
+min_learning_rate: 0.001
+default_learning_rate: 0.01
+default_local_epochs: 1
+
+#####################################
+########### Non-IID Defaults ########
+#####################################
+default_noniid_type: 'dirichlet'
+default_pat_num_cls: 10
+default_partition_mode: 'dir'
+default_dir_alpha: 0.5
+default_dir_beta: 1.0
+
+
 # Below seem unused in original FedHello code that is relevant to this experiment
 #_base_ : ['../../base_ffm.yaml']
 model: google/vit-base-patch16-224-in21k

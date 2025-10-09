@@ -63,7 +63,7 @@ DEFAULT_MIN_LEARNING_RATE = 0.001
 DEFAULT_LEARNING_RATE = 0.01
 DEFAULT_LOCAL_EPOCHS = 1
 
-# Model architecture constants
+# Model architecture constants (can be overridden by config)
 VIT_BASE_HIDDEN_SIZE = 768
 VIT_LARGE_HIDDEN_SIZE = 1024
 LORA_RANK = 64
@@ -72,7 +72,7 @@ LORA_DROPOUT = 0.1
 LORA_TARGET_MODULES = ["query", "value"]
 LORA_BIAS = "none"
 
-# Training constants
+# Training constants (can be overridden by config)
 DEFAULT_LOGGING_BATCHES = 3  # Number of batches to log during training
 DEFAULT_EVAL_BATCHES = 3     # Number of batches to log during evaluation
 DEFAULT_FLATTENED_SIZE_CIFAR = 150528  # 3*224*224 for CIFAR-100 with ViT
@@ -108,7 +108,7 @@ DEFAULT_PARTITION_MODE = 'dir'
 DEFAULT_DIR_ALPHA = 0.5
 DEFAULT_DIR_BETA = 1.0
 
-# Data processing constants
+# Data processing constants (can be overridden by config)
 DEFAULT_BATCH_SIZE = 128
 DEFAULT_NUM_WORKERS = 0  # Avoid multiprocessing issues in federated setting
 DEFAULT_SHUFFLE_TRAINING = True
@@ -144,6 +144,13 @@ class DatasetArgs:
         # Model configuration
         self.peft = config_dict.get('peft', 'lora')
         self.lora_layer = config_dict.get('lora_layer', 12)
+        
+        # LoRA configuration
+        self.lora_rank = config_dict.get('lora_rank', LORA_RANK)
+        self.lora_alpha = config_dict.get('lora_alpha', LORA_ALPHA)
+        self.lora_dropout = config_dict.get('lora_dropout', LORA_DROPOUT)
+        self.lora_target_modules = config_dict.get('lora_target_modules', LORA_TARGET_MODULES)
+        self.lora_bias = config_dict.get('lora_bias', LORA_BIAS)
 
         # Training configuration
         self.batch_size = config_dict.get('batch_size', DEFAULT_BATCH_SIZE)
@@ -151,6 +158,15 @@ class DatasetArgs:
         self.tau = config_dict.get('tau', 3)
         self.round = config_dict.get('round', 500)
         self.optimizer = config_dict.get('optimizer', 'adamw')
+        
+        # Data processing configuration
+        self.num_workers = config_dict.get('num_workers', DEFAULT_NUM_WORKERS)
+        self.shuffle_training = config_dict.get('shuffle_training', DEFAULT_SHUFFLE_TRAINING)
+        self.drop_last = config_dict.get('drop_last', DEFAULT_DROP_LAST)
+        self.shuffle_eval = config_dict.get('shuffle_eval', DEFAULT_SHUFFLE_EVAL)
+        self.drop_last_eval = config_dict.get('drop_last_eval', DEFAULT_DROP_LAST_EVAL)
+        self.logging_batches = config_dict.get('logging_batches', DEFAULT_LOGGING_BATCHES)
+        self.eval_batches = config_dict.get('eval_batches', DEFAULT_EVAL_BATCHES)
 
         # Federated learning configuration
         self.num_users = config_dict.get('num_users', 100)
@@ -568,11 +584,11 @@ class FlowerClient(fl.client.NumPyClient):
         # Apply LoRA if specified
         if self.args.get('peft') == 'lora':
             lora_config = LoraConfig(
-                r=LORA_RANK,
-                lora_alpha=LORA_ALPHA,
-                target_modules=LORA_TARGET_MODULES,
-                lora_dropout=LORA_DROPOUT,
-                bias=LORA_BIAS,
+                r=self.args.get('lora_rank', LORA_RANK),
+                lora_alpha=self.args.get('lora_alpha', LORA_ALPHA),
+                target_modules=self.args.get('lora_target_modules', LORA_TARGET_MODULES),
+                lora_dropout=self.args.get('lora_dropout', LORA_DROPOUT),
+                bias=self.args.get('lora_bias', LORA_BIAS),
                 modules_to_save=["classifier"] if 'vit' in model_name.lower() else None,
             )
             model = get_peft_model(model, lora_config)
@@ -685,9 +701,9 @@ class FlowerClient(fl.client.NumPyClient):
         return DataLoader(
             client_dataset,
             batch_size=batch_size,
-            shuffle=DEFAULT_SHUFFLE_TRAINING,
-            drop_last=DEFAULT_DROP_LAST,
-            num_workers=DEFAULT_NUM_WORKERS,
+            shuffle=self.args.get('shuffle_training', DEFAULT_SHUFFLE_TRAINING),
+            drop_last=self.args.get('drop_last', DEFAULT_DROP_LAST),
+            num_workers=self.args.get('num_workers', DEFAULT_NUM_WORKERS),
             collate_fn=collate_fn
         )
     
@@ -769,7 +785,7 @@ class FlowerClient(fl.client.NumPyClient):
         batch_loss = loss.item()
         
         # Log progress for first few batches
-        if batch_idx < DEFAULT_LOGGING_BATCHES:
+        if batch_idx < self.args.get('logging_batches', DEFAULT_LOGGING_BATCHES):
             logging.debug(f"Client {self.client_id} epoch {epoch + 1}, batch {batch_idx + 1}: loss={batch_loss:.4f}")
         
         return batch_loss
@@ -870,9 +886,9 @@ class FlowerClient(fl.client.NumPyClient):
         return DataLoader(
             eval_dataset,
             batch_size=batch_size,
-            shuffle=DEFAULT_SHUFFLE_EVAL,
-            drop_last=DEFAULT_DROP_LAST_EVAL,
-            num_workers=DEFAULT_NUM_WORKERS,
+            shuffle=self.args.get('shuffle_eval', DEFAULT_SHUFFLE_EVAL),
+            drop_last=self.args.get('drop_last_eval', DEFAULT_DROP_LAST_EVAL),
+            num_workers=self.args.get('num_workers', DEFAULT_NUM_WORKERS),
             collate_fn=collate_fn
         )
     
@@ -903,7 +919,7 @@ class FlowerClient(fl.client.NumPyClient):
         metrics['num_batches'] += 1
 
         # Log progress for first few batches
-        if batch_idx < DEFAULT_EVAL_BATCHES:
+        if batch_idx < self.args.get('eval_batches', DEFAULT_EVAL_BATCHES):
             batch_accuracy = batch_correct / batch_size if batch_size > 0 else 0.0
             logging.debug(f"Client {self.client_id} eval batch {batch_idx + 1}: "
                           f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
@@ -1361,6 +1377,21 @@ def _load_and_merge_config(args) -> 'Config':
     """Load configuration and merge with command line arguments."""
     config_path = os.path.join('config/', args.config_name)
     config = load_configuration(config_path)
+    
+    # Override config values with command line arguments if provided
+    # Use config values as defaults for command line arguments
+    if hasattr(config, 'server_address') and not hasattr(args, 'server_address'):
+        args.server_address = config.server_address
+    if hasattr(config, 'server_port') and not hasattr(args, 'server_port'):
+        args.server_port = config.server_port
+    if hasattr(config, 'client_id') and not hasattr(args, 'client_id'):
+        args.client_id = config.client_id
+    if hasattr(config, 'seed') and not hasattr(args, 'seed'):
+        args.seed = config.seed
+    if hasattr(config, 'gpu_id') and not hasattr(args, 'gpu_id'):
+        args.gpu_id = config.gpu_id
+    if hasattr(config, 'log_level') and not hasattr(args, 'log_level'):
+        args.log_level = config.log_level
     
     # Merge command line arguments into config
     for arg_name in vars(args):
