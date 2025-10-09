@@ -102,7 +102,7 @@ DATASET_CONFIGS = {
 }
 
 # Non-IID configuration defaults
-DEFAULT_NONIID_TYPE = 'pathological'
+DEFAULT_NONIID_TYPE = 'dirichlet'
 DEFAULT_PAT_NUM_CLS = 10
 DEFAULT_PARTITION_MODE = 'dir'
 DEFAULT_DIR_ALPHA = 0.5
@@ -310,8 +310,12 @@ class FlowerClient(fl.client.NumPyClient):
         if not hasattr(self, 'args_loaded'):
             self.args_loaded = None
         
-        # Create actual model parameters
-        self.model_params = self._create_model_params()
+        # Create actual model and parameters
+        self.model = self._create_actual_model()
+        self.model_params = self._model_to_numpy_params()
+        
+        # Initialize optimizer (will be recreated for each training round)
+        self.optimizer = None
     
     def _validate_config(self) -> None:
         """Validate required configuration parameters."""
@@ -527,12 +531,12 @@ class FlowerClient(fl.client.NumPyClient):
         """
         return self.dataset_info.copy()
     
-    def _create_model_params(self) -> List[np.ndarray]:
+    def _create_actual_model(self):
         """
-        Create actual model parameters using AutoModelForImageClassification.from_pretrained.
+        Create actual model using AutoModelForImageClassification.from_pretrained.
         
         Returns:
-            List of numpy arrays representing model parameters
+            PyTorch model instance
             
         Raises:
             ValueError: If model configuration is invalid
@@ -570,23 +574,37 @@ class FlowerClient(fl.client.NumPyClient):
         # Apply LoRA if specified
         if self.args.get('peft') == 'lora':
             lora_config = LoraConfig(
-                r=16,
-                lora_alpha=16,
-                target_modules=["query", "value"],
-                lora_dropout=0.1,
-                bias="none",
+                r=LORA_RANK,
+                lora_alpha=LORA_ALPHA,
+                target_modules=LORA_TARGET_MODULES,
+                lora_dropout=LORA_DROPOUT,
+                bias=LORA_BIAS,
                 modules_to_save=["classifier"] if 'vit' in model_name.lower() else None,
             )
             model = get_peft_model(model, lora_config)
-            
-        # Convert model parameters to numpy arrays
-        params = []
-        for param in model.parameters():
-            params.append(param.detach().cpu().numpy())
-            
-        logging.info(f"Created {len(params)} actual model parameters for {num_classes} classes "
+        
+        # Set device
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = model.to(device)
+        
+        logging.info(f"Created actual model for {num_classes} classes "
                         f"(model={model_name}, peft={self.args.get('peft', 'none')})")
+        return model
+    
+    def _model_to_numpy_params(self) -> List[np.ndarray]:
+        """Convert model parameters to numpy arrays."""
+        params = []
+        for param in self.model.parameters():
+            params.append(param.detach().cpu().numpy())
         return params
+    
+    def _numpy_params_to_model(self, params: List[np.ndarray]) -> None:
+        """Set model parameters from numpy arrays."""
+        param_idx = 0
+        for param in self.model.parameters():
+            if param_idx < len(params):
+                param.data = torch.from_numpy(params[param_idx]).to(param.device)
+                param_idx += 1
             
 
     
@@ -610,11 +628,41 @@ class FlowerClient(fl.client.NumPyClient):
         
         logging.info(f"Client {self.client_id} created DataLoader with {len(dataloader)} batches")
         
-        # Perform training epochs
-        total_loss = self._perform_training_epochs(dataloader, local_epochs, learning_rate, server_round)
+        # Setup optimizer for this training round
+        self._setup_optimizer(learning_rate)
+        
+        # Perform actual training with gradients
+        total_loss = self._perform_actual_training(dataloader, local_epochs, server_round)
         
         # Log final results
         self._log_training_results(client_indices_list, total_loss, local_epochs)
+        return total_loss
+    
+    def _setup_optimizer(self, learning_rate: float) -> None:
+        """Setup optimizer for training."""
+        # Only optimize LoRA parameters if using LoRA
+        if self.args.get('peft') == 'lora':
+            # Get only LoRA parameters
+            lora_params = []
+            for name, param in self.model.named_parameters():
+                if 'lora' in name or 'classifier' in name:
+                    lora_params.append(param)
+            self.optimizer = torch.optim.AdamW(lora_params, lr=learning_rate)
+        else:
+            # Optimize all parameters
+            self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate)
+        
+        logging.debug(f"Setup optimizer with {len(list(self.optimizer.param_groups[0]['params']))} parameters")
+    
+    def _perform_actual_training(self, dataloader, local_epochs: int, server_round: int) -> float:
+        """Perform actual training with gradients and parameter updates."""
+        self.model.train()
+        total_loss = 0.0
+        
+        for epoch in range(local_epochs):
+            epoch_loss = self._train_single_epoch_with_gradients(dataloader, epoch, server_round)
+            total_loss += epoch_loss
+            
         return total_loss
     
     def _log_training_results(self, client_indices_list: List[int], total_loss: float, local_epochs: int) -> None:
@@ -689,34 +737,42 @@ class FlowerClient(fl.client.NumPyClient):
         
         return vit_collate_fn
     
-    def _perform_training_epochs(self, dataloader: 'DataLoader', local_epochs: int, 
-                                learning_rate: float, server_round: int) -> float:
-        """Perform training across multiple epochs."""
-        total_loss = 0.0
-        
-        for epoch in range(local_epochs):
-            epoch_loss = self._train_single_epoch(dataloader, epoch, learning_rate, server_round)
-            total_loss += epoch_loss
-            
-        return total_loss
-    
-    def _train_single_epoch(self, dataloader: 'DataLoader', epoch: int, 
-                           learning_rate: float, server_round: int) -> float:
-        """Train for a single epoch."""
+    def _train_single_epoch_with_gradients(self, dataloader, epoch: int, server_round: int) -> float:
+        """Train for a single epoch with actual gradients and parameter updates."""
         epoch_loss = 0.0
         num_batches = 0
 
         for batch_idx, batch in enumerate(dataloader):
-            batch_loss = self._process_training_batch(batch, server_round, batch_idx, epoch)
+            batch_loss = self._process_training_batch_with_gradients(batch, batch_idx, epoch)
             epoch_loss += batch_loss
             num_batches += 1
 
         return self._compute_epoch_metrics(epoch, epoch_loss, num_batches)
     
-    def _process_training_batch(self, batch, server_round: int, batch_idx: int, epoch: int) -> float:
-        """Process a single training batch."""
+    def _process_training_batch_with_gradients(self, batch, batch_idx: int, epoch: int) -> float:
+        """Process a single training batch with actual gradients."""
+        # Extract batch data
         pixel_values, labels = self._extract_batch_data(batch)
-        batch_loss = self._compute_batch_loss(pixel_values, labels, server_round, batch_idx)
+        
+        # Move to device
+        device = next(self.model.parameters()).device
+        pixel_values = pixel_values.to(device)
+        labels = labels.to(device)
+        
+        # Zero gradients
+        self.optimizer.zero_grad()
+        
+        # Forward pass
+        outputs = self.model(pixel_values=pixel_values, labels=labels)
+        loss = outputs.loss
+        
+        # Backward pass
+        loss.backward()
+        
+        # Update parameters
+        self.optimizer.step()
+        
+        batch_loss = loss.item()
         
         # Log progress for first few batches
         if batch_idx < DEFAULT_LOGGING_BATCHES:
@@ -781,97 +837,6 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 
-    def _compute_batch_loss(self, pixel_values, labels, server_round: int, batch_idx: int) -> float:
-        """
-        Compute actual loss for a batch of data using model forward pass.
-
-        Args:
-            pixel_values: Batch of image data (tensor or None)
-            labels: Batch of labels (tensor or None)
-            server_round: Current server round
-            batch_idx: Batch index within epoch
-
-        Returns:
-            Computed loss for this batch
-        """
-        self._validate_batch_data(pixel_values, labels)
-        batch_size = self._get_batch_size(pixel_values, labels)
-        loss = self._compute_actual_loss(pixel_values, labels, batch_size)
-        
-        logging.debug(f"Batch {batch_idx}: size={batch_size}, actual_loss={loss:.4f}")
-        return float(loss)
-    
-    def _validate_batch_data(self, pixel_values, labels) -> None:
-        """Validate that batch data is not None."""
-        if pixel_values is None or labels is None:
-            raise ValueError(f"Invalid pixel_values or labels: {pixel_values}, {labels}")
-    
-    def _get_batch_size(self, pixel_values, labels) -> int:
-        """Get batch size from pixel_values or labels."""
-        if hasattr(pixel_values, 'shape'):
-            return pixel_values.shape[0]
-        elif hasattr(labels, 'shape'):
-            return labels.shape[0]
-        else:
-            raise ValueError("Cannot determine batch size from pixel_values or labels")
-
-    def _compute_actual_loss(self, pixel_values, labels, batch_size: int) -> float:
-        """
-        Compute actual loss using model forward pass.
-        
-        Args:
-            pixel_values: Batch of image data
-            labels: Batch of labels
-            batch_size: Size of the batch
-            
-        Returns:
-            Computed loss value
-        """
-        
-        # Convert to tensors if needed
-        if not isinstance(pixel_values, torch.Tensor):
-            pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
-        if not isinstance(labels, torch.Tensor):
-            labels = torch.tensor(labels, dtype=torch.long)
-
-            # Ensure proper device placement
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        pixel_values = pixel_values.to(device)
-        labels = labels.to(device)
-
-        # Create a simple model for forward pass
-        loss = self._forward_pass_loss(pixel_values, labels, batch_size)
-
-        return float(loss.detach().cpu().item())
-
-    def _forward_pass_loss(self, pixel_values: torch.Tensor, labels: torch.Tensor, batch_size: int) -> torch.Tensor:
-        """
-        Simulate forward pass and compute loss without using actual model.
-
-        Args:
-            pixel_values: Batch of image data
-            labels: Batch of labels
-            batch_size: Size of the batch
-
-        Returns:
-            Computed loss tensor
-        """
-        num_classes = self.dataset_info.get('num_classes', 100)
-        flattened_size = self._get_flattened_size(pixel_values, batch_size)
-        
-        # Create linear layer and perform forward pass
-        linear = torch.nn.Linear(flattened_size, num_classes).to(pixel_values.device)
-        logits = linear(pixel_values.view(batch_size, -1))
-        
-        # Compute cross-entropy loss
-        loss_fn = torch.nn.CrossEntropyLoss()
-        return loss_fn(logits, labels)
-    
-    def _get_flattened_size(self, pixel_values: torch.Tensor, batch_size: int) -> int:
-        """Get flattened size for linear layer input."""
-        # For CIFAR-100 with ViT, pixel_values has shape (batch_size, 3, 224, 224)
-        # We need to flatten it to (batch_size, 3*224*224) = (batch_size, 150528)
-        return pixel_values.view(batch_size, -1).shape[1]
 
     
     
@@ -987,81 +952,36 @@ class FlowerClient(fl.client.NumPyClient):
         Returns:
             Tuple of (batch_loss, num_correct, batch_size)
         """
-        self._validate_batch_data(pixel_values, labels)
-        batch_size = self._get_batch_size(pixel_values, labels)
-        loss, num_correct = self._compute_actual_evaluation_metrics(pixel_values, labels, batch_size)
+        if pixel_values is None or labels is None:
+            raise ValueError(f"Invalid pixel_values or labels: {pixel_values}, {labels}")
+        
+        batch_size = pixel_values.shape[0] if hasattr(pixel_values, 'shape') else labels.shape[0]
+        
+        # Move to device
+        device = next(self.model.parameters()).device
+        pixel_values = pixel_values.to(device)
+        labels = labels.to(device)
+        
+        # Set model to evaluation mode
+        self.model.eval()
+        
+        with torch.no_grad():
+            # Forward pass
+            outputs = self.model(pixel_values=pixel_values, labels=labels)
+            loss = outputs.loss
+            logits = outputs.logits
+            
+            # Get predictions
+            predictions = torch.argmax(logits, dim=1)
+            num_correct = int(torch.sum(predictions == labels).item())
 
         logging.debug(f"Eval batch {batch_idx}: size={batch_size}, "
                       f"loss={loss:.4f}, correct={num_correct}")
 
-        return float(loss), num_correct, batch_size
+        return float(loss.item()), num_correct, batch_size
 
 
 
-    def _compute_actual_evaluation_metrics(self, pixel_values, labels, batch_size: int) -> Tuple[float, int]:
-        """
-        Compute actual evaluation metrics using model forward pass.
-
-        Args:
-            pixel_values: Batch of image data
-            labels: Batch of labels
-            batch_size: Size of the batch
-
-        Returns:
-            Tuple of (loss, num_correct)
-        """
-        
-        # Convert to tensors if needed
-        if not isinstance(pixel_values, torch.Tensor):
-            pixel_values = torch.tensor(pixel_values, dtype=torch.float32)
-        if not isinstance(labels, torch.Tensor):
-            labels = torch.tensor(labels, dtype=torch.long)
-
-        # Ensure proper device placement
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        pixel_values = pixel_values.to(device)
-        labels = labels.to(device)
-
-        # Compute actual loss and predictions
-        loss, predictions = self._forward_pass_evaluation(pixel_values, labels, batch_size)
-
-        # Calculate number of correct predictions
-        num_correct = int(torch.sum(predictions == labels).item())
-
-        return float(loss.detach().cpu().item()), num_correct
-
-    def _forward_pass_evaluation(self, pixel_values: torch.Tensor, labels: torch.Tensor, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Perform forward pass for evaluation and return loss and predictions.
-
-        Args:
-            pixel_values: Batch of image data
-            labels: Batch of labels
-            batch_size: Size of the batch
-
-        Returns:
-            Tuple of (loss, predictions)
-        """
-        num_classes = self.dataset_info.get('num_classes', 100)
-        hidden_size = self._get_hidden_size(pixel_values)
-        
-        # Create linear layer and perform forward pass
-        linear = torch.nn.Linear(hidden_size, num_classes).to(pixel_values.device)
-        logits = linear(pixel_values.view(batch_size, -1))
-
-        # Compute loss and predictions
-        loss_fn = torch.nn.CrossEntropyLoss()
-        loss = loss_fn(logits, labels)
-        predictions = torch.argmax(logits, dim=1)
-
-        return loss, predictions
-    
-    def _get_hidden_size(self, pixel_values: torch.Tensor) -> int:
-        """Get hidden size from pixel_values shape."""
-        if len(pixel_values.shape) > 1:
-            return pixel_values.shape[1]
-        else:
-            raise ValueError(f"Invalid pixel_values shape: {pixel_values.shape}")
 
 
     def get_parameters(self, config: Dict[str, Any]) -> List[np.ndarray]:
@@ -1074,7 +994,7 @@ class FlowerClient(fl.client.NumPyClient):
         Returns:
             List of model parameters as numpy arrays
         """
-        return self.model_params
+        return self._model_to_numpy_params()
     
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         """
@@ -1087,7 +1007,7 @@ class FlowerClient(fl.client.NumPyClient):
             logging.warning("Received empty parameters from server")
             return
             
-        self.model_params = [param.copy() for param in parameters]
+        self._numpy_params_to_model(parameters)
         logging.debug(f"Updated model parameters with {len(parameters)} parameter arrays")
     
     def fit(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[List[np.ndarray], int, Dict[str, Any]]:
