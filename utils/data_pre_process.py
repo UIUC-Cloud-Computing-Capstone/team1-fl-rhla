@@ -16,7 +16,7 @@ from torchvision.transforms import (
 )
 from transformers import AutoImageProcessor
 from transformers import AutoTokenizer
-from .noniid_patitioner import ClassWisePartitioner
+#from .noniid_patitioner import ClassWisePartitioner
 
 
 
@@ -178,22 +178,22 @@ def load_partition(args):
                     with open(pik_path, 'wb') as f: 
                         dill.dump(dict_users, f)
             else:
-                if args.noniid_type == 'pathological':
-                    least_samples = 10 if args.pat_num_cls > 3 else 16
-                    split = ClassWisePartitioner(rng=np.random.RandomState(2),
-                                                 n_class_per_share=args.pat_num_cls,
-                                                 min_n_sample_per_share=least_samples,
-                                                 partition_mode=args.partition_mode,
-                                                 verbose=True)
-                    _tr_labels = dataset['train']['fine_label']  # labels in the original order
-                    args._idx_by_user, _user_ids_by_cls = split(_tr_labels, args.num_users,
-                                                        return_user_ids_by_class=True)
-                    print(f" train split size: {[len(idxs) for idxs in args._idx_by_user]}")
-                    args._tr_labels = np.array(_tr_labels)
-                    print(f"    | train classes: "
-                        f"{[f'{np.unique(args._tr_labels[idxs]).tolist()}' for idxs in args._idx_by_user]}")
-                    dict_users = {index: set(inner_list) for index, inner_list in enumerate(args._idx_by_user)}
-                elif args.noniid_type == 'dirichlet':
+                # if args.noniid_type == 'pathological':
+                #     least_samples = 10 if args.pat_num_cls > 3 else 16
+                #     split = ClassWisePartitioner(rng=np.random.RandomState(2),
+                #                                  n_class_per_share=args.pat_num_cls,
+                #                                  min_n_sample_per_share=least_samples,
+                #                                  partition_mode=args.partition_mode,
+                #                                  verbose=True)
+                #     _tr_labels = dataset['train']['fine_label']  # labels in the original order
+                #     args._idx_by_user, _user_ids_by_cls = split(_tr_labels, args.num_users,
+                #                                         return_user_ids_by_class=True)
+                #     print(f" train split size: {[len(idxs) for idxs in args._idx_by_user]}")
+                #     args._tr_labels = np.array(_tr_labels)
+                #     print(f"    | train classes: "
+                #         f"{[f'{np.unique(args._tr_labels[idxs]).tolist()}' for idxs in args._idx_by_user]}")
+                #     dict_users = {index: set(inner_list) for index, inner_list in enumerate(args._idx_by_user)}
+                if args.noniid_type == 'dirichlet':
                     least_samples = 50
                     N = len(dataset['train'])
                     K = args.num_classes
@@ -313,23 +313,23 @@ def load_partition(args):
                     with open(pik_path, 'wb') as f: 
                         dill.dump(dict_users, f)
             else:
-                if args.noniid_type == 'pathological':
-                    least_samples = 0 if args.pat_num_cls > 3 else 0
-                    split = ClassWisePartitioner(rng=np.random.RandomState(2),
-                                                n_class_per_share=args.pat_num_cls,
-                                                min_n_sample_per_share=least_samples,
-                                                partition_mode=args.partition_mode,
-                                                verbose=True)
-                    _tr_labels = dataset_train['labels']  # labels in the original order
-                    args._idx_by_user, _user_ids_by_cls = split(_tr_labels, args.num_users,
-                                                        return_user_ids_by_class=True)
-                    print(f" train split size: {[len(idxs) for idxs in args._idx_by_user]}")
-                    args._tr_labels = np.array(_tr_labels)
-                    print(f"    | train classes: "
-                        f"{[f'{np.unique(args._tr_labels[idxs]).tolist()}' for idxs in args._idx_by_user]}")
-                    dict_users = {index: set(inner_list) for index, inner_list in enumerate(args._idx_by_user)}
+                # if args.noniid_type == 'pathological':
+                #     least_samples = 0 if args.pat_num_cls > 3 else 0
+                #     split = ClassWisePartitioner(rng=np.random.RandomState(2),
+                #                                 n_class_per_share=args.pat_num_cls,
+                #                                 min_n_sample_per_share=least_samples,
+                #                                 partition_mode=args.partition_mode,
+                #                                 verbose=True)
+                #     _tr_labels = dataset_train['labels']  # labels in the original order
+                #     args._idx_by_user, _user_ids_by_cls = split(_tr_labels, args.num_users,
+                #                                         return_user_ids_by_class=True)
+                #     print(f" train split size: {[len(idxs) for idxs in args._idx_by_user]}")
+                #     args._tr_labels = np.array(_tr_labels)
+                #     print(f"    | train classes: "
+                #         f"{[f'{np.unique(args._tr_labels[idxs]).tolist()}' for idxs in args._idx_by_user]}")
+                #     dict_users = {index: set(inner_list) for index, inner_list in enumerate(args._idx_by_user)}
                 
-                elif args.noniid_type == 'dirichlet':
+                if args.noniid_type == 'dirichlet':
                     least_samples = 50
                     N = len(dataset_train)
                     K = args.num_classes
