@@ -9,55 +9,6 @@ from typing import Dict, List, Tuple, Any
 from collections import defaultdict
 
 
-def compute_model_update(local_model: Dict[str, torch.Tensor], 
-                        global_model: Dict[str, torch.Tensor], 
-                        peft: str = 'lora', 
-                        no_weight_lora: List[int] = None) -> Dict[str, torch.Tensor]:
-    """
-    Compute model update (local_model - global_model).
-    
-    Args:
-        local_model: Local model state dict
-        global_model: Global model state dict
-        peft: Parameter efficient fine-tuning method ('lora' or None)
-        no_weight_lora: List of LoRA layer indices to exclude
-        
-    Returns:
-        Model update dictionary
-    """
-    import re
-    
-    model_update = {}
-    if peft == 'lora':
-        for k in global_model.keys():
-            if 'lora' in k:  # no classifier
-                if no_weight_lora is None or int(re.findall(r"\d+", k)[0]) not in no_weight_lora:
-                    model_update[k] = local_model[k].detach().cpu() - global_model[k].detach().cpu()
-    else:
-        model_update = {k: local_model[k].detach().cpu() - global_model[k].detach().cpu() 
-                       for k in global_model.keys()}
-    
-    return model_update
-
-
-def compute_update_norm(model_update: Dict[str, torch.Tensor]) -> float:
-    """
-    Compute the Frobenius norm of model updates.
-    
-    Args:
-        model_update: Model update dictionary
-        
-    Returns:
-        Frobenius norm of the updates
-    """
-    norm_updates = []
-    for k in model_update.keys():
-        norm_updates.append(torch.flatten(model_update[k]))
-    
-    if len(norm_updates) > 0:
-        return torch.norm(torch.cat(norm_updates)).item()
-    else:
-        return 0.0
 
 
 def aggregate_updates_simple(local_updates: List[Dict[str, torch.Tensor]], 
@@ -197,55 +148,6 @@ def aggregate_updates_weighted_heterogeneous(local_updates: List[Dict[str, torch
             global_model[k] = global_model[k].detach().cpu() + sum([model*weight for model, weight in zip(model_update_avg_dict[k], model_weights_list[k])])
 
     return global_model
-
-
-def get_optimizer_parameters(model, no_weight_lora: List[int] = None, 
-                           weight_decay: float = 0.01, 
-                           forbidden_layer_types: List = None):
-    """
-    Get optimizer parameters with proper weight decay and learning rate settings.
-    
-    Args:
-        model: PyTorch model
-        no_weight_lora: List of LoRA layer indices to exclude
-        weight_decay: Weight decay for parameters
-        forbidden_layer_types: Layer types to exclude from weight decay
-        
-    Returns:
-        List of parameter groups for optimizer
-    """
-    if forbidden_layer_types is None:
-        forbidden_layer_types = []
-        
-    if no_weight_lora is None:
-        no_weight_lora = []
-    
-    # Get parameter names excluding forbidden layers
-    decay_parameters = get_parameter_names(model, forbidden_layer_types)
-    decay_parameters = [name for name in decay_parameters if "bias" not in name]
-    
-    optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in model.named_parameters() 
-                      if not any(str(nd) in n for nd in no_weight_lora) and 
-                      (n in decay_parameters and p.requires_grad)],
-            "weight_decay": weight_decay,
-        },
-        {
-            "params": [p for n, p in model.named_parameters() 
-                      if not any(str(nd) in n for nd in no_weight_lora) and 
-                      (n not in decay_parameters and p.requires_grad)],
-            "weight_decay": 0.0,
-        },
-        {
-            "params": [p for n, p in model.named_parameters() 
-                      if any(str(nd) in n for nd in no_weight_lora)],
-            'lr': 0.0
-        }
-    ]
-    
-    return optimizer_grouped_parameters
-
 
 def get_parameter_names(model, forbidden_layer_types):
     """

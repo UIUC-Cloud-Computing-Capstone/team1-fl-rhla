@@ -33,9 +33,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Local imports
 from algorithms.solver.fl_utils import (
-    compute_model_update,
-    compute_update_norm,
-    get_optimizer_parameters,
     setup_multiprocessing
 )
 from utils.data_pre_process import load_partition
