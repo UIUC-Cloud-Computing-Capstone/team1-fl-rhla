@@ -78,12 +78,8 @@ if __name__ == '__main__':
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         
-        if args.method == "ffm_fedavg":
-            if args.model_heterogeneity == 'depthfl':
-                best_result, metric_keys = ffm_fedavg_depthfl(args)
-            elif args.model_heterogeneity == 'depthffm':
-                best_result, metric_keys = ffm_fedavg_depthffm(args)     
-            elif args.model_heterogeneity == 'depthffm_fim':
+        if args.method == "ffm_fedavg":  
+            if args.model_heterogeneity == 'depthffm_fim':
                 best_result, metric_keys = ffm_fedavg_depthffm_fim(args)     
         score_box = [[] for _ in range(len(metric_keys))]
         for index, (key, value) in enumerate(metric_keys.items()):
