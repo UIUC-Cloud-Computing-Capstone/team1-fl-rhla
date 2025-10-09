@@ -17,19 +17,6 @@ import threading
 
 gpu_lock = threading.Lock()
 
-def vit_collate_fn(examples):
-    pixel_values = torch.stack([example[2] for example in examples])
-    labels = torch.tensor([example[1] for example in examples])
-    return {"pixel_values": pixel_values, "labels": labels}
-
-def test_collate_fn(examples):
-    pixel_values = torch.stack([example["pixel_values"] for example in examples])
-    if 'label' in examples[0]:
-        labels = torch.tensor([example["label"] for example in examples])
-    else:
-        labels = torch.tensor([example["fine_label"] for example in examples])
-    return {"pixel_values": pixel_values, "labels": labels}
-
 def ffm_fedavg_depthffm_fim(args):
     ################################### hyperparameter setup ########################################
     args, dataset_train, dataset_test, dict_users, dataset_fim, writer, net_glob, global_model = set_up_hyperparameters(args)
@@ -322,3 +309,16 @@ def load_data(args):
     args.logger.info('num. of training data:{}'.format(len(dataset_train)), main_process_only=True)
     args.logger.info('num. of testing data:{}'.format(len(dataset_test)), main_process_only=True)
     return args,dataset_train,dataset_test,dict_users,dataset_fim
+
+def vit_collate_fn(examples):
+    pixel_values = torch.stack([example[2] for example in examples])
+    labels = torch.tensor([example[1] for example in examples])
+    return {"pixel_values": pixel_values, "labels": labels}
+
+def test_collate_fn(examples):
+    pixel_values = torch.stack([example["pixel_values"] for example in examples])
+    if 'label' in examples[0]:
+        labels = torch.tensor([example["label"] for example in examples])
+    else:
+        labels = torch.tensor([example["fine_label"] for example in examples])
+    return {"pixel_values": pixel_values, "labels": labels}
