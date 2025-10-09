@@ -1,21 +1,7 @@
-from model.cnn import CNNFmnist, CNNFEmnist, CNNSvhn, CNNCifar
-from model.mlp import MLP
-from model.recurrent import CharLSTM, RNN_FedShakespeare
-from model.vgg import vgg19_bn
-from model.resnet import ResNet9FashionMNIST, ResNet18, ReducedResNet18, \
-                         ResNet34, ResNet50, ResNet101, ResNet152, \
-                         CIFARResNet20, SVHNResNet20
-# from model.bert import Bert
-from transformers import AutoModelForCausalLM, BloomForSequenceClassification, AutoTokenizer, default_data_collator, get_linear_schedule_with_warmup
-# from peft import get_peft_model, PromptTuningInit, PromptTuningConfig, TaskType
-# from peft import PeftModel, PeftConfig
 from peft import LoraConfig, get_peft_model
-
 import torch
-import torch.nn as nn
 import copy
-
-from transformers import AutoModelForImageClassification, AutoModelForSequenceClassification, AutoModelForMultipleChoice
+from transformers import AutoModelForImageClassification, AutoModelForSequenceClassification
 from peft import LoraConfig, get_peft_model
 
 ################################### model setup ########################################
