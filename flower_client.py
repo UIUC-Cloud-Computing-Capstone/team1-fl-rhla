@@ -94,11 +94,7 @@ LOG_EVALUATION_COMPLETED = "Client {client_id} evaluation: Loss={loss:.4f}, Accu
 # Dataset configuration
 DATASET_CONFIGS = {
     'cifar100': {'num_classes': 100, 'data_type': 'image'},
-    'sst2': {'num_classes': 2, 'data_type': 'text'},
-    'qqp': {'num_classes': 2, 'data_type': 'text'},
-    'qnli': {'num_classes': 2, 'data_type': 'text'},
     'ledgar': {'num_classes': 2, 'data_type': 'text'},
-    'belebele': {'num_classes': 4, 'data_type': 'text'},
 }
 
 # Non-IID configuration defaults
