@@ -29,16 +29,11 @@ def ffm_fedavg_depthffm_fim(args):
     dataset_fim = get_dataset_fim(args, dataset_fim)
     
     # heterogenity
-    group_num = len(args.heterogeneous_group)
-    group_cnt = get_group_cnt(args, group_num)
+    group_cnt = get_group_cnt(args)
 
     user_groupid_list(args, group_cnt)
 
-    best_test_acc = 0.0
-    best_test_f1 = 0.0
-    best_test_macro_f1 = 0.0
-    best_test_micro_f1 = 0.0
-    metric_keys = {'Accuracy': 0, 'F1': 0, 'Macro_F1': 0, "Micro_F1": 0}
+    best_test_acc, best_test_f1, best_test_micro_f1, metric_keys = init_metrics()
 
     for t in range(args.round):
         # block ids for each clients
@@ -67,9 +62,7 @@ def ffm_fedavg_depthffm_fim(args):
         norm = get_norm(delta_norms)
         train_loss = get_train_loss(local_losses)
         
-        if args.accelerator.is_local_main_process:
-            writer.add_scalar('norm', norm, t)
-            writer.add_scalar('train_loss', train_loss, t)
+        add_to_writer(args, writer, t, norm, train_loss)
 
         global_model = get_global_model(args, global_model, local_updates, num_samples)
 
@@ -79,6 +72,19 @@ def ffm_fedavg_depthffm_fim(args):
         args.accelerator.wait_for_everyone()
 
     return (best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1), metric_keys
+
+def add_to_writer(args, writer, t, norm, train_loss):
+    if args.accelerator.is_local_main_process:
+        writer.add_scalar('norm', norm, t)
+        writer.add_scalar('train_loss', train_loss, t)
+
+def init_metrics():
+    best_test_acc = 0.0
+    best_test_f1 = 0.0
+    best_test_macro_f1 = 0.0
+    best_test_micro_f1 = 0.0
+    metric_keys = {'Accuracy': 0, 'F1': 0, 'Macro_F1': 0, "Micro_F1": 0}
+    return best_test_acc,best_test_f1,best_test_micro_f1,metric_keys
 
 def set_up_hyperparameters(args):
     args, dataset_train, dataset_test, dict_users, dataset_fim = load_data(args)
@@ -272,7 +278,8 @@ def user_groupid_list(args, group_cnt):
     for id, c in enumerate(group_cnt):
         args.user_groupid_list += [id] * c
 
-def get_group_cnt(args, group_num):
+def get_group_cnt(args):
+    group_num = len(args.heterogeneous_group)
     group_cnt = []
     for g in range(group_num):
         if g == (group_num - 1):
