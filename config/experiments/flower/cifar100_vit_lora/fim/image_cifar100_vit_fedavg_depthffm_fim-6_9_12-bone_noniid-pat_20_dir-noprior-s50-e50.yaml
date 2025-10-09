@@ -1,26 +1,4 @@
 _base_ : ['../../base_ffm.yaml']
-# Flower Federated Learning Configuration
-# Optimized for CIFAR-100 with ViT and LoRA fine-tuning
-
-# # Training Parameters
-# round: 500                    # Number of federated learning rounds
-# num_users: 100               # Total number of clients
-# num_selected_users: 1       # Number of clients selected per round
-# tau: 3                       # Local training epochs per round
-# batch_size: 128              # Local batch size
-# local_lr: 0.01               # Local learning rate
-# optimizer: adamw             # Optimizer type
-
-# # Model Configuration
-# model: google/vit-base-patch16-224-in21k
-# peft: lora                   # Parameter Efficient Fine-Tuning method
-# lora_layer: 12               # Number of LoRA layers
-
-# # Heterogeneous LoRA Configuration
-
-# # Dataset Configuration
-# data_type: image
-# dataset: cifar100
 
 ############## base differential #############
 num_users: 100 # number of users: K
