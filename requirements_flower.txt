@@ -9,6 +9,7 @@ numpy>=1.21.0
 torch>=1.12.0
 torchvision>=0.13.0
 transformers>=4.20.0
+peft>=0.4.0
 accelerate>=0.20.0
 tqdm>=4.64.0
 matplotlib>=3.5.0

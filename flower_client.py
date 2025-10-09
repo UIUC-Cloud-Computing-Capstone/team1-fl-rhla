@@ -24,6 +24,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import yaml
+from transformers import AutoModelForImageClassification, AutoModelForSequenceClassification
+from peft import LoraConfig, get_peft_model
 
 # Suppress Flower deprecation warnings for cleaner output
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="flwr")
@@ -259,8 +261,8 @@ class FlowerClient(fl.client.NumPyClient):
         self.dataset_fim = None
         self.args_loaded = None
         
-        # Create dummy model parameters for testing
-        self.model_params = self._create_dummy_model_params()
+        # Create actual model parameters
+        self.model_params = self._create_model_params()
     
     def _validate_config(self) -> None:
         """Validate required configuration parameters."""
@@ -448,10 +450,9 @@ class FlowerClient(fl.client.NumPyClient):
         """
         return self.dataset_info.copy()
     
-    # TODO Liam: do not create dummy model params, use the actual model params
-    def _create_dummy_model_params(self) -> List[np.ndarray]:
+    def _create_model_params(self) -> List[np.ndarray]:
         """
-        Create dummy model parameters for testing based on dataset configuration.
+        Create actual model parameters using AutoModelForImageClassification.from_pretrained.
         
         Returns:
             List of numpy arrays representing model parameters
@@ -468,93 +469,53 @@ class FlowerClient(fl.client.NumPyClient):
             if num_classes <= 0:
                 raise ValueError(f"Invalid number of classes: {num_classes}")
             
-            # Determine hidden size based on model architecture
-            hidden_size = self._get_model_hidden_size(model_name)
+            # Create label mappings for the model
+            label2id = {f"class_{i}": i for i in range(num_classes)}
+            id2label = {i: f"class_{i}" for i in range(num_classes)}
             
-            # Create base model parameters
-            params = self._create_base_model_params(hidden_size, num_classes)
+            # Create the actual model using AutoModelForImageClassification
+            if 'vit' in model_name.lower():
+                model = AutoModelForImageClassification.from_pretrained(
+                    model_name,
+                    label2id=label2id,
+                    id2label=id2label,
+                    ignore_mismatched_sizes=True,
+                    num_labels=num_classes
+                )
+            else:
+                # Fallback for other model types
+                model = AutoModelForImageClassification.from_pretrained(
+                    model_name,
+                    num_labels=num_classes,
+                    ignore_mismatched_sizes=True
+                )
             
-            # Add LoRA parameters if specified
+            # Apply LoRA if specified
             if self.args.get('peft') == 'lora':
-                lora_params = self._create_lora_params(hidden_size)
-                params.extend(lora_params)
+                lora_config = LoraConfig(
+                    r=16,
+                    lora_alpha=16,
+                    target_modules=["query", "value"],
+                    lora_dropout=0.1,
+                    bias="none",
+                    modules_to_save=["classifier"] if 'vit' in model_name.lower() else None,
+                )
+                model = get_peft_model(model, lora_config)
             
-            logging.info(f"Created {len(params)} dummy model parameters for {num_classes} classes "
-                        f"(hidden_size={hidden_size}, model={model_name})")
+            # Convert model parameters to numpy arrays
+            params = []
+            for param in model.parameters():
+                params.append(param.detach().cpu().numpy())
+            
+            logging.info(f"Created {len(params)} actual model parameters for {num_classes} classes "
+                        f"(model={model_name}, peft={self.args.get('peft', 'none')})")
             return params
             
         except Exception as e:
-            logging.error(f"Failed to create dummy model parameters: {e}")
+            logging.error(f"Failed to create model parameters: {e}")
             # Return minimal parameters as fallback
             return [np.random.randn(100, 100).astype(np.float32)]
     
-    def _get_model_hidden_size(self, model_name: str) -> int:
-        """
-        Get hidden size based on model architecture.
-        
-        Args:
-            model_name: Name of the model architecture
-            
-        Returns:
-            Hidden size for the model
-        """
-        if 'vit-base' in model_name.lower():
-            return VIT_BASE_HIDDEN_SIZE
-        elif 'vit-large' in model_name.lower():
-            return VIT_LARGE_HIDDEN_SIZE
-        else:
-            logging.warning(f"Unknown model architecture: {model_name}, using default hidden size")
-            return VIT_BASE_HIDDEN_SIZE
-    
-    # TODO Liam: do not create dummy base model params, use the actual model params
-    def _create_base_model_params(self, hidden_size: int, num_classes: int) -> List[np.ndarray]:
-        """
-        Create base model parameters.
-        
-        Args:
-            hidden_size: Hidden layer size
-            num_classes: Number of output classes
-            
-        Returns:
-            List of base model parameters
-        """
-        params = []
-        
-        # Hidden layer weights and bias
-        params.append(np.random.randn(hidden_size, hidden_size).astype(np.float32))
-        params.append(np.random.randn(hidden_size).astype(np.float32))
-        
-        # Output layer weights and bias
-        params.append(np.random.randn(num_classes, hidden_size).astype(np.float32))
-        params.append(np.random.randn(num_classes).astype(np.float32))
-        
-        return params
-    
-    def _create_lora_params(self, hidden_size: int) -> List[np.ndarray]:
-        """
-        Create LoRA parameters.
-        
-        Args:
-            hidden_size: Hidden layer size
-            
-        Returns:
-            List of LoRA parameters
-        """
-        lora_layers = self.args.get('lora_layer', 12)
-        
-        # Validate LoRA layers
-        if lora_layers <= 0:
-            logging.warning(f"Invalid lora_layer value: {lora_layers}, using default of 12")
-            lora_layers = 12
-        
-        params = []
-        for _ in range(lora_layers):
-            # LoRA A and B matrices
-            params.append(np.random.randn(LORA_RANK, hidden_size).astype(np.float32))  # LoRA A
-            params.append(np.random.randn(hidden_size, LORA_RANK).astype(np.float32))  # LoRA B
-        
-        logging.info(f"Created {lora_layers} LoRA layer pairs (rank={LORA_RANK})")
-        return params
     
     def _train_with_actual_data(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
         """
