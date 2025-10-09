@@ -322,6 +322,7 @@ class FlowerClient(fl.client.NumPyClient):
         required_params = ['data_type', 'peft', 'lora_layer', 'dataset', 'model']
         for param in required_params:
             if not hasattr(self.args, param):
+                # TODO Liam: is this error exception proper? 
                 logging.warning(f"Missing configuration parameter: {param}, using default")
     
     def _get_loss_function(self) -> nn.Module:
@@ -435,7 +436,7 @@ class FlowerClient(fl.client.NumPyClient):
         dataset_data = self._load_dataset_with_partition(dataset_args)
         
         if dataset_data is None:
-            return False
+            raise ValueError("Failed to load dataset")
             
         # Store dataset information
         self._store_dataset_data(dataset_data)
@@ -463,12 +464,10 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Validate that we have the required data
         if dataset_train is None or len(dataset_train) == 0:
-            logging.error("Failed to load training dataset")
-            return None
-                
+            raise ValueError("Failed to load training dataset")
+            
         if dict_users is None or len(dict_users) == 0:
-            logging.error("Failed to load user data partition")
-            return None
+            raise ValueError("Failed to load user data partition")
 
         return (args_loaded, dataset_train, dataset_test, dict_users, dataset_fim)
             
@@ -564,12 +563,7 @@ class FlowerClient(fl.client.NumPyClient):
                 num_labels=num_classes
             )
         else:
-            # Fallback for other model types
-            model = AutoModelForImageClassification.from_pretrained(
-                model_name,
-                num_labels=num_classes,
-                ignore_mismatched_sizes=True
-            )
+            raise ValueError(f"Unsupported model type: {model_name}")
             
         # Apply LoRA if specified
         if self.args.get('peft') == 'lora':
