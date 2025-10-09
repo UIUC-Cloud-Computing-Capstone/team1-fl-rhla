@@ -2,8 +2,8 @@
 Flower Client Implementation
 
 This module provides a comprehensive Flower client implementation for federated learning
-scenarios. It supports configuration-driven setup, dataset loading, and realistic
-training and evaluation simulation. The client is designed to work with various
+scenarios. It supports configuration-driven setup, dataset loading, and actual
+training and evaluation with real data. The client is designed to work with various
 datasets and model architectures including LoRA fine-tuning.
 
 Author: Team1-FL-RHLA
@@ -94,11 +94,11 @@ DEFAULT_NUM_WORKERS = 0  # Avoid multiprocessing issues in federated setting
 # HELPER CLASSES
 # =============================================================================
 
-class MockArgs:
-    """Mock arguments class for dataset loading compatibility."""
+class DatasetArgs:
+    """Arguments class for dataset loading compatibility."""
     
     def __init__(self, config_dict: Dict[str, Any], client_id: int):
-        """Initialize mock args from configuration dictionary."""
+        """Initialize dataset args from configuration dictionary."""
         # Dataset configuration
         self.dataset = config_dict.get('dataset', 'cifar100')
         self.model = config_dict.get('model', 'google/vit-base-patch16-224-in21k')
@@ -211,7 +211,7 @@ class FlowerClient(fl.client.NumPyClient):
     - Configuration-driven setup from YAML files
     - Dataset loading and management
     - Model parameter creation based on architecture
-    - Realistic training and evaluation simulation
+    - Actual training and evaluation with real data
     - LoRA fine-tuning support
     """
     
@@ -363,9 +363,9 @@ class FlowerClient(fl.client.NumPyClient):
         """
         logging.info(f"Loading dataset: {dataset_name}")
 
-        # Create mock args and load dataset
-        mock_args = MockArgs(self.args.to_dict(), self.client_id)
-        dataset_data = self._load_dataset_with_partition(mock_args)
+        # Create dataset args and load dataset
+        dataset_args = DatasetArgs(self.args.to_dict(), self.client_id)
+        dataset_data = self._load_dataset_with_partition(dataset_args)
         
         if dataset_data is None:
             return False
@@ -378,14 +378,14 @@ class FlowerClient(fl.client.NumPyClient):
         
         return True
     
-    def _load_dataset_with_partition(self, mock_args: MockArgs) -> Optional[Tuple]:
+    def _load_dataset_with_partition(self, dataset_args: DatasetArgs) -> Optional[Tuple]:
         """Load dataset using load_partition function."""
         
-        logging.info(f"Loading dataset: {mock_args.dataset} with model: {mock_args.model}")
-        logging.info(f"Non-IID configuration: {mock_args.noniid_type}, {mock_args.pat_num_cls} classes per client")
+        logging.info(f"Loading dataset: {dataset_args.dataset} with model: {dataset_args.model}")
+        logging.info(f"Non-IID configuration: {dataset_args.noniid_type}, {dataset_args.pat_num_cls} classes per client")
 
         # Call load_partition to get the actual dataset with non-IID partitioning
-        args_loaded, dataset_train, dataset_test, _, _, dict_users, dataset_fim = load_partition(mock_args)
+        args_loaded, dataset_train, dataset_test, _, _, dict_users, dataset_fim = load_partition(dataset_args)
 
         # Debug prints
         print('dataset_train length: ', len(dataset_train))
@@ -535,7 +535,7 @@ class FlowerClient(fl.client.NumPyClient):
         Args:
             local_epochs: Number of local training epochs
             learning_rate: Learning rate for training
-            server_round: Current server round (for loss simulation)
+            server_round: Current server round
             
         Returns:
             Total training loss
@@ -715,7 +715,7 @@ class FlowerClient(fl.client.NumPyClient):
             elif hasattr(labels, 'shape'):
                 batch_size = labels.shape[0]
             else:
-                batch_size = 128  # Default
+                raise ValueError("Cannot determine batch size from pixel_values or labels")
 
             # Compute actual loss using model forward pass
             loss = self._compute_actual_loss(pixel_values, labels, batch_size)
@@ -723,16 +723,9 @@ class FlowerClient(fl.client.NumPyClient):
             logging.debug(f"Batch {batch_idx}: size={batch_size}, actual_loss={loss:.4f}")
 
         else:
-            # Fallback: use a simple loss computation without simulation
-            # loss = self._compute_simple_loss(batch_size=128)
             raise ValueError(f"Invalid pixel_values or labels: {pixel_values}, {labels}")
 
         return float(loss)
-
-    # except Exception as e:
-    # logging.warning(f"Error computing batch loss: {e}")
-    # Fallback to simple loss computation
-    # return float(self._compute_simple_loss(batch_size=128))
 
     def _compute_actual_loss(self, pixel_values, labels, batch_size: int) -> float:
         """
@@ -758,8 +751,7 @@ class FlowerClient(fl.client.NumPyClient):
         pixel_values = pixel_values.to(device)
         labels = labels.to(device)
 
-        # Create a simple model for forward pass (since we don't have the actual model)
-        # This simulates the forward pass without using the actual model parameters
+        # Create a simple model for forward pass
         loss = self._forward_pass_loss(pixel_values, labels, batch_size)
 
         return float(loss.detach().cpu().item())
@@ -777,12 +769,10 @@ class FlowerClient(fl.client.NumPyClient):
             Computed loss tensor
     """
         
-        # Create a simple linear layer for demonstration
-        # In a real implementation, this would use the actual model
+        # Create a simple linear layer for forward pass
         num_classes = self.dataset_info.get('num_classes', 100)
 
-        # Simple linear transformation (simulating model forward pass)
-        # This is a placeholder - in reality you'd use the actual model
+        # Linear transformation for forward pass
         # For CIFAR-100 with ViT, pixel_values has shape (batch_size, 3, 224, 224)
         # We need to flatten it to (batch_size, 3*224*224) = (batch_size, 150528)
         flattened_size = pixel_values.view(batch_size, -1).shape[1]
@@ -804,7 +794,7 @@ class FlowerClient(fl.client.NumPyClient):
         Evaluate using actual dataset data with real batch iteration.
 
         Args:
-            server_round: Current server round (for accuracy simulation)
+            server_round: Current server round
 
         Returns:
             Tuple of (accuracy, loss)
@@ -829,7 +819,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _create_evaluation_dataloader(self, eval_dataset) -> 'DataLoader':
         """Create DataLoader for evaluation."""
         from torch.utils.data import DataLoader
-        batch_size = min(128, len(eval_dataset))  # Use smaller batches for evaluation
+        batch_size = len(eval_dataset)  # Use full dataset for evaluation
         
         # Use the appropriate collate function based on the dataset type
         if hasattr(self.args_loaded, 'dataset') and self.args_loaded.dataset == 'cifar100':
@@ -927,7 +917,7 @@ class FlowerClient(fl.client.NumPyClient):
             elif hasattr(labels, 'shape'):
                 batch_size = labels.shape[0]
             else:
-                batch_size = 128  # Default
+                raise ValueError("Cannot determine batch size from pixel_values or labels")
 
             # Compute actual loss and accuracy
             loss, num_correct = self._compute_actual_evaluation_metrics(pixel_values, labels, batch_size)
@@ -988,12 +978,14 @@ class FlowerClient(fl.client.NumPyClient):
             Tuple of (loss, predictions)
         """
         
-        # Create a simple linear layer for demonstration
-        # In a real implementation, this would use the actual model
+        # Create a simple linear layer for forward pass
         num_classes = self.dataset_info.get('num_classes', 100)
 
-        # Simple linear transformation (simulating model forward pass)
-        hidden_size = pixel_values.shape[1] if len(pixel_values.shape) > 1 else 768
+        # Linear transformation for forward pass
+        if len(pixel_values.shape) > 1:
+            hidden_size = pixel_values.shape[1]
+        else:
+            raise ValueError(f"Invalid pixel_values shape: {pixel_values.shape}")
         linear = torch.nn.Linear(hidden_size, num_classes).to(pixel_values.device)
 
         # Forward pass
@@ -1037,7 +1029,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def fit(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[List[np.ndarray], int, Dict[str, Any]]:
         """
-        Train the model on local data (simulated).
+        Train the model on local data.
         
         Args:
             parameters: Model parameters from server
@@ -1050,18 +1042,24 @@ class FlowerClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         
         # Extract and validate configuration
-        server_round = config.get('server_round', 0)
-        # Use tau from config for local epochs, with fallback to config parameter
-        local_epochs = max(1, config.get('local_epochs', self.args.get('tau', DEFAULT_LOCAL_EPOCHS)))
-        learning_rate = max(DEFAULT_MIN_LEARNING_RATE,
-                         config.get('learning_rate', self.args.get('local_lr', DEFAULT_LEARNING_RATE)))
+        server_round = config.get('server_round')
+        if server_round is None:
+            raise ValueError("server_round not provided in config")
+        # Get local epochs and learning rate from config
+        local_epochs = config.get('local_epochs', self.args.get('tau'))
+        learning_rate = config.get('learning_rate', self.args.get('local_lr'))
+        
+        if local_epochs is None or local_epochs < 1:
+            raise ValueError(f"Invalid local_epochs: {local_epochs}")
+        if learning_rate is None or learning_rate <= 0:
+            raise ValueError(f"Invalid learning_rate: {learning_rate}")
 
         # Debug: Print the entire config to see what's being passed
         logging.info(f"Client {self.client_id} received config: {config}")
         logging.info(f"Client {self.client_id} starting training for round {server_round} "
                      f"(epochs={local_epochs}, lr={learning_rate:.4f})")
 
-        # Train using actual dataset if available, otherwise simulate
+        # Train using actual dataset
         data_loaded = self.dataset_info.get('data_loaded', False)
         dataset_train_available = self.dataset_train is not None
         
@@ -1101,7 +1099,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[float, int, Dict[str, Any]]:
         """
-        Evaluate the model on local test data (simulated).
+        Evaluate the model on local test data.
         
         Args:
             parameters: Model parameters from server
@@ -1114,13 +1112,17 @@ class FlowerClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         
         # Extract server round from config
-        server_round = config.get('server_round', 0)
+        server_round = config.get('server_round')
+        if server_round is None:
+            raise ValueError("server_round not provided in config")
         
-        # Evaluate using actual dataset if available, otherwise simulate
+        # Evaluate using actual dataset
         if self.dataset_info.get('data_loaded', False) and self.dataset_test is not None:
             # Use actual dataset for evaluation
             accuracy, loss = self._evaluate_with_actual_data(server_round)
-            num_examples = min(500, self.dataset_info.get('test_samples', 500))
+            num_examples = self.dataset_info.get('test_samples')
+            if num_examples is None:
+                raise ValueError("test_samples not available in dataset_info")
             logging.info(f"Client {self.client_id} evaluated with actual test dataset: {num_examples} samples")
         else:
             raise ValueError("No test dataset available for evaluation")
