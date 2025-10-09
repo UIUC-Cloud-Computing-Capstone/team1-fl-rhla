@@ -94,7 +94,7 @@ def ffm_fedavg_depthffm_fim(args):
     args.logger.info('model dim: '+str(args.dim), main_process_only=True)
 
     ###################################### model initialization ###########################
-    t1 = time.time()
+    #t1 = time.time()
     args.logger.info("{:<50}".format("-" * 15 + " training... " + "-" * 50)[0:60], main_process_only=True)
     # initialize data loader for training and/or public dataset
     data_loader_list = []
@@ -257,42 +257,42 @@ def ffm_fedavg_depthffm_fim(args):
             args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
                 format(t, train_loss, norm, test_acc), main_process_only=True)
         elif 'bert' in args.model:
-            if 'sst2' in args.dataset:
-                test_acc, test_loss = test_sst2(copy.deepcopy(net_glob), dataset_test, args, t)
-                # metrics
-                if args.accelerator.is_local_main_process:
-                    writer.add_scalar('test_acc', test_acc, t)
-                    if test_acc > best_test_acc:
-                        best_test_acc = test_acc
-                        metric_keys['Accuracy'] = 1
-                args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
-                    format(t, train_loss, norm, test_acc), main_process_only=True)
-            elif 'qqp' in args.dataset:
-                test_f1, test_acc, test_loss = test_qqp(copy.deepcopy(net_glob), dataset_test, args, t)
-                # metrics
-                if args.accelerator.is_local_main_process:
-                    writer.add_scalar('test_acc', test_acc, t)
-                    writer.add_scalar('test_f1', test_f1, t)
+            # if 'sst2' in args.dataset:
+            #     test_acc, test_loss = test_sst2(copy.deepcopy(net_glob), dataset_test, args, t)
+            #     # metrics
+            #     if args.accelerator.is_local_main_process:
+            #         writer.add_scalar('test_acc', test_acc, t)
+            #         if test_acc > best_test_acc:
+            #             best_test_acc = test_acc
+            #             metric_keys['Accuracy'] = 1
+            #     args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
+            #         format(t, train_loss, norm, test_acc), main_process_only=True)
+            # elif 'qqp' in args.dataset:
+            #     test_f1, test_acc, test_loss = test_qqp(copy.deepcopy(net_glob), dataset_test, args, t)
+            #     # metrics
+            #     if args.accelerator.is_local_main_process:
+            #         writer.add_scalar('test_acc', test_acc, t)
+            #         writer.add_scalar('test_f1', test_f1, t)
 
-                    if test_f1 > best_test_f1:
-                        best_test_f1 = test_f1
-                        # best performance based on f1
-                        best_test_acc = test_acc
-                        metric_keys['Accuracy'] = 1
-                        metric_keys['F1'] = 1
-                args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_f1 = {:.3f}, test_acc = {:.3f}'.
-                    format(t, train_loss, norm, test_f1, test_acc), main_process_only=True)
-            elif 'qnli' in args.dataset:
-                test_acc, test_loss = test_qnli(copy.deepcopy(net_glob), dataset_test, args, t)
-                # metrics
-                if args.accelerator.is_local_main_process:
-                    writer.add_scalar('test_acc', test_acc, t)
-                    if test_acc > best_test_acc:
-                        best_test_acc = test_acc
-                        metric_keys['Accuracy'] = 1
-                args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
-                    format(t, train_loss, norm, test_acc), main_process_only=True)
-            elif 'ledgar' in args.dataset:
+            #         if test_f1 > best_test_f1:
+            #             best_test_f1 = test_f1
+            #             # best performance based on f1
+            #             best_test_acc = test_acc
+            #             metric_keys['Accuracy'] = 1
+            #             metric_keys['F1'] = 1
+            #     args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_f1 = {:.3f}, test_acc = {:.3f}'.
+            #         format(t, train_loss, norm, test_f1, test_acc), main_process_only=True)
+            # elif 'qnli' in args.dataset:
+            #     test_acc, test_loss = test_qnli(copy.deepcopy(net_glob), dataset_test, args, t)
+            #     # metrics
+            #     if args.accelerator.is_local_main_process:
+            #         writer.add_scalar('test_acc', test_acc, t)
+            #         if test_acc > best_test_acc:
+            #             best_test_acc = test_acc
+            #             metric_keys['Accuracy'] = 1
+            #     args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
+            #         format(t, train_loss, norm, test_acc), main_process_only=True)
+            if 'ledgar' in args.dataset:
                 test_macro_f1, test_micro_f1, test_loss = test_ledgar(copy.deepcopy(net_glob), dataset_test, args, t)
                 # metrics
                 if args.accelerator.is_local_main_process:
@@ -306,16 +306,16 @@ def ffm_fedavg_depthffm_fim(args):
 
                 args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_macro_f1 = {:.3f}, test_micro_f1 = {:.3f}'.
                     format(t, train_loss, norm, test_macro_f1, test_micro_f1), main_process_only=True)
-            elif 'belebele' in args.dataset:
-                test_acc, test_loss = test_belebele(copy.deepcopy(net_glob), dataset_test, args, t)
-                # metrics
-                if args.accelerator.is_local_main_process:
-                    writer.add_scalar('test_acc', test_acc, t)
-                    if test_acc > best_test_acc:
-                        best_test_acc = test_acc
-                        metric_keys['Accuracy'] = 1
-                args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
-                    format(t, train_loss, norm, test_acc), main_process_only=True)
+            # elif 'belebele' in args.dataset:
+            #     test_acc, test_loss = test_belebele(copy.deepcopy(net_glob), dataset_test, args, t)
+            #     # metrics
+            #     if args.accelerator.is_local_main_process:
+            #         writer.add_scalar('test_acc', test_acc, t)
+            #         if test_acc > best_test_acc:
+            #             best_test_acc = test_acc
+            #             metric_keys['Accuracy'] = 1
+            #     args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
+            #         format(t, train_loss, norm, test_acc), main_process_only=True)
         else:
             test_acc, test_loss = test(copy.deepcopy(net_glob), dataset_test, args)
             # metrics
