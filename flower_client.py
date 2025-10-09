@@ -334,8 +334,8 @@ class FlowerClient(fl.client.NumPyClient):
             dataset_info['num_classes'] = 100  # Default fallback
             dataset_info['data_type'] = 'image'
 
-        # Try to load actual dataset if available
-        dataset_info['data_loaded'] = self._try_load_dataset(dataset_name)
+        # Load actual dataset if available
+        dataset_info['data_loaded'] = self._load_dataset(dataset_name)
         
         # If data was loaded successfully, update dataset_info with actual data
         if dataset_info['data_loaded'] and hasattr(self, 'dataset_train'):
@@ -357,7 +357,7 @@ class FlowerClient(fl.client.NumPyClient):
 
         return dataset_info
     
-    def _try_load_dataset(self, dataset_name: str) -> bool:
+    def _load_dataset(self, dataset_name: str) -> bool:
         """
         Attempt to load actual dataset data.
         
