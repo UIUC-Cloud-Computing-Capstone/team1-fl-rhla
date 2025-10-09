@@ -88,8 +88,6 @@ DEFAULT_DIR_BETA = 1.0
 # Data processing constants
 DEFAULT_BATCH_SIZE = 128
 DEFAULT_NUM_WORKERS = 0  # Avoid multiprocessing issues in federated setting
-DEFAULT_IMAGE_SIZE = (3, 224, 224)
-DEFAULT_NUM_CLASSES = 100
 
 
 # =============================================================================
@@ -155,19 +153,6 @@ class MockArgs:
         return SimpleLogger()
 
 
-class SimpleClientDataset:
-    """Simple client dataset wrapper as fallback."""
-    
-    def __init__(self, indices: List[int]):
-        self.indices = indices
-
-    def __len__(self):
-        return len(self.indices)
-
-    def __getitem__(self, idx):
-        # TODO Liam: remove this dummy data
-        """Return dummy data for fallback."""
-        return (torch.randn(*DEFAULT_IMAGE_SIZE), torch.randint(0, DEFAULT_NUM_CLASSES, (1,)).item())
 
 
 class Config:
@@ -342,9 +327,7 @@ class FlowerClient(fl.client.NumPyClient):
             dataset_info['num_classes'] = config['num_classes']
             dataset_info['data_type'] = config['data_type']
         else:
-            logging.warning(f"Unknown dataset: {dataset_name}, using defaults")
-            dataset_info['num_classes'] = 100  # Default fallback
-            dataset_info['data_type'] = 'image'
+            raise ValueError(f"Unknown dataset: {dataset_name}")
 
         # Load actual dataset if available
         
@@ -609,9 +592,27 @@ class FlowerClient(fl.client.NumPyClient):
         """Get the appropriate collate function for ViT models with CIFAR-100."""
         def vit_collate_fn(examples):
             """Collate function for ViT models that handles the CIFAR-100 dataset format."""
-            # The DatasetSplit returns (image, label, pixel_values) for CIFAR-100
-            pixel_values = torch.stack([example[2] for example in examples])
-            labels = torch.tensor([example[1] for example in examples])
+            # Find the pixel_values tensor in the example
+            pixel_values = None
+            labels = None
+            
+            for example in examples:
+                for i, item in enumerate(example):
+                    if isinstance(item, torch.Tensor) and len(item.shape) == 3:  # (C, H, W)
+                        if pixel_values is None:
+                            pixel_values = []
+                        pixel_values.append(item)
+                    elif isinstance(item, (int, float)) or (isinstance(item, torch.Tensor) and item.dim() == 0):
+                        if labels is None:
+                            labels = []
+                        labels.append(int(item) if isinstance(item, torch.Tensor) else item)
+            
+            if pixel_values is None or labels is None:
+                raise ValueError(f"Could not find pixel_values or labels in dataset format: {[type(x) for x in examples[0]]}")
+            
+            pixel_values = torch.stack(pixel_values)
+            labels = torch.tensor(labels)
+            
             return {"pixel_values": pixel_values, "labels": labels}
         
         return vit_collate_fn
@@ -637,11 +638,10 @@ class FlowerClient(fl.client.NumPyClient):
             # Extract batch data
             pixel_values, labels = self._extract_batch_data(batch)
             
-            # Compute loss and update parameters
+            # Compute loss
             batch_loss = self._compute_batch_loss(pixel_values, labels, server_round, batch_idx)
             epoch_loss += batch_loss
             num_batches += 1
-            self._update_parameters(learning_rate)
 
             # Log progress for first few batches
             if batch_idx < 3:
@@ -692,17 +692,6 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 
-    def _create_simple_client_dataset(self, client_indices: List[int]):
-        """
-        Create a simple client dataset as fallback.
-        
-        Args:
-            client_indices: List of indices for this client's data
-            
-        Returns:
-            Simple dataset wrapper
-        """
-        return SimpleClientDataset(client_indices)
 
     def _compute_batch_loss(self, pixel_values, labels, server_round: int, batch_idx: int) -> float:
         """
@@ -808,81 +797,7 @@ class FlowerClient(fl.client.NumPyClient):
 
         return loss
 
-    def _simulate_training(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
-        """
-        Perform training without actual data (fallback method).
-        
-        Args:
-            local_epochs: Number of local training epochs
-            learning_rate: Learning rate for training
-            server_round: Current server round
-            
-        Returns:
-            Total training loss
-        """
-        total_loss = 0.0
-
-        for epoch in range(local_epochs):
-            epoch_loss = 0.0
-
-            # Perform training steps without simulation
-            for step in range(DEFAULT_TRAINING_STEPS_PER_EPOCH):
-                # Compute actual loss based on current parameters
-                loss = self._compute_parameter_based_loss(learning_rate, server_round)
-                epoch_loss += loss
-                
-                # Update parameters
-                self._update_parameters(learning_rate)
-            
-            total_loss += epoch_loss / DEFAULT_TRAINING_STEPS_PER_EPOCH
-        
-        return total_loss
     
-    def _compute_parameter_based_loss(self, learning_rate: float, server_round: int) -> float:
-        """
-        Compute loss based on current model parameters without simulation.
-
-        Args:
-            learning_rate: Current learning rate
-            server_round: Current server round
-
-        Returns:
-            Computed loss value
-        """
-        
-        # Compute loss based on parameter characteristics
-        # This is not a simulation but a deterministic computation based on actual parameters
-
-        # Calculate parameter norm as a proxy for model complexity
-        param_norm = 0.0
-        for param in self.model_params:
-            param_norm += np.linalg.norm(param)
-
-        # Normalize by number of parameters
-        param_norm /= len(self.model_params)
-
-        # Compute loss based on parameter characteristics and learning rate
-        # This creates a realistic loss that depends on actual model state
-        base_loss = param_norm * 0.1  # Scale parameter norm
-        lr_factor = learning_rate * 0.5  # Learning rate influence
-        round_factor = max(0.1, 1.0 - server_round * 0.001)  # Gradual decrease over rounds
-
-        loss = base_loss + lr_factor + round_factor
-
-        return float(loss)
-
-    def _update_parameters(self, learning_rate: float) -> None:
-        """
-        Simulate parameter updates during training.
-        
-        Args:
-            learning_rate: Learning rate for updates
-        """
-        for i, param in enumerate(self.model_params):
-            # Add small random update scaled by learning rate
-            update_scale = 0.01 * learning_rate
-            update = np.random.normal(0, update_scale, param.shape).astype(param.dtype)
-            self.model_params[i] = param + update
     
     def _evaluate_with_actual_data(self, server_round: int) -> Tuple[float, float]:
         """
@@ -897,8 +812,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Prepare evaluation dataset
         eval_dataset = self._get_evaluation_dataset()
         if eval_dataset is None:
-            logging.warning("No test dataset available, falling back to simulation")
-            return self._simulate_evaluation_metrics(server_round)
+            raise ValueError("No test dataset available for evaluation")
 
         # Create evaluation DataLoader
         eval_dataloader = self._create_evaluation_dataloader(eval_dataset)
@@ -909,20 +823,28 @@ class FlowerClient(fl.client.NumPyClient):
         return metrics
     
     def _get_evaluation_dataset(self):
-        """Get evaluation dataset (test or train fallback)."""
-        return self.dataset_test if self.dataset_test is not None else self.dataset_train
+        """Get evaluation dataset (test only)."""
+        return self.dataset_test
     
     def _create_evaluation_dataloader(self, eval_dataset) -> 'DataLoader':
         """Create DataLoader for evaluation."""
         from torch.utils.data import DataLoader
         batch_size = min(128, len(eval_dataset))  # Use smaller batches for evaluation
         
+        # Use the appropriate collate function based on the dataset type
+        if hasattr(self.args_loaded, 'dataset') and self.args_loaded.dataset == 'cifar100':
+            # For CIFAR-100, use the vit_collate_fn that handles the dataset format
+            collate_fn = self._get_vit_collate_fn()
+        else:
+            collate_fn = None  # Use default collate
+        
         return DataLoader(
             eval_dataset,
             batch_size=batch_size,
             shuffle=False,
             drop_last=False,
-            num_workers=DEFAULT_NUM_WORKERS
+            num_workers=DEFAULT_NUM_WORKERS,
+            collate_fn=collate_fn
         )
     
     def _perform_evaluation(self, eval_dataloader: 'DataLoader', server_round: int) -> Tuple[float, float]:
@@ -980,8 +902,7 @@ class FlowerClient(fl.client.NumPyClient):
 
             return accuracy, avg_loss
         else:
-            logging.warning("No batches processed during evaluation, falling back to simulation")
-            return self._simulate_evaluation_metrics(0)  # Use round 0 for fallback
+            raise ValueError("No batches processed during evaluation")
 
     def _compute_batch_evaluation_metrics(self, pixel_values, labels, server_round: int, batch_idx: int) -> Tuple[
         float, int, int]:
@@ -1087,55 +1008,6 @@ class FlowerClient(fl.client.NumPyClient):
 
         return loss, predictions
 
-    def _simulate_evaluation_metrics(self, server_round: int) -> Tuple[float, float]:
-        """
-        Compute evaluation metrics without actual data (fallback method).
-        
-        Args:
-            server_round: Current server round
-            
-        Returns:
-            Tuple of (accuracy, loss)
-        """
-        # Compute accuracy based on parameter characteristics
-        accuracy = self._compute_parameter_based_accuracy(server_round)
-
-        # Compute loss based on parameter characteristics
-        loss = self._compute_parameter_based_loss(learning_rate=0.01, server_round=server_round)
-        
-        return accuracy, loss
-    
-    def _compute_parameter_based_accuracy(self, server_round: int) -> float:
-        """
-        Compute accuracy based on current model parameters without simulation.
-
-        Args:
-            server_round: Current server round
-
-        Returns:
-            Computed accuracy value
-        """
-
-        # Compute accuracy based on parameter characteristics
-        # This is not a simulation but a deterministic computation based on actual parameters
-
-        # Calculate parameter variance as a proxy for model diversity
-        param_variance = 0.0
-        for param in self.model_params:
-            param_variance += np.var(param)
-
-        # Normalize by number of parameters
-        param_variance /= len(self.model_params)
-
-        # Compute accuracy based on parameter characteristics
-        # Higher variance typically indicates better model capacity
-        base_accuracy = min(0.95, 0.3 + param_variance * 10)  # Scale variance
-        round_factor = min(0.2, server_round * 0.001)  # Gradual improvement over rounds
-
-        accuracy = base_accuracy + round_factor
-        accuracy = max(0.0, min(1.0, accuracy))  # Clamp to [0, 1]
-
-        return float(accuracy)
 
     def get_parameters(self, config: Dict[str, Any]) -> List[np.ndarray]:
         """
@@ -1206,10 +1078,6 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             logging.error(f"Client {self.client_id} cannot train: data_loaded={data_loaded}, dataset_train_available={dataset_train_available}")
             raise ValueError("No actual dataset found for training")
-            # # Simulate training
-            # total_loss = self._simulate_training(local_epochs, learning_rate, server_round)
-            # num_examples = np.random.randint(100, 1000)
-            # logging.info(f"Client {self.client_id} trained with simulated data: {num_examples} samples")
 
         avg_loss = total_loss / local_epochs
 
@@ -1226,7 +1094,7 @@ class FlowerClient(fl.client.NumPyClient):
             'client_id': self.client_id,
             'learning_rate': learning_rate,
             'data_loaded': self.dataset_info.get('data_loaded', False),
-            'noniid_type': self.dataset_info.get('noniid_type', 'simulated')
+            'noniid_type': self.dataset_info.get('noniid_type', 'unknown')
         }
 
         return self.get_parameters(config), num_examples, metrics
@@ -1255,10 +1123,7 @@ class FlowerClient(fl.client.NumPyClient):
             num_examples = min(500, self.dataset_info.get('test_samples', 500))
             logging.info(f"Client {self.client_id} evaluated with actual test dataset: {num_examples} samples")
         else:
-            # Simulate evaluation metrics
-            accuracy, loss = self._simulate_evaluation_metrics(server_round)
-            num_examples = np.random.randint(50, 200)
-            logging.info(f"Client {self.client_id} evaluated with simulated data: {num_examples} samples")
+            raise ValueError("No test dataset available for evaluation")
 
         # Update training history
         self.training_history['accuracies'].append(accuracy)
@@ -1271,7 +1136,7 @@ class FlowerClient(fl.client.NumPyClient):
             'accuracy': accuracy,
             'client_id': self.client_id,
             'data_loaded': self.dataset_info.get('data_loaded', False),
-            'noniid_type': self.dataset_info.get('noniid_type', 'simulated')
+            'noniid_type': self.dataset_info.get('noniid_type', 'unknown')
         }
 
         return loss, num_examples, metrics
@@ -1363,19 +1228,6 @@ def start_flower_client(args: 'Config', server_address: str = "localhost",
     )
 
 
-def setup_random_seeds(seed: int, client_id: int) -> None:
-    """
-    Setup random seeds for reproducibility.
-    
-    Args:
-        seed: Base seed value
-        client_id: Client identifier for unique seeds
-    """
-    client_seed = seed + client_id
-    torch.manual_seed(client_seed)
-    np.random.seed(client_seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
 
 
 def setup_device(gpu_id: int) -> torch.device:
@@ -1507,9 +1359,8 @@ def _load_and_merge_config(args) -> 'Config':
 
 
 def _setup_environment(config: 'Config', args) -> None:
-    """Setup device and random seeds."""
+    """Setup device."""
     config.device = setup_device(args.gpu)
-    setup_random_seeds(args.seed, args.client_id)
 
 
 if __name__ == "__main__":
