@@ -1,6 +1,4 @@
-import torch, random, argparse, os
-from algorithms.engine.ffm_fedavg_depthfl import ffm_fedavg_depthfl
-from algorithms.engine.ffm_fedavg_depthffm import ffm_fedavg_depthffm
+import torch, argparse, os
 from algorithms.engine.ffm_fedavg_depthffm_fim import ffm_fedavg_depthffm_fim
 from accelerate import Accelerator
 from accelerate import DistributedDataParallelKwargs
@@ -9,7 +7,6 @@ from utils.log_utils import set_log_path
 
 from mmengine.config import Config
 import logging
-from datetime import datetime
 import sys
 import numpy as np
 import copy
