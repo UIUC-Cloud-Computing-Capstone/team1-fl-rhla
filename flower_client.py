@@ -330,6 +330,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_loss_function(self) -> nn.Module:
         """Get appropriate loss function based on data type."""
+        # TODO Liam: extract constant
         data_type = getattr(self.args, 'data_type', 'image')
         
         loss_functions = {
@@ -380,10 +381,12 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_dataset_name(self) -> str:
         """Get dataset name from configuration."""
+        # TODO Liam: extract constant
         return self.args.get('dataset', 'cifar100')
     
     def _create_base_dataset_info(self, dataset_name: str) -> Dict[str, Any]:
         """Create base dataset information dictionary."""
+        # TODO Liam: extract constant
         return {
             'dataset_name': dataset_name,
             'data_type': self.args.get('data_type', 'image'),
