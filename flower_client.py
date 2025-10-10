@@ -919,6 +919,7 @@ class FlowerClient(fl.client.NumPyClient):
         return (hasattr(self.args_loaded, 'dataset') and 
                 'ledgar' in self.args_loaded.dataset)
     
+    # TODO Liam: is this correct?
     def _train_single_epoch_with_gradients(self, dataloader, epoch: int, server_round: int) -> float:
         """Train for a single epoch with actual gradients and parameter updates."""
         epoch_loss = 0.0
@@ -931,6 +932,7 @@ class FlowerClient(fl.client.NumPyClient):
 
         return self._compute_epoch_metrics(epoch, epoch_loss, num_batches)
     
+    # TODO Liam: is this correct?
     def _process_training_batch_with_gradients(self, batch, batch_idx: int, epoch: int) -> float:
         """Process a single training batch with actual gradients."""
         # Extract batch data
@@ -1007,6 +1009,7 @@ class FlowerClient(fl.client.NumPyClient):
             Dataset subset for this client
         """
         # Use shared create_client_dataset function
+        # TODO Liam: is this correct?
         client_dataset = create_client_dataset(self.dataset_train, client_indices, self.args_loaded)
 
         logging.debug(f"Client {self.client_id} created dataset subset with {len(client_dataset)} samples")
