@@ -819,6 +819,7 @@ class FlowerClient(fl.client.NumPyClient):
         import gc
         gc.collect()
     
+    # TODO Liam: refactor this
     def _initialize_heterogeneous_config(self) -> None:
         """Initialize heterogeneous group configuration if needed."""
         # Only initialize if we have heterogeneous group configuration
