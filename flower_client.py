@@ -472,11 +472,13 @@ class FlowerClient(fl.client.NumPyClient):
         print('args_loaded: ', args_loaded)
 
         # Validate that we have the required data
-        if dataset_train is None or len(dataset_train) == 0:
+        if not dataset_train:
             raise ValueError("Failed to load training dataset")
             
-        if dict_users is None or len(dict_users) == 0:
+        if not dict_users:
             raise ValueError("Failed to load user data partition")
+
+        # TODO Liam: other edge cases
 
         return (args_loaded, dataset_train, dataset_test, dict_users, dataset_fim)
             
