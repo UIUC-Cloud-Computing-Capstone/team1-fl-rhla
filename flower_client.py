@@ -417,6 +417,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _update_dataset_info_with_loaded_data(self, dataset_info: Dict[str, Any]) -> None:
         """Update dataset info with actual loaded data."""
+        # TODO Liam: extract constant
         if hasattr(self, 'dataset_train'):
             dataset_info.update({
                 'train_samples': len(self.dataset_train) if self.dataset_train else 0,
