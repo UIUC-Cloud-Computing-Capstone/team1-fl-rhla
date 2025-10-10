@@ -786,7 +786,7 @@ class FlowerClient(fl.client.NumPyClient):
                 hasattr(self.args, CONFIG_KEY_BLOCK_IDS_LIST) and
                 self.args.get(CONFIG_KEY_PEFT) == DEFAULT_LORA_PEFT)
     
-    # TODO Liam: this is a bit weird
+    # TODO Liam: fix
     def _train_with_local_update(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
         """
         Train using LocalUpdate class for heterogeneous federated learning.
@@ -1015,7 +1015,7 @@ class FlowerClient(fl.client.NumPyClient):
         return (hasattr(args_loaded, 'dataset') and 
                 DEFAULT_LEDGAR_DATASET in args_loaded.dataset)
     
-    # TODO Liam: is this correct?
+    # TODO Liam: fix
     def _train_single_epoch_with_gradients(self, dataloader, epoch: int, server_round: int, optimizer: torch.optim.Optimizer) -> float:
         """Train for a single epoch with actual gradients and parameter updates."""
         epoch_loss = DEFAULT_ZERO_VALUE
