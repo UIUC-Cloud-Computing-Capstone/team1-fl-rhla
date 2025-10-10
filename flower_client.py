@@ -309,20 +309,6 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Load dataset configuration and data
         self.dataset_info = self._load_dataset_config()
-
-        # TODO Liam: this is a bit weird
-        # Initialize dataset attributes (will be populated if actual data is loaded)
-        # Only set to None if not already loaded
-        if not hasattr(self, 'dataset_train'):
-            self.dataset_train = None
-        if not hasattr(self, 'dataset_test'):
-            self.dataset_test = None
-        if not hasattr(self, 'dict_users'):
-            self.dict_users = None
-        if not hasattr(self, 'dataset_fim'):
-            self.dataset_fim = None
-        if not hasattr(self, 'args_loaded'):
-            self.args_loaded = None
         
         # Initialize heterogeneous group configuration if needed
         self._initialize_heterogeneous_config()
@@ -336,10 +322,10 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _validate_config(self) -> None:
         """Validate required configuration parameters."""
+        # TODO Liam: this is not complete
         required_params = ['data_type', 'peft', 'lora_layer', 'dataset', 'model']
         for param in required_params:
-            if not hasattr(self.args, param):
-                # TODO Liam: is this error exception proper? 
+            if not hasattr(self.args, param): 
                 logging.warning(f"Missing configuration parameter: {param}, using default")
     
     def _get_loss_function(self) -> nn.Module:
