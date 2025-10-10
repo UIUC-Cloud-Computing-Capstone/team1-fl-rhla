@@ -555,6 +555,7 @@ class FlowerClient(fl.client.NumPyClient):
         self._ensure_model_setup_attributes()
         
         # Use shared model_setup function for consistency with original implementation
+        # TODO Liam: refactor this to support finer LoRA training
         _, model, _, model_dim = model_setup(self.args)
         
         # Update args with model dimension
