@@ -130,6 +130,7 @@ def get_group_cnt(args):
     return group_cnt
 
 
+# TODO Liam: refactor this
 def user_groupid_list(args, group_cnt):
     """
     Create user group ID list for heterogeneous federated learning.
