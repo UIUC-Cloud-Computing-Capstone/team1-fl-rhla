@@ -805,8 +805,7 @@ class FlowerClient(fl.client.NumPyClient):
             update_block_ids_list(self.args)
             logging.info(f"Initialized block_ids_list for client {self.client_id}")
         
-        # Apply memory management
-        self._apply_memory_management()
+    
         
         # Prepare training data with reduced batch size if needed
         client_indices_list = self._get_client_data_indices()
@@ -821,9 +820,9 @@ class FlowerClient(fl.client.NumPyClient):
         # Get client group ID for heterogeneous training
         hete_group_id = self._get_client_group_id()
         
-        try:
-            # Use LocalUpdate for training
-            local_model, local_loss, no_weight_lora = local_solver.lora_tuning(
+        
+        # Use LocalUpdate for training
+        local_model, local_loss, no_weight_lora = local_solver.lora_tuning(
                 model=copy.deepcopy(self.model),
                 ldr_train=dataloader,
                 args=self.args,
@@ -834,89 +833,25 @@ class FlowerClient(fl.client.NumPyClient):
             )
             
             # Update model with trained parameters
-            self.model.load_state_dict(local_model)
+        self.model.load_state_dict(local_model)
             
             # Log results
-            if local_loss is not None:
+        if local_loss is not None:
                 logging.info(f"Client {self.client_id} LocalUpdate training completed: loss={local_loss:.4f}")
                 return float(local_loss)  # Ensure float type
-            else:
+        else:
                 logging.warning(f"Client {self.client_id} LocalUpdate training returned no loss")
                 return 0.0
-                
-        except RuntimeError as e:
-            if "out of memory" in str(e).lower():
-                logging.error(f"Memory error during training: {e}")
-                logging.info("Falling back to standard training approach")
-                return self._train_with_standard_approach(local_epochs, learning_rate, server_round)
-            else:
-                raise e
-        finally:
-            # Clean up memory
-            self._cleanup_memory()
-    
-    # TODO Liam: review this
-    def _train_with_standard_approach(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
-        """
-        Train using standard Flower client approach.
-        
-        Args:
-            local_epochs: Number of local training epochs
-            learning_rate: Learning rate for training
-            server_round: Current server round
-            
-        Returns:
-            Total training loss
-        """
-        # Prepare training data
-        client_indices_list = self._get_client_data_indices()
-        client_dataset = self._create_client_dataset(client_indices_list, self.dataset_train, self.args_loaded)
-        dataloader = self._create_training_dataloader(client_dataset)
-        
-        logging.info(f"Client {self.client_id} created DataLoader with {len(dataloader)} batches")
-        
-        # Create optimizer for this training round
-        optimizer = self._create_optimizer(learning_rate)
-        
-        # Perform actual training with gradients
-        total_loss = self._perform_actual_training(dataloader, local_epochs, server_round, optimizer)
-        
-        # Log final results
-        self._log_training_results(client_indices_list, total_loss, local_epochs)
-        return float(total_loss)  # Ensure float type
+
+
     
     def _get_client_group_id(self) -> int:
         """Get the heterogeneous group ID for this client."""
         if hasattr(self.args, CONFIG_KEY_USER_GROUPID_LIST) and self.client_id < len(self.args.user_groupid_list):
             return self.args.user_groupid_list[self.client_id]
         return DEFAULT_GROUP_ID  # Default to group 0
-    
-    def _apply_memory_management(self):
-        """Apply memory management settings."""
-        # Reduce batch size for memory-constrained environments
-        original_batch_size = self.args.get(CONFIG_KEY_BATCH_SIZE, DEFAULT_MEMORY_THRESHOLD)
-        if original_batch_size > DEFAULT_MEMORY_BATCH_SIZE:
-            self.args.batch_size = DEFAULT_MEMORY_BATCH_SIZE
-            logging.info(f"Reduced batch size from {original_batch_size} to {self.args.batch_size} for memory management")
         
-        # Clear cache if using CUDA
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # Set memory-efficient settings
-        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-            # Already set in _get_optimal_device()
-            pass
-    
-    def _cleanup_memory(self):
-        """Clean up memory after training."""
-        # Clear cache
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # Force garbage collection
-        import gc
-        gc.collect()
+
     
     # TODO Liam: refactor this
     def _initialize_heterogeneous_config(self) -> None:
@@ -960,16 +895,6 @@ class FlowerClient(fl.client.NumPyClient):
         logging.debug(f"Created optimizer with {len(list(optimizer.param_groups[0]['params']))} parameters")
         return optimizer
     
-    def _perform_actual_training(self, dataloader, local_epochs: int, server_round: int, optimizer: torch.optim.Optimizer) -> float:
-        """Perform actual training with gradients and parameter updates."""
-        self.model.train()
-        total_loss = DEFAULT_ZERO_VALUE
-        
-        for epoch in range(local_epochs):
-            epoch_loss = self._train_single_epoch_with_gradients(dataloader, epoch, server_round, optimizer)
-            total_loss += epoch_loss
-            
-        return total_loss
     
     def _log_training_results(self, client_indices_list: List[int], total_loss: float, local_epochs: int) -> None:
         """Log final training results."""
@@ -1015,18 +940,6 @@ class FlowerClient(fl.client.NumPyClient):
         return (hasattr(args_loaded, 'dataset') and 
                 DEFAULT_LEDGAR_DATASET in args_loaded.dataset)
     
-    # TODO Liam: fix
-    def _train_single_epoch_with_gradients(self, dataloader, epoch: int, server_round: int, optimizer: torch.optim.Optimizer) -> float:
-        """Train for a single epoch with actual gradients and parameter updates."""
-        epoch_loss = DEFAULT_ZERO_VALUE
-        num_batches = DEFAULT_ZERO_VALUE
-
-        for batch_idx, batch in enumerate(dataloader):
-            batch_loss = self._process_training_batch_with_gradients(batch, batch_idx, epoch, optimizer)
-            epoch_loss += batch_loss
-            num_batches += 1
-
-        return self._compute_epoch_metrics(epoch, epoch_loss, num_batches)
     
     # TODO Liam: is this correct?
     def _process_training_batch_with_gradients(self, batch, batch_idx: int, epoch: int, optimizer: torch.optim.Optimizer) -> float:
