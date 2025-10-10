@@ -129,7 +129,7 @@ def update_block_ids_for_each_client(args, dataset_fim, net_glob, t):
 
 def local_training(args, net_glob, global_model, data_loader_list, t, selected_idxs):
     local_solver = LocalUpdate(args=args)
-    local_losses, local_updates, delta_norms, num_samples = [], [], [], [], []
+    local_losses, local_updates, delta_norms, num_samples = [], [], [], []
     for num_index, i in enumerate(selected_idxs):
         train_each_client(args, net_glob, global_model, data_loader_list, t, local_solver, local_losses, local_updates, delta_norms, num_samples, num_index, i)
     return local_losses,local_updates,delta_norms,num_samples
