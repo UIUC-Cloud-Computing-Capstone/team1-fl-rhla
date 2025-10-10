@@ -569,6 +569,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _ensure_model_setup_attributes(self):
         """Ensure required attributes are present for model_setup function."""
         # Add missing attributes that model_setup expects
+        # TODO Liam: extract constant
         if not hasattr(self.args, 'label2id'):
             num_classes = self.dataset_info.get('num_classes', 100)
             self.args.label2id = {f"class_{i}": i for i in range(num_classes)}
@@ -607,6 +608,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _get_optimal_device(self):
         """Get optimal device with memory management."""
         # Force CPU for memory-constrained environments
+        # TODO Liam: extract constant
         if hasattr(self.args, 'force_cpu') and self.args.force_cpu:
             logging.info("Forcing CPU usage due to configuration")
             return torch.device('cpu')
@@ -647,6 +649,7 @@ class FlowerClient(fl.client.NumPyClient):
             params.append(param.detach().cpu().numpy())
         return params
     
+    # TODO Liam: why is this needed?
     def _numpy_params_to_model(self, params: List[np.ndarray]) -> None:
         """Set model parameters from numpy arrays."""
         param_idx = 0
@@ -676,6 +679,7 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             return self._train_with_standard_approach(local_epochs, learning_rate, server_round)
     
+    # TODO Liam: refactor this
     def _should_use_local_update(self) -> bool:
         """Check if we should use LocalUpdate for heterogeneous training."""
         # Use LocalUpdate if we have heterogeneous group configuration
@@ -753,6 +757,7 @@ class FlowerClient(fl.client.NumPyClient):
             # Clean up memory
             self._cleanup_memory()
     
+    # TODO Liam: review this
     def _train_with_standard_approach(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
         """
         Train using standard Flower client approach.
@@ -871,6 +876,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _log_training_results(self, client_indices_list: List[int], total_loss: float, local_epochs: int) -> None:
         """Log final training results."""
+        # TODO Liam: is this correct?
         avg_total_loss = total_loss / local_epochs if local_epochs > 0 else 0.0
         logging.info(f"Client {self.client_id} trained on {len(client_indices_list)} actual samples, "
                      f"avg_loss={avg_total_loss:.4f}")
