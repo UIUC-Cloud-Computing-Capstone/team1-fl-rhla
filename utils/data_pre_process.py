@@ -60,7 +60,6 @@ def load_partition(args):
                 [
                     RandomResizedCrop(image_processor.size["height"]),
                     RandomHorizontalFlip(),
-                    # Grayscale(),
                     ToTensor(),
                     normalize,
                 ]
@@ -74,21 +73,11 @@ def load_partition(args):
                 ]
             )
 
-
-            # proxy_transforms = Compose(
-            #     [
-            #         Resize((image_processor.size["height"], image_processor.size["width"])),
-            #         ToTensor(),
-            #         normalize,
-            #     ]
-            # )
         else:
             train_transforms = Compose(
                 [
-                    # RandomResizedCrop(image_processor.size["height"]),
                     RandomResizedCrop((32, 32)),
-                    RandomHorizontalFlip(),
-                    # Grayscale(),
+                    RandomHorizontalFlip(),   
                     ToTensor(),
                     normalize,
                 ]
@@ -96,7 +85,6 @@ def load_partition(args):
 
             val_transforms = Compose(
                 [
-                    # Resize(image_processor.size["height"]),
                     Resize((32, 32)),
                     ToTensor(),
                     normalize,
@@ -112,12 +100,7 @@ def load_partition(args):
             """Apply val_transforms across a batch."""
             example_batch["pixel_values"] = [val_transforms(image.convert("RGB")) for image in example_batch["img"]]
             return example_batch
-        
-        # def preprocess_proxy(example_batch):
-        #     """Apply val_transforms across a batch."""
-        #     example_batch["pixel_values"] = [proxy_transforms(image.convert("RGB")) for image in example_batch["img"]]
-        #     return example_batch
-        
+                
         if 'depthffm_fim' in args.model_heterogeneity:
             if args.model_heterogeneity == 'depthffm_fim' or args.model_heterogeneity == 'depthffm_fim_extradata' or args.model_heterogeneity == 'depthffm_fim_extradata-ft':
                 # FIM dataset
@@ -151,16 +134,6 @@ def load_partition(args):
                 
                 dataset_fim = dataset_fim.with_transform(preprocess_val)
 
-            # elif args.model_heterogeneity == 'depthffm_fim_external':
-            #     #############
-            #     ## proxy ####
-            #     #############
-            #     dataset_fim = load_dataset('TNILab/cifar100_proxydata')
-            #     dataset_fim = dataset_fim.rename_column('label', 'fine_label')
-            #     dataset_fim = dataset_fim.rename_column('image', 'img')
-            #     dataset_fim = dataset_fim['train']
-
-            #     dataset_fim = dataset_fim.with_transform(preprocess_proxy)
 
         dataset_train = dataset["train"].with_transform(preprocess_train)
         dataset_test = dataset["test"].with_transform(preprocess_val)
@@ -178,21 +151,6 @@ def load_partition(args):
                     with open(pik_path, 'wb') as f: 
                         dill.dump(dict_users, f)
             else:
-                # if args.noniid_type == 'pathological':
-                #     least_samples = 10 if args.pat_num_cls > 3 else 16
-                #     split = ClassWisePartitioner(rng=np.random.RandomState(2),
-                #                                  n_class_per_share=args.pat_num_cls,
-                #                                  min_n_sample_per_share=least_samples,
-                #                                  partition_mode=args.partition_mode,
-                #                                  verbose=True)
-                #     _tr_labels = dataset['train']['fine_label']  # labels in the original order
-                #     args._idx_by_user, _user_ids_by_cls = split(_tr_labels, args.num_users,
-                #                                         return_user_ids_by_class=True)
-                #     print(f" train split size: {[len(idxs) for idxs in args._idx_by_user]}")
-                #     args._tr_labels = np.array(_tr_labels)
-                #     print(f"    | train classes: "
-                #         f"{[f'{np.unique(args._tr_labels[idxs]).tolist()}' for idxs in args._idx_by_user]}")
-                #     dict_users = {index: set(inner_list) for index, inner_list in enumerate(args._idx_by_user)}
                 if args.noniid_type == 'dirichlet':
                     least_samples = 50
                     N = len(dataset['train'])
@@ -313,21 +271,6 @@ def load_partition(args):
                     with open(pik_path, 'wb') as f: 
                         dill.dump(dict_users, f)
             else:
-                # if args.noniid_type == 'pathological':
-                #     least_samples = 0 if args.pat_num_cls > 3 else 0
-                #     split = ClassWisePartitioner(rng=np.random.RandomState(2),
-                #                                 n_class_per_share=args.pat_num_cls,
-                #                                 min_n_sample_per_share=least_samples,
-                #                                 partition_mode=args.partition_mode,
-                #                                 verbose=True)
-                #     _tr_labels = dataset_train['labels']  # labels in the original order
-                #     args._idx_by_user, _user_ids_by_cls = split(_tr_labels, args.num_users,
-                #                                         return_user_ids_by_class=True)
-                #     print(f" train split size: {[len(idxs) for idxs in args._idx_by_user]}")
-                #     args._tr_labels = np.array(_tr_labels)
-                #     print(f"    | train classes: "
-                #         f"{[f'{np.unique(args._tr_labels[idxs]).tolist()}' for idxs in args._idx_by_user]}")
-                #     dict_users = {index: set(inner_list) for index, inner_list in enumerate(args._idx_by_user)}
                 
                 if args.noniid_type == 'dirichlet':
                     least_samples = 50
