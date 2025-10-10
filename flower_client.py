@@ -112,6 +112,75 @@ DEFAULT_BATCH_FORMAT_3_ELEMENTS = DEFAULT_THREE_VALUE
 DEFAULT_BATCH_FORMAT_2_ELEMENTS = DEFAULT_TWO_VALUE
 DEFAULT_DIMENSION_1 = DEFAULT_ONE_VALUE
 
+# Configuration key constants
+CONFIG_KEY_DATASET = 'dataset'
+CONFIG_KEY_MODEL = 'model'
+CONFIG_KEY_DATA_TYPE = 'data_type'
+CONFIG_KEY_PEFT = 'peft'
+CONFIG_KEY_LORA_LAYER = 'lora_layer'
+CONFIG_KEY_LORA_RANK = 'lora_rank'
+CONFIG_KEY_LORA_ALPHA = 'lora_alpha'
+CONFIG_KEY_LORA_DROPOUT = 'lora_dropout'
+CONFIG_KEY_LORA_TARGET_MODULES = 'lora_target_modules'
+CONFIG_KEY_LORA_BIAS = 'lora_bias'
+CONFIG_KEY_BATCH_SIZE = 'batch_size'
+CONFIG_KEY_LOCAL_LR = 'local_lr'
+CONFIG_KEY_TAU = 'tau'
+CONFIG_KEY_ROUND = 'round'
+CONFIG_KEY_OPTIMIZER = 'optimizer'
+CONFIG_KEY_NUM_WORKERS = 'num_workers'
+CONFIG_KEY_SHUFFLE_TRAINING = 'shuffle_training'
+CONFIG_KEY_DROP_LAST = 'drop_last'
+CONFIG_KEY_SHUFFLE_EVAL = 'shuffle_eval'
+CONFIG_KEY_DROP_LAST_EVAL = 'drop_last_eval'
+CONFIG_KEY_LOGGING_BATCHES = 'logging_batches'
+CONFIG_KEY_EVAL_BATCHES = 'eval_batches'
+CONFIG_KEY_NUM_USERS = 'num_users'
+CONFIG_KEY_NUM_SELECTED_USERS = 'num_selected_users'
+CONFIG_KEY_IID = 'iid'
+CONFIG_KEY_NONIID_TYPE = 'noniid_type'
+CONFIG_KEY_PAT_NUM_CLS = 'pat_num_cls'
+CONFIG_KEY_PARTITION_MODE = 'partition_mode'
+CONFIG_KEY_DIR_CLS_ALPHA = 'dir_cls_alpha'
+CONFIG_KEY_DIR_PAR_BETA = 'dir_par_beta'
+CONFIG_KEY_MODEL_HETEROGENEITY = 'model_heterogeneity'
+CONFIG_KEY_FREEZE_DATASPLIT = 'freeze_datasplit'
+CONFIG_KEY_NUM_CLASSES = 'num_classes'
+CONFIG_KEY_SEED = 'seed'
+CONFIG_KEY_GPU_ID = 'gpu_id'
+CONFIG_KEY_FORCE_CPU = 'force_cpu'
+CONFIG_KEY_HETEROGENEOUS_GROUP = 'heterogeneous_group'
+CONFIG_KEY_USER_GROUPID_LIST = 'user_groupid_list'
+CONFIG_KEY_BLOCK_IDS_LIST = 'block_ids_list'
+CONFIG_KEY_LABEL2ID = 'label2id'
+CONFIG_KEY_ID2LABEL = 'id2label'
+CONFIG_KEY_LOGGER = 'logger'
+CONFIG_KEY_ACCELERATOR = 'accelerator'
+CONFIG_KEY_LOG_PATH = 'log_path'
+CONFIG_KEY_DEVICE = 'device'
+CONFIG_KEY_DATASET_INFO = 'dataset_info'
+CONFIG_KEY_CLIENT_DATA_INDICES = 'client_data_indices'
+CONFIG_KEY_NONIID_TYPE = 'noniid_type'
+CONFIG_KEY_DATA_COLLATOR = 'data_collator'
+CONFIG_KEY_TRAIN_SAMPLES = 'train_samples'
+CONFIG_KEY_TEST_SAMPLES = 'test_samples'
+CONFIG_KEY_NUM_USERS = 'num_users'
+CONFIG_KEY_DATA_LOADED = 'data_loaded'
+CONFIG_KEY_DATASET_NAME = 'dataset_name'
+CONFIG_KEY_MODEL_NAME = 'model_name'
+CONFIG_KEY_LABELS = 'labels'
+CONFIG_KEY_NUM_CLASSES = 'num_classes'
+CONFIG_KEY_LOSSES = 'losses'
+CONFIG_KEY_ACCURACIES = 'accuracies'
+CONFIG_KEY_ROUNDS = 'rounds'
+CONFIG_KEY_PIXEL_VALUES = 'pixel_values'
+CONFIG_KEY_LABELS = 'labels'
+CONFIG_KEY_TOTAL_LOSS = 'total_loss'
+CONFIG_KEY_TOTAL_CORRECT = 'total_correct'
+CONFIG_KEY_TOTAL_SAMPLES = 'total_samples'
+CONFIG_KEY_NUM_BATCHES = 'num_batches'
+CONFIG_KEY_TR_LABELS = '_tr_labels'
+
 # Default configuration paths
 DEFAULT_CONFIG_PATH = "experiments/flower/cifar100_vit_lora/fim/image_cifar100_vit_fedavg_fim-6_9_12-noniid-pat_10_dir-noprior-s50-e50.yaml"
 
@@ -159,8 +228,8 @@ LOG_EVALUATION_COMPLETED = "Client {client_id} evaluation: Loss={loss:.4f}, Accu
 
 # Dataset configuration
 DATASET_CONFIGS = {
-    DEFAULT_CIFAR100_DATASET: {'num_classes': DEFAULT_ONE_HUNDRED_VALUE, 'data_type': DEFAULT_IMAGE_DATA_TYPE},
-    DEFAULT_LEDGAR_DATASET: {'num_classes': DEFAULT_TWO_VALUE, 'data_type': DEFAULT_TEXT_DATA_TYPE},
+    DEFAULT_CIFAR100_DATASET: {CONFIG_KEY_NUM_CLASSES: DEFAULT_ONE_HUNDRED_VALUE, CONFIG_KEY_DATA_TYPE: DEFAULT_IMAGE_DATA_TYPE},
+    DEFAULT_LEDGAR_DATASET: {CONFIG_KEY_NUM_CLASSES: DEFAULT_TWO_VALUE, CONFIG_KEY_DATA_TYPE: DEFAULT_TEXT_DATA_TYPE},
 }
 
 # Non-IID configuration defaults
@@ -192,60 +261,60 @@ class DatasetArgs:
     preprocessing pipeline.
     
     Example:
-        config_dict = {'dataset': DEFAULT_DATASET, 'batch_size': DEFAULT_BATCH_SIZE}
+        config_dict = {CONFIG_KEY_DATASET: DEFAULT_DATASET, CONFIG_KEY_BATCH_SIZE: DEFAULT_BATCH_SIZE}
         args = DatasetArgs(config_dict, client_id=DEFAULT_CLIENT_ID)
     """
     
     def __init__(self, config_dict: Dict[str, Any], client_id: int):
         """Initialize dataset args from configuration dictionary."""
         # Dataset configuration
-        self.dataset = config_dict.get('dataset', DEFAULT_DATASET)
-        self.model = config_dict.get('model', DEFAULT_MODEL)
-        self.data_type = config_dict.get('data_type', DEFAULT_DATA_TYPE)
+        self.dataset = config_dict.get(CONFIG_KEY_DATASET, DEFAULT_DATASET)
+        self.model = config_dict.get(CONFIG_KEY_MODEL, DEFAULT_MODEL)
+        self.data_type = config_dict.get(CONFIG_KEY_DATA_TYPE, DEFAULT_DATA_TYPE)
 
         # Model configuration
-        self.peft = config_dict.get('peft', DEFAULT_PEFT)
-        self.lora_layer = config_dict.get('lora_layer', DEFAULT_LORA_LAYER)
+        self.peft = config_dict.get(CONFIG_KEY_PEFT, DEFAULT_PEFT)
+        self.lora_layer = config_dict.get(CONFIG_KEY_LORA_LAYER, DEFAULT_LORA_LAYER)
         
         # LoRA configuration
-        self.lora_rank = config_dict.get('lora_rank', LORA_RANK)
-        self.lora_alpha = config_dict.get('lora_alpha', LORA_ALPHA)
-        self.lora_dropout = config_dict.get('lora_dropout', LORA_DROPOUT)
-        self.lora_target_modules = config_dict.get('lora_target_modules', LORA_TARGET_MODULES)
-        self.lora_bias = config_dict.get('lora_bias', LORA_BIAS)
+        self.lora_rank = config_dict.get(CONFIG_KEY_LORA_RANK, LORA_RANK)
+        self.lora_alpha = config_dict.get(CONFIG_KEY_LORA_ALPHA, LORA_ALPHA)
+        self.lora_dropout = config_dict.get(CONFIG_KEY_LORA_DROPOUT, LORA_DROPOUT)
+        self.lora_target_modules = config_dict.get(CONFIG_KEY_LORA_TARGET_MODULES, LORA_TARGET_MODULES)
+        self.lora_bias = config_dict.get(CONFIG_KEY_LORA_BIAS, LORA_BIAS)
 
         # Training configuration
-        self.batch_size = config_dict.get('batch_size', DEFAULT_BATCH_SIZE)
-        self.local_lr = config_dict.get('local_lr', DEFAULT_LEARNING_RATE)
-        self.tau = config_dict.get('tau', DEFAULT_TAU)
-        self.round = config_dict.get('round', DEFAULT_ROUND)
-        self.optimizer = config_dict.get('optimizer', DEFAULT_OPTIMIZER)
+        self.batch_size = config_dict.get(CONFIG_KEY_BATCH_SIZE, DEFAULT_BATCH_SIZE)
+        self.local_lr = config_dict.get(CONFIG_KEY_LOCAL_LR, DEFAULT_LEARNING_RATE)
+        self.tau = config_dict.get(CONFIG_KEY_TAU, DEFAULT_TAU)
+        self.round = config_dict.get(CONFIG_KEY_ROUND, DEFAULT_ROUND)
+        self.optimizer = config_dict.get(CONFIG_KEY_OPTIMIZER, DEFAULT_OPTIMIZER)
         
         # Data processing configuration
-        self.num_workers = config_dict.get('num_workers', DEFAULT_NUM_WORKERS)
-        self.shuffle_training = config_dict.get('shuffle_training', DEFAULT_SHUFFLE_TRAINING)
-        self.drop_last = config_dict.get('drop_last', DEFAULT_DROP_LAST)
-        self.shuffle_eval = config_dict.get('shuffle_eval', DEFAULT_SHUFFLE_EVAL)
-        self.drop_last_eval = config_dict.get('drop_last_eval', DEFAULT_DROP_LAST_EVAL)
-        self.logging_batches = config_dict.get('logging_batches', DEFAULT_LOGGING_BATCHES)
-        self.eval_batches = config_dict.get('eval_batches', DEFAULT_EVAL_BATCHES)
+        self.num_workers = config_dict.get(CONFIG_KEY_NUM_WORKERS, DEFAULT_NUM_WORKERS)
+        self.shuffle_training = config_dict.get(CONFIG_KEY_SHUFFLE_TRAINING, DEFAULT_SHUFFLE_TRAINING)
+        self.drop_last = config_dict.get(CONFIG_KEY_DROP_LAST, DEFAULT_DROP_LAST)
+        self.shuffle_eval = config_dict.get(CONFIG_KEY_SHUFFLE_EVAL, DEFAULT_SHUFFLE_EVAL)
+        self.drop_last_eval = config_dict.get(CONFIG_KEY_DROP_LAST_EVAL, DEFAULT_DROP_LAST_EVAL)
+        self.logging_batches = config_dict.get(CONFIG_KEY_LOGGING_BATCHES, DEFAULT_LOGGING_BATCHES)
+        self.eval_batches = config_dict.get(CONFIG_KEY_EVAL_BATCHES, DEFAULT_EVAL_BATCHES)
 
         # Federated learning configuration
-        self.num_users = config_dict.get('num_users', DEFAULT_NUM_USERS)
-        self.num_selected_users = config_dict.get('num_selected_users', DEFAULT_NUM_SELECTED_USERS)
+        self.num_users = config_dict.get(CONFIG_KEY_NUM_USERS, DEFAULT_NUM_USERS)
+        self.num_selected_users = config_dict.get(CONFIG_KEY_NUM_SELECTED_USERS, DEFAULT_NUM_SELECTED_USERS)
 
         # Non-IID configuration - use values from config or defaults
-        self.iid = config_dict.get('iid', DEFAULT_ZERO_VALUE) == DEFAULT_ONE_VALUE  # Convert to boolean
+        self.iid = config_dict.get(CONFIG_KEY_IID, DEFAULT_ZERO_VALUE) == DEFAULT_ONE_VALUE  # Convert to boolean
         self.noniid = not self.iid
-        self.noniid_type = config_dict.get('noniid_type', DEFAULT_NONIID_TYPE)
-        self.pat_num_cls = config_dict.get('pat_num_cls', DEFAULT_PAT_NUM_CLS)
-        self.partition_mode = config_dict.get('partition_mode', DEFAULT_PARTITION_MODE)
-        self.dir_cls_alpha = config_dict.get('dir_cls_alpha', DEFAULT_DIR_ALPHA)
-        self.dir_par_beta = config_dict.get('dir_par_beta', DEFAULT_DIR_BETA)
+        self.noniid_type = config_dict.get(CONFIG_KEY_NONIID_TYPE, DEFAULT_NONIID_TYPE)
+        self.pat_num_cls = config_dict.get(CONFIG_KEY_PAT_NUM_CLS, DEFAULT_PAT_NUM_CLS)
+        self.partition_mode = config_dict.get(CONFIG_KEY_PARTITION_MODE, DEFAULT_PARTITION_MODE)
+        self.dir_cls_alpha = config_dict.get(CONFIG_KEY_DIR_CLS_ALPHA, DEFAULT_DIR_ALPHA)
+        self.dir_par_beta = config_dict.get(CONFIG_KEY_DIR_PAR_BETA, DEFAULT_DIR_BETA)
 
         # Model heterogeneity
-        self.model_heterogeneity = config_dict.get('model_heterogeneity', DEFAULT_MODEL_HETEROGENEITY)
-        self.freeze_datasplit = config_dict.get('freeze_datasplit', True)
+        self.model_heterogeneity = config_dict.get(CONFIG_KEY_MODEL_HETEROGENEITY, DEFAULT_MODEL_HETEROGENEITY)
+        self.freeze_datasplit = config_dict.get(CONFIG_KEY_FREEZE_DATASPLIT, True)
 
         # Device configuration
         self.device = torch.device(DEFAULT_CUDA_DEVICE if torch.cuda.is_available() else DEFAULT_CPU_DEVICE)
@@ -255,7 +324,7 @@ class DatasetArgs:
         self.client_id = client_id
         
         # Additional attributes that might be needed
-        self.num_classes = config_dict.get('num_classes', DEFAULT_NUM_CLASSES)
+        self.num_classes = config_dict.get(CONFIG_KEY_NUM_CLASSES, DEFAULT_NUM_CLASSES)
         self.labels = None  # Will be set by load_partition
         self.label2id = None  # Will be set by load_partition
         self.id2label = None  # Will be set by load_partition
@@ -276,9 +345,9 @@ class Config:
     a configuration dictionary, providing type safety and validation.
     
     Example:
-        config_dict = {'dataset': DEFAULT_DATASET, 'batch_size': DEFAULT_BATCH_SIZE, 'learning_rate': DEFAULT_ZERO_POINT_ZERO_ONE}
+        config_dict = {CONFIG_KEY_DATASET: DEFAULT_DATASET, CONFIG_KEY_BATCH_SIZE: DEFAULT_BATCH_SIZE, 'learning_rate': DEFAULT_ZERO_POINT_ZERO_ONE}
         config = Config(config_dict)
-        dataset = config.get('dataset', DEFAULT_DEFAULT_VALUE)
+        dataset = config.get(CONFIG_KEY_DATASET, DEFAULT_DEFAULT_VALUE)
         batch_size = config.batch_size
     """
     
@@ -337,7 +406,7 @@ class FlowerClient(fl.client.NumPyClient):
     local training, parameter aggregation, and evaluation on test data.
     
     Example:
-        config = Config({'dataset': DEFAULT_DATASET, 'model': DEFAULT_MODEL})
+        config = Config({CONFIG_KEY_DATASET: DEFAULT_DATASET, CONFIG_KEY_MODEL: DEFAULT_MODEL})
         client = FlowerClient(config, client_id=DEFAULT_CLIENT_ID)
     """
     
@@ -364,9 +433,9 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Initialize training history
         self.training_history = {
-            'losses': [],
-            'accuracies': [],
-            'rounds': []
+            CONFIG_KEY_LOSSES: [],
+            CONFIG_KEY_ACCURACIES: [],
+            CONFIG_KEY_ROUNDS: []
         }
         
         # Load dataset configuration and data
@@ -385,14 +454,14 @@ class FlowerClient(fl.client.NumPyClient):
     def _validate_config(self) -> None:
         """Validate required configuration parameters."""
         # TODO Liam: this is not complete
-        required_params = ['data_type', 'peft', 'lora_layer', 'dataset', 'model']
+        required_params = [CONFIG_KEY_DATA_TYPE, CONFIG_KEY_PEFT, CONFIG_KEY_LORA_LAYER, CONFIG_KEY_DATASET, CONFIG_KEY_MODEL]
         for param in required_params:
             if not hasattr(self.args, param): 
                 logging.warning(f"Missing configuration parameter: {param}, using default")
     
     def _get_loss_function(self) -> nn.Module:
         """Get appropriate loss function based on data type."""
-        data_type = getattr(self.args, 'data_type', DEFAULT_IMAGE_DATA_TYPE)
+        data_type = getattr(self.args, CONFIG_KEY_DATA_TYPE, DEFAULT_IMAGE_DATA_TYPE)
         
         loss_functions = {
             DEFAULT_IMAGE_DATA_TYPE: nn.CrossEntropyLoss(),
@@ -428,34 +497,34 @@ class FlowerClient(fl.client.NumPyClient):
         self._apply_dataset_specific_config(dataset_info, dataset_name)
         
         # Load actual dataset if available
-        dataset_info['data_loaded'] = self._load_dataset(dataset_name)
-        logging.info(f"Dataset loading result: {dataset_info['data_loaded']}")
+        dataset_info[CONFIG_KEY_DATA_LOADED] = self._load_dataset(dataset_name)
+        logging.info(f"Dataset loading result: {dataset_info[CONFIG_KEY_DATA_LOADED]}")
         
         # Update with actual data if loaded successfully
-        if dataset_info['data_loaded']:
+        if dataset_info[CONFIG_KEY_DATA_LOADED]:
             self._update_dataset_info_with_loaded_data(dataset_info)
 
         logging.info(f"Dataset configuration loaded: {dataset_name} "
-                     f"({dataset_info['num_classes']} classes, {dataset_info['data_type']} data)")
+                     f"({dataset_info[CONFIG_KEY_NUM_CLASSES]} classes, {dataset_info[CONFIG_KEY_DATA_TYPE]} data)")
 
         return dataset_info
     
     def _get_dataset_name(self) -> str:
         """Get dataset name from configuration."""
-        return self.args.get('dataset', DEFAULT_DATASET)
+        return self.args.get(CONFIG_KEY_DATASET, DEFAULT_DATASET)
     
     def _create_base_dataset_info(self, dataset_name: str) -> Dict[str, Any]:
         """Create base dataset information dictionary."""
         return {
-            'dataset_name': dataset_name,
-            'data_type': self.args.get('data_type', DEFAULT_IMAGE_DATA_TYPE),
-            'model_name': self.args.get('model', DEFAULT_MODEL),
-            'batch_size': self.args.get('batch_size', DEFAULT_BATCH_SIZE),
-            'num_classes': None,
-            'labels': None,
-            'label2id': None,
-            'id2label': None,
-            'data_loaded': False
+            CONFIG_KEY_DATASET_NAME: dataset_name,
+            CONFIG_KEY_DATA_TYPE: self.args.get(CONFIG_KEY_DATA_TYPE, DEFAULT_IMAGE_DATA_TYPE),
+            CONFIG_KEY_MODEL_NAME: self.args.get(CONFIG_KEY_MODEL, DEFAULT_MODEL),
+            CONFIG_KEY_BATCH_SIZE: self.args.get(CONFIG_KEY_BATCH_SIZE, DEFAULT_BATCH_SIZE),
+            CONFIG_KEY_NUM_CLASSES: None,
+            CONFIG_KEY_LABELS: None,
+            CONFIG_KEY_LABEL2ID: None,
+            CONFIG_KEY_ID2LABEL: None,
+            CONFIG_KEY_DATA_LOADED: False
         }
     
     def _validate_dataset_name(self, dataset_name: str) -> None:
@@ -468,8 +537,8 @@ class FlowerClient(fl.client.NumPyClient):
         """Apply dataset-specific configuration."""
         if dataset_name in DATASET_CONFIGS:
             config = DATASET_CONFIGS[dataset_name]
-            dataset_info['num_classes'] = config['num_classes']
-            dataset_info['data_type'] = config['data_type']
+            dataset_info[CONFIG_KEY_NUM_CLASSES] = config[CONFIG_KEY_NUM_CLASSES]
+            dataset_info[CONFIG_KEY_DATA_TYPE] = config[CONFIG_KEY_DATA_TYPE]
         else:
             raise ValueError(ERROR_INVALID_DATASET.format(dataset_name=dataset_name))
     
@@ -477,11 +546,11 @@ class FlowerClient(fl.client.NumPyClient):
         """Update dataset info with actual loaded data."""
         if hasattr(self, 'dataset_train'):
             dataset_info.update({
-                'train_samples': len(self.dataset_train) if self.dataset_train else DEFAULT_ZERO_VALUE,
-                'test_samples': len(self.dataset_test) if self.dataset_test else DEFAULT_ZERO_VALUE,
-                'num_users': len(self.client_data_partition) if self.client_data_partition else DEFAULT_ZERO_VALUE,
-                'client_data_indices': getattr(self, 'dataset_info', {}).get('client_data_indices', set()),
-                'noniid_type': getattr(self.args_loaded, 'noniid_type', DEFAULT_DIRICHLET_TYPE) if hasattr(self, 'args_loaded') else DEFAULT_DIRICHLET_TYPE
+                CONFIG_KEY_TRAIN_SAMPLES: len(self.dataset_train) if self.dataset_train else DEFAULT_ZERO_VALUE,
+                CONFIG_KEY_TEST_SAMPLES: len(self.dataset_test) if self.dataset_test else DEFAULT_ZERO_VALUE,
+                CONFIG_KEY_NUM_USERS: len(self.client_data_partition) if self.client_data_partition else DEFAULT_ZERO_VALUE,
+                CONFIG_KEY_CLIENT_DATA_INDICES: getattr(self, CONFIG_KEY_DATASET_INFO, {}).get(CONFIG_KEY_CLIENT_DATA_INDICES, set()),
+                CONFIG_KEY_NONIID_TYPE: getattr(self.args_loaded, CONFIG_KEY_NONIID_TYPE, DEFAULT_DIRICHLET_TYPE) if hasattr(self, 'args_loaded') else DEFAULT_DIRICHLET_TYPE
             })
     
     def _load_dataset(self, dataset_name: str) -> bool:
@@ -520,13 +589,12 @@ class FlowerClient(fl.client.NumPyClient):
         # Use shared load_data function for consistency
         args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim = load_data(dataset_args)
 
-        # Debug prints
-        # TODO Liam: log instead of print
-        print('dataset_train length: ', len(dataset_train))
-        print('dataset_test length: ', len(dataset_test))
-        print('client_data_partition length: ', len(client_data_partition))
-        print('dataset_fim length: ', len(dataset_fim) if dataset_fim else 0)
-        print('args_loaded: ', args_loaded)
+        # Log dataset loading information
+        logging.info(f'Dataset train length: {len(dataset_train)}')
+        logging.info(f'Dataset test length: {len(dataset_test)}')
+        logging.info(f'Client data partition length: {len(client_data_partition)}')
+        logging.info(f'Dataset FIM length: {len(dataset_fim) if dataset_fim else 0}')
+        logging.debug(f'Args loaded: {args_loaded}')
 
         # Validate that we have the required data
         if not dataset_train:
@@ -579,7 +647,7 @@ class FlowerClient(fl.client.NumPyClient):
             return
             
         client_indices = list(client_data_partition[self.client_id])
-        if not hasattr(args_loaded, '_tr_labels') or args_loaded._tr_labels is None:
+        if not hasattr(args_loaded, CONFIG_KEY_TR_LABELS) or args_loaded._tr_labels is None:
             return
             
         client_labels = args_loaded._tr_labels[client_indices]
@@ -619,31 +687,31 @@ class FlowerClient(fl.client.NumPyClient):
         self.args.dim = model_dim
         
         logging.info(f"Created model using shared model_setup: {model_dim} dimensions "
-                    f"(model={self.args.get('model', DEFAULT_UNKNOWN_VALUE)}, peft={self.args.get('peft', DEFAULT_NONE_VALUE)})")
+                    f"(model={self.args.get(CONFIG_KEY_MODEL, DEFAULT_UNKNOWN_VALUE)}, peft={self.args.get(CONFIG_KEY_PEFT, DEFAULT_NONE_VALUE)})")
         return model
     
     def _ensure_model_setup_attributes(self):
         """Ensure required attributes are present for model_setup function."""
         # Add missing attributes that model_setup expects
-        if not hasattr(self.args, 'label2id'):
-            num_classes = self.dataset_info.get('num_classes', DEFAULT_NUM_CLASSES)
+        if not hasattr(self.args, CONFIG_KEY_LABEL2ID):
+            num_classes = self.dataset_info.get(CONFIG_KEY_NUM_CLASSES, DEFAULT_NUM_CLASSES)
             self.args.label2id = {f"{DEFAULT_CLASS_PREFIX}{i}": i for i in range(num_classes)}
         
-        if not hasattr(self.args, 'id2label'):
-            num_classes = self.dataset_info.get('num_classes', DEFAULT_NUM_CLASSES)
+        if not hasattr(self.args, CONFIG_KEY_ID2LABEL):
+            num_classes = self.dataset_info.get(CONFIG_KEY_NUM_CLASSES, DEFAULT_NUM_CLASSES)
             self.args.id2label = {i: f"{DEFAULT_CLASS_PREFIX}{i}" for i in range(num_classes)}
         
-        if not hasattr(self.args, 'logger'):
+        if not hasattr(self.args, CONFIG_KEY_LOGGER):
             self.args.logger = self._create_simple_logger()
         
-        if not hasattr(self.args, 'accelerator'):
+        if not hasattr(self.args, CONFIG_KEY_ACCELERATOR):
             # Create a simple accelerator-like object for compatibility
             class SimpleAccelerator:
                 def is_local_main_process(self):
                     return True
             self.args.accelerator = SimpleAccelerator()
         
-        if not hasattr(self.args, 'log_path'):
+        if not hasattr(self.args, CONFIG_KEY_LOG_PATH):
             self.args.log_path = f"{DEFAULT_LOG_PATH_PREFIX}{self.client_id}"
         
         # Set device with memory management
@@ -651,9 +719,9 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Ensure other required attributes
         required_attrs = {
-            'device': device,
-            'seed': getattr(self.args, 'seed', DEFAULT_SEED),
-            'gpu_id': getattr(self.args, 'gpu_id', DEFAULT_GPU_ID),
+            CONFIG_KEY_DEVICE: device,
+            CONFIG_KEY_SEED: getattr(self.args, CONFIG_KEY_SEED, DEFAULT_SEED),
+            CONFIG_KEY_GPU_ID: getattr(self.args, CONFIG_KEY_GPU_ID, DEFAULT_GPU_ID),
         }
         
         for attr, default_value in required_attrs.items():
@@ -663,7 +731,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _get_optimal_device(self):
         """Get optimal device with memory management."""
         # Force CPU for memory-constrained environments
-        if hasattr(self.args, 'force_cpu') and self.args.force_cpu:
+        if hasattr(self.args, CONFIG_KEY_FORCE_CPU) and self.args.force_cpu:
             logging.info("Forcing CPU usage due to configuration")
             return torch.device(DEFAULT_CPU_DEVICE)
         
@@ -737,10 +805,10 @@ class FlowerClient(fl.client.NumPyClient):
     def _should_use_local_update(self) -> bool:
         """Check if we should use LocalUpdate for heterogeneous training."""
         # Use LocalUpdate if we have heterogeneous group configuration
-        return (hasattr(self.args, 'heterogeneous_group') and 
-                hasattr(self.args, 'user_groupid_list') and
-                hasattr(self.args, 'block_ids_list') and
-                self.args.get('peft') == 'lora')
+        return (hasattr(self.args, CONFIG_KEY_HETEROGENEOUS_GROUP) and 
+                hasattr(self.args, CONFIG_KEY_USER_GROUPID_LIST) and
+                hasattr(self.args, CONFIG_KEY_BLOCK_IDS_LIST) and
+                self.args.get(CONFIG_KEY_PEFT) == DEFAULT_LORA_PEFT)
     
     # TODO Liam: this is a bit weird
     def _train_with_local_update(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
@@ -756,7 +824,7 @@ class FlowerClient(fl.client.NumPyClient):
             Total training loss
         """
         # Ensure block_ids_list is initialized
-        if not hasattr(self.args, 'block_ids_list'):
+        if not hasattr(self.args, CONFIG_KEY_BLOCK_IDS_LIST):
             from algorithms.solver.shared_utils import update_block_ids_list
             update_block_ids_list(self.args)
             logging.info(f"Initialized block_ids_list for client {self.client_id}")
@@ -843,14 +911,14 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_client_group_id(self) -> int:
         """Get the heterogeneous group ID for this client."""
-        if hasattr(self.args, 'user_groupid_list') and self.client_id < len(self.args.user_groupid_list):
+        if hasattr(self.args, CONFIG_KEY_USER_GROUPID_LIST) and self.client_id < len(self.args.user_groupid_list):
             return self.args.user_groupid_list[self.client_id]
         return DEFAULT_GROUP_ID  # Default to group 0
     
     def _apply_memory_management(self):
         """Apply memory management settings."""
         # Reduce batch size for memory-constrained environments
-        original_batch_size = self.args.get('batch_size', DEFAULT_MEMORY_THRESHOLD)
+        original_batch_size = self.args.get(CONFIG_KEY_BATCH_SIZE, DEFAULT_MEMORY_THRESHOLD)
         if original_batch_size > DEFAULT_MEMORY_BATCH_SIZE:
             self.args.batch_size = DEFAULT_MEMORY_BATCH_SIZE
             logging.info(f"Reduced batch size from {original_batch_size} to {self.args.batch_size} for memory management")
@@ -878,11 +946,11 @@ class FlowerClient(fl.client.NumPyClient):
     def _initialize_heterogeneous_config(self) -> None:
         """Initialize heterogeneous group configuration if needed."""
         # Only initialize if we have heterogeneous group configuration
-        if hasattr(self.args, 'heterogeneous_group'):
+        if hasattr(self.args, CONFIG_KEY_HETEROGENEOUS_GROUP):
             from algorithms.solver.shared_utils import get_group_cnt, update_user_groupid_list, update_block_ids_list
             
             # Initialize user group ID list if not present
-            if not hasattr(self.args, 'user_groupid_list'):
+            if not hasattr(self.args, CONFIG_KEY_USER_GROUPID_LIST):
                 # Calculate group counts
                 group_cnt = get_group_cnt(self.args)
                 
@@ -892,7 +960,7 @@ class FlowerClient(fl.client.NumPyClient):
                 logging.info(f"Initialized heterogeneous groups: {group_cnt}")
             
             # Initialize block IDs list if not present
-            if not hasattr(self.args, 'block_ids_list'):
+            if not hasattr(self.args, CONFIG_KEY_BLOCK_IDS_LIST):
                 update_block_ids_list(self.args)
                 logging.info(f"Initialized block IDs list: {len(self.args.block_ids_list)} clients")
             
@@ -901,7 +969,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _setup_optimizer(self, learning_rate: float) -> None:
         """Setup optimizer for training."""
         # Only optimize LoRA parameters if using LoRA
-        if self.args.get('peft') == 'lora':
+        if self.args.get(CONFIG_KEY_PEFT) == DEFAULT_LORA_PEFT:
             # Get only LoRA parameters
             lora_params = []
             # TODO Liam: refactor this
@@ -937,7 +1005,7 @@ class FlowerClient(fl.client.NumPyClient):
         if hasattr(self, 'client_data_indices'):
             client_indices = self.client_data_indices
         else:
-            client_indices = self.dataset_info.get('client_data_indices', set())
+            client_indices = self.dataset_info.get(CONFIG_KEY_CLIENT_DATA_INDICES, set())
         
         if not client_indices:
             raise ValueError(ERROR_NO_DATA_INDICES.format(client_id=self.client_id))
@@ -956,7 +1024,7 @@ class FlowerClient(fl.client.NumPyClient):
         if self._is_cifar100_dataset():
             return vit_collate_fn
         elif self._is_ledgar_dataset():
-            return getattr(self.args_loaded, 'data_collator', None)
+            return getattr(self.args_loaded, CONFIG_KEY_DATA_COLLATOR, None)
         else:
             raise ValueError(f"Invalid dataset: {self.args_loaded.dataset}")
     
@@ -1010,7 +1078,7 @@ class FlowerClient(fl.client.NumPyClient):
         batch_loss = loss.item()
         
         # Log progress for first few batches
-        if batch_idx < self.args.get('logging_batches', DEFAULT_LOGGING_BATCHES):
+        if batch_idx < self.args.get(CONFIG_KEY_LOGGING_BATCHES, DEFAULT_LOGGING_BATCHES):
             logging.debug(f"Client {self.client_id} epoch {epoch + 1}, batch {batch_idx + 1}: loss={batch_loss:.4f}")
         
         return batch_loss
@@ -1038,7 +1106,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _extract_from_dict_batch(self, batch: Dict) -> Tuple:
         """Extract data from dictionary format batch."""
-        return batch["pixel_values"], batch["labels"]
+        return batch[CONFIG_KEY_PIXEL_VALUES], batch[CONFIG_KEY_LABELS]
     
     def _extract_from_three_element_batch(self, batch) -> Tuple:
         """Extract data from three-element batch (image, label, pixel_values)."""
@@ -1108,15 +1176,15 @@ class FlowerClient(fl.client.NumPyClient):
         return DataLoader(
             eval_dataset,
             batch_size=batch_size,
-            shuffle=self.args.get('shuffle_eval', DEFAULT_SHUFFLE_EVAL),
-            drop_last=self.args.get('drop_last_eval', DEFAULT_DROP_LAST_EVAL),
-            num_workers=self.args.get('num_workers', DEFAULT_NUM_WORKERS),
+            shuffle=self.args.get(CONFIG_KEY_SHUFFLE_EVAL, DEFAULT_SHUFFLE_EVAL),
+            drop_last=self.args.get(CONFIG_KEY_DROP_LAST_EVAL, DEFAULT_DROP_LAST_EVAL),
+            num_workers=self.args.get(CONFIG_KEY_NUM_WORKERS, DEFAULT_NUM_WORKERS),
             collate_fn=collate_fn
         )
     
     def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
         """Perform evaluation on all batches."""
-        metrics = {'total_loss': DEFAULT_ZERO_VALUE, 'total_correct': DEFAULT_ZERO_VALUE, 'total_samples': DEFAULT_ZERO_VALUE, 'num_batches': DEFAULT_ZERO_VALUE}
+        metrics = {CONFIG_KEY_TOTAL_LOSS: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_CORRECT: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_SAMPLES: DEFAULT_ZERO_VALUE, CONFIG_KEY_NUM_BATCHES: DEFAULT_ZERO_VALUE}
         
         logging.info(f"Client {self.client_id} evaluating on {len(eval_dataloader)} test batches")
 
@@ -1124,8 +1192,8 @@ class FlowerClient(fl.client.NumPyClient):
             self._process_evaluation_batch(batch, server_round, batch_idx, metrics)
 
         return self._compute_overall_evaluation_metrics(
-            metrics['total_loss'], metrics['total_correct'], 
-            metrics['total_samples'], metrics['num_batches']
+            metrics[CONFIG_KEY_TOTAL_LOSS], metrics[CONFIG_KEY_TOTAL_CORRECT], 
+            metrics[CONFIG_KEY_TOTAL_SAMPLES], metrics[CONFIG_KEY_NUM_BATCHES]
         )
     
     def _process_evaluation_batch(self, batch, server_round: int, batch_idx: int, metrics: Dict) -> None:
@@ -1135,13 +1203,13 @@ class FlowerClient(fl.client.NumPyClient):
             pixel_values, label, server_round, batch_idx
         )
 
-        metrics['total_loss'] += batch_loss
-        metrics['total_correct'] += batch_correct
-        metrics['total_samples'] += batch_size
-        metrics['num_batches'] += 1
+        metrics[CONFIG_KEY_TOTAL_LOSS] += batch_loss
+        metrics[CONFIG_KEY_TOTAL_CORRECT] += batch_correct
+        metrics[CONFIG_KEY_TOTAL_SAMPLES] += batch_size
+        metrics[CONFIG_KEY_NUM_BATCHES] += 1
 
         # Log progress for first few batches
-        if batch_idx < self.args.get('eval_batches', DEFAULT_EVAL_BATCHES):
+        if batch_idx < self.args.get(CONFIG_KEY_EVAL_BATCHES, DEFAULT_EVAL_BATCHES):
             batch_accuracy = batch_correct / batch_size if batch_size > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
             logging.debug(f"Client {self.client_id} eval batch {batch_idx + DEFAULT_ONE_VALUE}: "
                           f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
@@ -1278,8 +1346,8 @@ class FlowerClient(fl.client.NumPyClient):
         if server_round is None:
             raise ValueError("server_round not provided in config")
         
-        local_epochs = config.get('local_epochs', self.args.get('tau'))
-        learning_rate = config.get('learning_rate', self.args.get('local_lr'))
+        local_epochs = config.get('local_epochs', self.args.get(CONFIG_KEY_TAU))
+        learning_rate = config.get('learning_rate', self.args.get(CONFIG_KEY_LOCAL_LR))
         
         if local_epochs is None or local_epochs < DEFAULT_ONE_VALUE:
             raise ValueError(f"Invalid local_epochs: {local_epochs}")
@@ -1296,7 +1364,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _perform_training(self, local_epochs: int, learning_rate: float, server_round: int) -> Tuple[float, int]:
         """Perform the actual training."""
-        data_loaded = self.dataset_info.get('data_loaded', False)
+        data_loaded = self.dataset_info.get(CONFIG_KEY_DATA_LOADED, False)
         dataset_train_available = self.dataset_train is not None
         
         logging.info(f"Client {self.client_id} data status: data_loaded={data_loaded}, dataset_train_available={dataset_train_available}")
@@ -1315,12 +1383,12 @@ class FlowerClient(fl.client.NumPyClient):
         if hasattr(self, 'client_data_indices'):
             return len(self.client_data_indices)
         else:
-            return len(self.dataset_info.get('client_data_indices', set()))
+            return len(self.dataset_info.get(CONFIG_KEY_CLIENT_DATA_INDICES, set()))
     
     def _update_training_history(self, avg_loss: float, server_round: int) -> None:
         """Update training history."""
-        self.training_history['losses'].append(avg_loss)
-        self.training_history['rounds'].append(server_round)
+        self.training_history[CONFIG_KEY_LOSSES].append(avg_loss)
+        self.training_history[CONFIG_KEY_ROUNDS].append(server_round)
     
     def _create_training_metrics(self, avg_loss: float, local_epochs: int, learning_rate: float) -> Dict[str, Any]:
         """Create training metrics dictionary with proper types for Flower."""
@@ -1329,8 +1397,8 @@ class FlowerClient(fl.client.NumPyClient):
             'num_epochs': local_epochs,
             'client_id': self.client_id,
             'learning_rate': learning_rate,
-            'data_loaded': self.dataset_info.get('data_loaded', False),
-            'noniid_type': self.dataset_info.get('noniid_type', 'unknown')
+            'data_loaded': self.dataset_info.get(CONFIG_KEY_DATA_LOADED, False),
+            'noniid_type': self.dataset_info.get(CONFIG_KEY_NONIID_TYPE, DEFAULT_UNKNOWN_VALUE)
         }
         return self._ensure_flower_compatible_types(metrics)
     
@@ -1353,7 +1421,7 @@ class FlowerClient(fl.client.NumPyClient):
         accuracy, loss, num_examples = self._perform_evaluation_with_validation(server_round)
         
         # Update training history and return results
-        self.training_history['accuracies'].append(accuracy)
+        self.training_history[CONFIG_KEY_ACCURACIES].append(accuracy)
         logging.info(LOG_EVALUATION_COMPLETED.format(
             client_id=self.client_id, loss=loss, accuracy=accuracy
         ))
@@ -1370,11 +1438,11 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _perform_evaluation_with_validation(self, server_round: int) -> Tuple[float, float, int]:
         """Perform evaluation with proper validation."""
-        if not (self.dataset_info.get('data_loaded', False) and self.dataset_test is not None):
+        if not (self.dataset_info.get(CONFIG_KEY_DATA_LOADED, False) and self.dataset_test is not None):
             raise ValueError(ERROR_NO_TEST_DATASET)
         
         accuracy, loss = self._evaluate_with_actual_data(server_round)
-        num_examples = self.dataset_info.get('test_samples')
+        num_examples = self.dataset_info.get(CONFIG_KEY_TEST_SAMPLES)
         
         if num_examples is None:
             raise ValueError("test_samples not available in dataset_info")
@@ -1387,8 +1455,8 @@ class FlowerClient(fl.client.NumPyClient):
         metrics = {
             'accuracy': accuracy,
             'client_id': self.client_id,
-            'data_loaded': self.dataset_info.get('data_loaded', False),
-            'noniid_type': self.dataset_info.get('noniid_type', 'unknown')
+            'data_loaded': self.dataset_info.get(CONFIG_KEY_DATA_LOADED, False),
+            'noniid_type': self.dataset_info.get(CONFIG_KEY_NONIID_TYPE, DEFAULT_UNKNOWN_VALUE)
         }
         return self._ensure_flower_compatible_types(metrics)
     
