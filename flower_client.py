@@ -849,6 +849,7 @@ class FlowerClient(fl.client.NumPyClient):
         if self.args.get('peft') == 'lora':
             # Get only LoRA parameters
             lora_params = []
+            # TODO Liam: refactor this
             for name, param in self.model.named_parameters():
                 if 'lora' in name or 'classifier' in name:
                     lora_params.append(param)
@@ -862,6 +863,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _perform_actual_training(self, dataloader, local_epochs: int, server_round: int) -> float:
         """Perform actual training with gradients and parameter updates."""
         self.model.train()
+        # TODO Liam: doesn't seem correct
         total_loss = 0.0
         
         for epoch in range(local_epochs):
