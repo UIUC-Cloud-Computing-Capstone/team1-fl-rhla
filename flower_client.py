@@ -491,6 +491,7 @@ class FlowerClient(fl.client.NumPyClient):
         
         self.dataset_train = dataset_train
         self.dataset_test = dataset_test
+        # TODO Liam: rename dict_users into something more descriptive
         self.dict_users = dict_users
         self.dataset_fim = dataset_fim
         self.args_loaded = args_loaded
