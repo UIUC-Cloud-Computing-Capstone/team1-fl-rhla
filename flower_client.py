@@ -795,6 +795,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _apply_memory_management(self):
         """Apply memory management settings."""
         # Reduce batch size for memory-constrained environments
+        # TODO Liam: refactor this
         original_batch_size = self.args.get('batch_size', 32)
         if original_batch_size > 16:
             self.args.batch_size = 16
