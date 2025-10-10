@@ -204,10 +204,7 @@ class DatasetArgs:
             def info(self, msg, main_process_only=False):
                 logging.info(msg)
         return SimpleLogger()
-
-
-
-
+  
 class Config:
     """
     Configuration class to hold and manage configuration parameters.
@@ -313,6 +310,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Load dataset configuration and data
         self.dataset_info = self._load_dataset_config()
 
+        # TODO Liam: this is a bit weird
         # Initialize dataset attributes (will be populated if actual data is loaded)
         # Only set to None if not already loaded
         if not hasattr(self, 'dataset_train'):
