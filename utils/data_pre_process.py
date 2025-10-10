@@ -41,6 +41,7 @@ class DatasetSplit(Dataset):
             image, label = self.dataset[self.idxs[item]]
             return image, label
 
+# TODO Liam: refactor this
 def load_partition(args):
     dict_users = []
     # read dataset
