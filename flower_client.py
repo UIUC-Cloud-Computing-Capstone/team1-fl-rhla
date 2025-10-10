@@ -50,36 +50,98 @@ DATASET_LOADING_AVAILABLE = True
 # CONSTANTS
 # =============================================================================
 
+# Basic numeric constants
+DEFAULT_ZERO_VALUE = 0
+DEFAULT_ONE_VALUE = 1
+DEFAULT_TWO_VALUE = 2
+DEFAULT_THREE_VALUE = 3
+DEFAULT_TWELVE_VALUE = 12
+DEFAULT_SIXTEEN_VALUE = 16
+DEFAULT_THIRTY_TWO_VALUE = 32
+DEFAULT_ONE_HUNDRED_VALUE = 100
+DEFAULT_FIVE_HUNDRED_VALUE = 500
+DEFAULT_ONE_THOUSAND_TWENTY_FOUR_VALUE = 1024
+DEFAULT_SEVEN_HUNDRED_SIXTY_EIGHT_VALUE = 768
+DEFAULT_ONE_FIFTY_FIVE_TWENTY_EIGHT_VALUE = 150528
+
+# Floating point constants
+DEFAULT_ZERO_POINT_ZERO = 0.0
+DEFAULT_ZERO_POINT_FIVE = 0.5
+DEFAULT_ONE_POINT_ZERO = 1.0
+DEFAULT_ZERO_POINT_ZERO_ONE = 0.01
+DEFAULT_ZERO_POINT_ZERO_ZERO_ONE = 0.001
+DEFAULT_ZERO_POINT_ONE = 0.1
+
+# String constants
+DEFAULT_DATASET = 'cifar100'
+DEFAULT_MODEL = 'google/vit-base-patch16-224-in21k'
+DEFAULT_DATA_TYPE = 'image'
+DEFAULT_PEFT = 'lora'
+DEFAULT_LORA_LAYER = DEFAULT_TWELVE_VALUE
+DEFAULT_TAU = DEFAULT_THREE_VALUE
+DEFAULT_ROUND = DEFAULT_FIVE_HUNDRED_VALUE
+DEFAULT_OPTIMIZER = 'adamw'
+DEFAULT_NUM_USERS = DEFAULT_ONE_HUNDRED_VALUE
+DEFAULT_NUM_SELECTED_USERS = DEFAULT_ONE_VALUE
+DEFAULT_NUM_CLASSES = DEFAULT_ONE_HUNDRED_VALUE
+DEFAULT_MODEL_HETEROGENEITY = 'depthffm_fim'
+DEFAULT_GROUP_ID = DEFAULT_ZERO_VALUE
+DEFAULT_MEMORY_BATCH_SIZE = DEFAULT_SIXTEEN_VALUE
+DEFAULT_MEMORY_THRESHOLD = DEFAULT_THIRTY_TWO_VALUE
+DEFAULT_PYTORCH_MPS_RATIO = '0.0'
+DEFAULT_LOG_PATH_PREFIX = './logs/client_'
+DEFAULT_CLASS_PREFIX = 'class_'
+DEFAULT_UNKNOWN_VALUE = 'unknown'
+DEFAULT_NONE_VALUE = 'none'
+DEFAULT_DEFAULT_VALUE = 'default'
+DEFAULT_DIRICHLET_TYPE = 'dirichlet'
+DEFAULT_CPU_DEVICE = 'cpu'
+DEFAULT_CUDA_DEVICE = 'cuda'
+DEFAULT_MPS_DEVICE = 'mps'
+DEFAULT_IMAGE_DATA_TYPE = 'image'
+DEFAULT_TEXT_DATA_TYPE = 'text'
+DEFAULT_SENTIMENT_DATA_TYPE = 'sentiment'
+DEFAULT_QUERY_MODULE = 'query'
+DEFAULT_VALUE_MODULE = 'value'
+DEFAULT_DIR_PARTITION_MODE = 'dir'
+DEFAULT_ADAMW_OPTIMIZER = 'adamw'
+DEFAULT_LORA_PEFT = 'lora'
+DEFAULT_CIFAR100_DATASET = 'cifar100'
+DEFAULT_LEDGAR_DATASET = 'ledgar'
+DEFAULT_BATCH_FORMAT_3_ELEMENTS = DEFAULT_THREE_VALUE
+DEFAULT_BATCH_FORMAT_2_ELEMENTS = DEFAULT_TWO_VALUE
+DEFAULT_DIMENSION_1 = DEFAULT_ONE_VALUE
+
 # Default configuration paths
 DEFAULT_CONFIG_PATH = "experiments/flower/cifar100_vit_lora/fim/image_cifar100_vit_fedavg_fim-6_9_12-noniid-pat_10_dir-noprior-s50-e50.yaml"
 
 # Network configuration
 DEFAULT_SERVER_ADDRESS = "localhost"
 DEFAULT_SERVER_PORT = 8080
-DEFAULT_CLIENT_ID = 0
+DEFAULT_CLIENT_ID = DEFAULT_ZERO_VALUE
 
 # Training configuration
-DEFAULT_SEED = 1
+DEFAULT_SEED = DEFAULT_ONE_VALUE
 DEFAULT_GPU_ID = -1
 DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_TRAINING_STEPS_PER_EPOCH = 10
-DEFAULT_MIN_LEARNING_RATE = 0.001
-DEFAULT_LEARNING_RATE = 0.01
-DEFAULT_LOCAL_EPOCHS = 1
+DEFAULT_MIN_LEARNING_RATE = DEFAULT_ZERO_POINT_ZERO_ZERO_ONE
+DEFAULT_LEARNING_RATE = DEFAULT_ZERO_POINT_ZERO_ONE
+DEFAULT_LOCAL_EPOCHS = DEFAULT_ONE_VALUE
 
 # Model architecture constants (can be overridden by config)
-VIT_BASE_HIDDEN_SIZE = 768
-VIT_LARGE_HIDDEN_SIZE = 1024
+VIT_BASE_HIDDEN_SIZE = DEFAULT_SEVEN_HUNDRED_SIXTY_EIGHT_VALUE
+VIT_LARGE_HIDDEN_SIZE = DEFAULT_ONE_THOUSAND_TWENTY_FOUR_VALUE
 LORA_RANK = 64
-LORA_ALPHA = 16
-LORA_DROPOUT = 0.1
-LORA_TARGET_MODULES = ["query", "value"]
-LORA_BIAS = "none"
+LORA_ALPHA = DEFAULT_SIXTEEN_VALUE
+LORA_DROPOUT = DEFAULT_ZERO_POINT_ONE
+LORA_TARGET_MODULES = [DEFAULT_QUERY_MODULE, DEFAULT_VALUE_MODULE]
+LORA_BIAS = DEFAULT_NONE_VALUE
 
 # Training constants (can be overridden by config)
-DEFAULT_LOGGING_BATCHES = 3  # Number of batches to log during training
-DEFAULT_EVAL_BATCHES = 3     # Number of batches to log during evaluation
-DEFAULT_FLATTENED_SIZE_CIFAR = 150528  # 3*224*224 for CIFAR-100 with ViT
+DEFAULT_LOGGING_BATCHES = DEFAULT_THREE_VALUE  # Number of batches to log during training
+DEFAULT_EVAL_BATCHES = DEFAULT_THREE_VALUE     # Number of batches to log during evaluation
+DEFAULT_FLATTENED_SIZE_CIFAR = DEFAULT_ONE_FIFTY_FIVE_TWENTY_EIGHT_VALUE  # 3*224*224 for CIFAR-100 with ViT
 
 # Error messages
 ERROR_NO_DATA_INDICES = "Client {client_id} has no data indices"
@@ -97,20 +159,20 @@ LOG_EVALUATION_COMPLETED = "Client {client_id} evaluation: Loss={loss:.4f}, Accu
 
 # Dataset configuration
 DATASET_CONFIGS = {
-    'cifar100': {'num_classes': 100, 'data_type': 'image'},
-    'ledgar': {'num_classes': 2, 'data_type': 'text'},
+    DEFAULT_CIFAR100_DATASET: {'num_classes': DEFAULT_ONE_HUNDRED_VALUE, 'data_type': DEFAULT_IMAGE_DATA_TYPE},
+    DEFAULT_LEDGAR_DATASET: {'num_classes': DEFAULT_TWO_VALUE, 'data_type': DEFAULT_TEXT_DATA_TYPE},
 }
 
 # Non-IID configuration defaults
-DEFAULT_NONIID_TYPE = 'dirichlet'
+DEFAULT_NONIID_TYPE = DEFAULT_DIRICHLET_TYPE
 DEFAULT_PAT_NUM_CLS = 10
-DEFAULT_PARTITION_MODE = 'dir'
-DEFAULT_DIR_ALPHA = 0.5
-DEFAULT_DIR_BETA = 1.0
+DEFAULT_PARTITION_MODE = DEFAULT_DIR_PARTITION_MODE
+DEFAULT_DIR_ALPHA = DEFAULT_ZERO_POINT_FIVE
+DEFAULT_DIR_BETA = DEFAULT_ONE_POINT_ZERO
 
 # Data processing constants (can be overridden by config)
 DEFAULT_BATCH_SIZE = 128
-DEFAULT_NUM_WORKERS = 0  # Avoid multiprocessing issues in federated setting
+DEFAULT_NUM_WORKERS = DEFAULT_ZERO_VALUE  # Avoid multiprocessing issues in federated setting
 DEFAULT_SHUFFLE_TRAINING = True
 DEFAULT_DROP_LAST = True
 DEFAULT_SHUFFLE_EVAL = False
@@ -130,20 +192,20 @@ class DatasetArgs:
     preprocessing pipeline.
     
     Example:
-        config_dict = {'dataset': 'cifar100', 'batch_size': 128}
-        args = DatasetArgs(config_dict, client_id=0)
+        config_dict = {'dataset': DEFAULT_DATASET, 'batch_size': DEFAULT_BATCH_SIZE}
+        args = DatasetArgs(config_dict, client_id=DEFAULT_CLIENT_ID)
     """
     
     def __init__(self, config_dict: Dict[str, Any], client_id: int):
         """Initialize dataset args from configuration dictionary."""
         # Dataset configuration
-        self.dataset = config_dict.get('dataset', 'cifar100')
-        self.model = config_dict.get('model', 'google/vit-base-patch16-224-in21k')
-        self.data_type = config_dict.get('data_type', 'image')
+        self.dataset = config_dict.get('dataset', DEFAULT_DATASET)
+        self.model = config_dict.get('model', DEFAULT_MODEL)
+        self.data_type = config_dict.get('data_type', DEFAULT_DATA_TYPE)
 
         # Model configuration
-        self.peft = config_dict.get('peft', 'lora')
-        self.lora_layer = config_dict.get('lora_layer', 12)
+        self.peft = config_dict.get('peft', DEFAULT_PEFT)
+        self.lora_layer = config_dict.get('lora_layer', DEFAULT_LORA_LAYER)
         
         # LoRA configuration
         self.lora_rank = config_dict.get('lora_rank', LORA_RANK)
@@ -155,9 +217,9 @@ class DatasetArgs:
         # Training configuration
         self.batch_size = config_dict.get('batch_size', DEFAULT_BATCH_SIZE)
         self.local_lr = config_dict.get('local_lr', DEFAULT_LEARNING_RATE)
-        self.tau = config_dict.get('tau', 3)
-        self.round = config_dict.get('round', 500)
-        self.optimizer = config_dict.get('optimizer', 'adamw')
+        self.tau = config_dict.get('tau', DEFAULT_TAU)
+        self.round = config_dict.get('round', DEFAULT_ROUND)
+        self.optimizer = config_dict.get('optimizer', DEFAULT_OPTIMIZER)
         
         # Data processing configuration
         self.num_workers = config_dict.get('num_workers', DEFAULT_NUM_WORKERS)
@@ -169,11 +231,11 @@ class DatasetArgs:
         self.eval_batches = config_dict.get('eval_batches', DEFAULT_EVAL_BATCHES)
 
         # Federated learning configuration
-        self.num_users = config_dict.get('num_users', 100)
-        self.num_selected_users = config_dict.get('num_selected_users', 1)
+        self.num_users = config_dict.get('num_users', DEFAULT_NUM_USERS)
+        self.num_selected_users = config_dict.get('num_selected_users', DEFAULT_NUM_SELECTED_USERS)
 
         # Non-IID configuration - use values from config or defaults
-        self.iid = config_dict.get('iid', 0) == 1  # Convert to boolean
+        self.iid = config_dict.get('iid', DEFAULT_ZERO_VALUE) == DEFAULT_ONE_VALUE  # Convert to boolean
         self.noniid = not self.iid
         self.noniid_type = config_dict.get('noniid_type', DEFAULT_NONIID_TYPE)
         self.pat_num_cls = config_dict.get('pat_num_cls', DEFAULT_PAT_NUM_CLS)
@@ -182,18 +244,18 @@ class DatasetArgs:
         self.dir_par_beta = config_dict.get('dir_par_beta', DEFAULT_DIR_BETA)
 
         # Model heterogeneity
-        self.model_heterogeneity = config_dict.get('model_heterogeneity', 'depthffm_fim')
+        self.model_heterogeneity = config_dict.get('model_heterogeneity', DEFAULT_MODEL_HETEROGENEITY)
         self.freeze_datasplit = config_dict.get('freeze_datasplit', True)
 
         # Device configuration
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(DEFAULT_CUDA_DEVICE if torch.cuda.is_available() else DEFAULT_CPU_DEVICE)
 
         # Logger
         self.logger = self._create_simple_logger()
         self.client_id = client_id
         
         # Additional attributes that might be needed
-        self.num_classes = config_dict.get('num_classes', 100)
+        self.num_classes = config_dict.get('num_classes', DEFAULT_NUM_CLASSES)
         self.labels = None  # Will be set by load_partition
         self.label2id = None  # Will be set by load_partition
         self.id2label = None  # Will be set by load_partition
@@ -214,9 +276,9 @@ class Config:
     a configuration dictionary, providing type safety and validation.
     
     Example:
-        config_dict = {'dataset': 'cifar100', 'batch_size': 128, 'learning_rate': 0.01}
+        config_dict = {'dataset': DEFAULT_DATASET, 'batch_size': DEFAULT_BATCH_SIZE, 'learning_rate': DEFAULT_ZERO_POINT_ZERO_ONE}
         config = Config(config_dict)
-        dataset = config.get('dataset', 'default')
+        dataset = config.get('dataset', DEFAULT_DEFAULT_VALUE)
         batch_size = config.batch_size
     """
     
@@ -275,8 +337,8 @@ class FlowerClient(fl.client.NumPyClient):
     local training, parameter aggregation, and evaluation on test data.
     
     Example:
-        config = Config({'dataset': 'cifar100', 'model': 'google/vit-base-patch16-224-in21k'})
-        client = FlowerClient(config, client_id=0)
+        config = Config({'dataset': DEFAULT_DATASET, 'model': DEFAULT_MODEL})
+        client = FlowerClient(config, client_id=DEFAULT_CLIENT_ID)
     """
     
     def __init__(self, args: 'Config', client_id: int = 0):
@@ -330,13 +392,12 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_loss_function(self) -> nn.Module:
         """Get appropriate loss function based on data type."""
-        # TODO Liam: extract constant
-        data_type = getattr(self.args, 'data_type', 'image')
+        data_type = getattr(self.args, 'data_type', DEFAULT_IMAGE_DATA_TYPE)
         
         loss_functions = {
-            'image': nn.CrossEntropyLoss(),
-            'text': nn.CrossEntropyLoss(),
-            'sentiment': nn.NLLLoss()
+            DEFAULT_IMAGE_DATA_TYPE: nn.CrossEntropyLoss(),
+            DEFAULT_TEXT_DATA_TYPE: nn.CrossEntropyLoss(),
+            DEFAULT_SENTIMENT_DATA_TYPE: nn.NLLLoss()
         }
         
         return loss_functions.get(data_type, nn.CrossEntropyLoss())
@@ -381,16 +442,14 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_dataset_name(self) -> str:
         """Get dataset name from configuration."""
-        # TODO Liam: extract constant
-        return self.args.get('dataset', 'cifar100')
+        return self.args.get('dataset', DEFAULT_DATASET)
     
     def _create_base_dataset_info(self, dataset_name: str) -> Dict[str, Any]:
         """Create base dataset information dictionary."""
-        # TODO Liam: extract constant
         return {
             'dataset_name': dataset_name,
-            'data_type': self.args.get('data_type', 'image'),
-            'model_name': self.args.get('model', 'google/vit-base-patch16-224-in21k'),
+            'data_type': self.args.get('data_type', DEFAULT_IMAGE_DATA_TYPE),
+            'model_name': self.args.get('model', DEFAULT_MODEL),
             'batch_size': self.args.get('batch_size', DEFAULT_BATCH_SIZE),
             'num_classes': None,
             'labels': None,
@@ -407,7 +466,6 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _apply_dataset_specific_config(self, dataset_info: Dict[str, Any], dataset_name: str) -> None:
         """Apply dataset-specific configuration."""
-        # TODO Liam: extract constant
         if dataset_name in DATASET_CONFIGS:
             config = DATASET_CONFIGS[dataset_name]
             dataset_info['num_classes'] = config['num_classes']
@@ -417,14 +475,13 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _update_dataset_info_with_loaded_data(self, dataset_info: Dict[str, Any]) -> None:
         """Update dataset info with actual loaded data."""
-        # TODO Liam: extract constant
         if hasattr(self, 'dataset_train'):
             dataset_info.update({
-                'train_samples': len(self.dataset_train) if self.dataset_train else 0,
-                'test_samples': len(self.dataset_test) if self.dataset_test else 0,
-                'num_users': len(self.client_data_partition) if self.client_data_partition else 0,
+                'train_samples': len(self.dataset_train) if self.dataset_train else DEFAULT_ZERO_VALUE,
+                'test_samples': len(self.dataset_test) if self.dataset_test else DEFAULT_ZERO_VALUE,
+                'num_users': len(self.client_data_partition) if self.client_data_partition else DEFAULT_ZERO_VALUE,
                 'client_data_indices': getattr(self, 'dataset_info', {}).get('client_data_indices', set()),
-                'noniid_type': getattr(self.args_loaded, 'noniid_type', 'dirichlet') if hasattr(self, 'args_loaded') else 'dirichlet'
+                'noniid_type': getattr(self.args_loaded, 'noniid_type', DEFAULT_DIRICHLET_TYPE) if hasattr(self, 'args_loaded') else DEFAULT_DIRICHLET_TYPE
             })
     
     def _load_dataset(self, dataset_name: str) -> bool:
@@ -561,22 +618,20 @@ class FlowerClient(fl.client.NumPyClient):
         # Update args with model dimension
         self.args.dim = model_dim
         
-        # TODO Liam: extract constant
         logging.info(f"Created model using shared model_setup: {model_dim} dimensions "
-                    f"(model={self.args.get('model', 'unknown')}, peft={self.args.get('peft', 'none')})")
+                    f"(model={self.args.get('model', DEFAULT_UNKNOWN_VALUE)}, peft={self.args.get('peft', DEFAULT_NONE_VALUE)})")
         return model
     
     def _ensure_model_setup_attributes(self):
         """Ensure required attributes are present for model_setup function."""
         # Add missing attributes that model_setup expects
-        # TODO Liam: extract constant
         if not hasattr(self.args, 'label2id'):
-            num_classes = self.dataset_info.get('num_classes', 100)
-            self.args.label2id = {f"class_{i}": i for i in range(num_classes)}
+            num_classes = self.dataset_info.get('num_classes', DEFAULT_NUM_CLASSES)
+            self.args.label2id = {f"{DEFAULT_CLASS_PREFIX}{i}": i for i in range(num_classes)}
         
         if not hasattr(self.args, 'id2label'):
-            num_classes = self.dataset_info.get('num_classes', 100)
-            self.args.id2label = {i: f"class_{i}" for i in range(num_classes)}
+            num_classes = self.dataset_info.get('num_classes', DEFAULT_NUM_CLASSES)
+            self.args.id2label = {i: f"{DEFAULT_CLASS_PREFIX}{i}" for i in range(num_classes)}
         
         if not hasattr(self.args, 'logger'):
             self.args.logger = self._create_simple_logger()
@@ -589,7 +644,7 @@ class FlowerClient(fl.client.NumPyClient):
             self.args.accelerator = SimpleAccelerator()
         
         if not hasattr(self.args, 'log_path'):
-            self.args.log_path = f"./logs/client_{self.client_id}"
+            self.args.log_path = f"{DEFAULT_LOG_PATH_PREFIX}{self.client_id}"
         
         # Set device with memory management
         device = self._get_optimal_device()
@@ -597,8 +652,8 @@ class FlowerClient(fl.client.NumPyClient):
         # Ensure other required attributes
         required_attrs = {
             'device': device,
-            'seed': getattr(self.args, 'seed', 1),
-            'gpu_id': getattr(self.args, 'gpu_id', -1),
+            'seed': getattr(self.args, 'seed', DEFAULT_SEED),
+            'gpu_id': getattr(self.args, 'gpu_id', DEFAULT_GPU_ID),
         }
         
         for attr, default_value in required_attrs.items():
@@ -608,28 +663,27 @@ class FlowerClient(fl.client.NumPyClient):
     def _get_optimal_device(self):
         """Get optimal device with memory management."""
         # Force CPU for memory-constrained environments
-        # TODO Liam: extract constant
         if hasattr(self.args, 'force_cpu') and self.args.force_cpu:
             logging.info("Forcing CPU usage due to configuration")
-            return torch.device('cpu')
+            return torch.device(DEFAULT_CPU_DEVICE)
         
         # Check for MPS (Metal Performance Shaders) on macOS
         if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
             # Set MPS memory management
-            os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = '0.0'
+            os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = DEFAULT_PYTORCH_MPS_RATIO
             logging.info("Using MPS with memory management enabled")
-            return torch.device('mps')
+            return torch.device(DEFAULT_MPS_DEVICE)
         
         # Check for CUDA
         if torch.cuda.is_available():
             # Set CUDA memory management
             torch.cuda.empty_cache()
             logging.info("Using CUDA with memory management enabled")
-            return torch.device('cuda')
+            return torch.device(DEFAULT_CUDA_DEVICE)
         
         # Fallback to CPU
         logging.info("Using CPU device")
-        return torch.device('cpu')
+        return torch.device(DEFAULT_CPU_DEVICE)
     
     def _create_simple_logger(self):
         """Create a simple logger for compatibility."""
@@ -791,15 +845,14 @@ class FlowerClient(fl.client.NumPyClient):
         """Get the heterogeneous group ID for this client."""
         if hasattr(self.args, 'user_groupid_list') and self.client_id < len(self.args.user_groupid_list):
             return self.args.user_groupid_list[self.client_id]
-        return 0  # Default to group 0
+        return DEFAULT_GROUP_ID  # Default to group 0
     
     def _apply_memory_management(self):
         """Apply memory management settings."""
         # Reduce batch size for memory-constrained environments
-        # TODO Liam: refactor this
-        original_batch_size = self.args.get('batch_size', 32)
-        if original_batch_size > 16:
-            self.args.batch_size = 16
+        original_batch_size = self.args.get('batch_size', DEFAULT_MEMORY_THRESHOLD)
+        if original_batch_size > DEFAULT_MEMORY_BATCH_SIZE:
+            self.args.batch_size = DEFAULT_MEMORY_BATCH_SIZE
             logging.info(f"Reduced batch size from {original_batch_size} to {self.args.batch_size} for memory management")
         
         # Clear cache if using CUDA
@@ -865,8 +918,7 @@ class FlowerClient(fl.client.NumPyClient):
     def _perform_actual_training(self, dataloader, local_epochs: int, server_round: int) -> float:
         """Perform actual training with gradients and parameter updates."""
         self.model.train()
-        # TODO Liam: doesn't seem correct
-        total_loss = 0.0
+        total_loss = DEFAULT_ZERO_VALUE
         
         for epoch in range(local_epochs):
             epoch_loss = self._train_single_epoch_with_gradients(dataloader, epoch, server_round)
@@ -876,8 +928,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _log_training_results(self, client_indices_list: List[int], total_loss: float, local_epochs: int) -> None:
         """Log final training results."""
-        # TODO Liam: is this correct?
-        avg_total_loss = total_loss / local_epochs if local_epochs > 0 else 0.0
+        avg_total_loss = total_loss / local_epochs if local_epochs > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
         logging.info(f"Client {self.client_id} trained on {len(client_indices_list)} actual samples, "
                      f"avg_loss={avg_total_loss:.4f}")
     
@@ -912,18 +963,18 @@ class FlowerClient(fl.client.NumPyClient):
     def _is_cifar100_dataset(self) -> bool:
         """Check if the dataset is CIFAR-100."""
         return (hasattr(self.args_loaded, 'dataset') and 
-                self.args_loaded.dataset == 'cifar100')
+                self.args_loaded.dataset == DEFAULT_CIFAR100_DATASET)
     
     def _is_ledgar_dataset(self) -> bool:
         """Check if the dataset is LEDGAR."""
         return (hasattr(self.args_loaded, 'dataset') and 
-                'ledgar' in self.args_loaded.dataset)
+                DEFAULT_LEDGAR_DATASET in self.args_loaded.dataset)
     
     # TODO Liam: is this correct?
     def _train_single_epoch_with_gradients(self, dataloader, epoch: int, server_round: int) -> float:
         """Train for a single epoch with actual gradients and parameter updates."""
-        epoch_loss = 0.0
-        num_batches = 0
+        epoch_loss = DEFAULT_ZERO_VALUE
+        num_batches = DEFAULT_ZERO_VALUE
 
         for batch_idx, batch in enumerate(dataloader):
             batch_loss = self._process_training_batch_with_gradients(batch, batch_idx, epoch)
@@ -966,21 +1017,21 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _compute_epoch_metrics(self, epoch: int, epoch_loss: float, num_batches: int) -> float:
         """Compute and log epoch metrics."""
-        if num_batches > 0:
+        if num_batches > DEFAULT_ZERO_VALUE:
             avg_epoch_loss = epoch_loss / num_batches
-            logging.info(f"Client {self.client_id} epoch {epoch + 1}: avg_loss={avg_epoch_loss:.4f} ({num_batches} batches)")
+            logging.info(f"Client {self.client_id} epoch {epoch + DEFAULT_ONE_VALUE}: avg_loss={avg_epoch_loss:.4f} ({num_batches} batches)")
             return avg_epoch_loss
         else:
-            logging.warning(f"Client {self.client_id} epoch {epoch + 1}: no batches processed")
-            return 0.0
+            logging.warning(f"Client {self.client_id} epoch {epoch + DEFAULT_ONE_VALUE}: no batches processed")
+            return DEFAULT_ZERO_VALUE
     
     def _extract_batch_data(self, batch) -> Tuple:
         """Extract pixel_values and labels from batch."""
         if isinstance(batch, dict):
             return self._extract_from_dict_batch(batch)
-        elif len(batch) == 3:
+        elif len(batch) == DEFAULT_BATCH_FORMAT_3_ELEMENTS:
             return self._extract_from_three_element_batch(batch)
-        elif len(batch) == 2:
+        elif len(batch) == DEFAULT_BATCH_FORMAT_2_ELEMENTS:
             return self._extract_from_two_element_batch(batch)
         else:
             raise ValueError(ERROR_INVALID_BATCH_FORMAT.format(batch_type=type(batch)))
@@ -996,7 +1047,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _extract_from_two_element_batch(self, batch) -> Tuple:
         """Extract data from two-element batch (pixel_values, labels)."""
-        return batch[0], batch[1]
+        return batch[DEFAULT_ZERO_VALUE], batch[DEFAULT_ONE_VALUE]
 
     def _create_client_dataset(self, client_indices: List[int]):
         """
@@ -1065,7 +1116,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
         """Perform evaluation on all batches."""
-        metrics = {'total_loss': 0.0, 'total_correct': 0, 'total_samples': 0, 'num_batches': 0}
+        metrics = {'total_loss': DEFAULT_ZERO_VALUE, 'total_correct': DEFAULT_ZERO_VALUE, 'total_samples': DEFAULT_ZERO_VALUE, 'num_batches': DEFAULT_ZERO_VALUE}
         
         logging.info(f"Client {self.client_id} evaluating on {len(eval_dataloader)} test batches")
 
@@ -1091,24 +1142,24 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Log progress for first few batches
         if batch_idx < self.args.get('eval_batches', DEFAULT_EVAL_BATCHES):
-            batch_accuracy = batch_correct / batch_size if batch_size > 0 else 0.0
-            logging.debug(f"Client {self.client_id} eval batch {batch_idx + 1}: "
+            batch_accuracy = batch_correct / batch_size if batch_size > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
+            logging.debug(f"Client {self.client_id} eval batch {batch_idx + DEFAULT_ONE_VALUE}: "
                           f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
     
     def _extract_evaluation_batch_data(self, batch) -> Tuple:
         """Extract batch data for evaluation."""
-        if len(batch) == 3:  # DatasetSplit format
+        if len(batch) == DEFAULT_BATCH_FORMAT_3_ELEMENTS:  # DatasetSplit format
             image, label, pixel_values = batch
             return pixel_values, label
-        elif len(batch) == 2:  # Standard format
-            return batch[0], batch[1]
+        elif len(batch) == DEFAULT_BATCH_FORMAT_2_ELEMENTS:  # Standard format
+            return batch[DEFAULT_ZERO_VALUE], batch[DEFAULT_ONE_VALUE]
         else:
             raise ValueError(f"Invalid batch length for evaluation: {len(batch)}")
     
     def _compute_overall_evaluation_metrics(self, total_loss: float, total_correct: int, 
                                           total_samples: int, num_batches: int) -> Tuple[float, float]:
         """Compute overall evaluation metrics."""
-        if num_batches > 0 and total_samples > 0:
+        if num_batches > DEFAULT_ZERO_VALUE and total_samples > DEFAULT_ZERO_VALUE:
             avg_loss = total_loss / num_batches
             accuracy = total_correct / total_samples
 
@@ -1153,7 +1204,7 @@ class FlowerClient(fl.client.NumPyClient):
             logits = outputs.logits
             
             # Get predictions
-            predictions = torch.argmax(logits, dim=1)
+            predictions = torch.argmax(logits, dim=DEFAULT_DIMENSION_1)
             num_correct = int(torch.sum(predictions == labels).item())
 
         logging.debug(f"Eval batch {batch_idx}: size={batch_size}, "
@@ -1230,9 +1281,9 @@ class FlowerClient(fl.client.NumPyClient):
         local_epochs = config.get('local_epochs', self.args.get('tau'))
         learning_rate = config.get('learning_rate', self.args.get('local_lr'))
         
-        if local_epochs is None or local_epochs < 1:
+        if local_epochs is None or local_epochs < DEFAULT_ONE_VALUE:
             raise ValueError(f"Invalid local_epochs: {local_epochs}")
-        if learning_rate is None or learning_rate <= 0:
+        if learning_rate is None or learning_rate <= DEFAULT_ZERO_VALUE:
             raise ValueError(f"Invalid learning_rate: {learning_rate}")
         
         return server_round, local_epochs, learning_rate
@@ -1479,9 +1530,9 @@ def setup_device(gpu_id: int) -> torch.device:
     if torch.cuda.is_available() and gpu_id != -1:
         if gpu_id >= torch.cuda.device_count():
             logging.warning(f"GPU {gpu_id} not available, falling back to CPU")
-            return torch.device('cpu')
-        return torch.device(f'cuda:{gpu_id}')
-    return torch.device('cpu')
+            return torch.device(DEFAULT_CPU_DEVICE)
+        return torch.device(f'{DEFAULT_CUDA_DEVICE}:{gpu_id}')
+    return torch.device(DEFAULT_CPU_DEVICE)
 
 
 def parse_arguments() -> argparse.Namespace:
