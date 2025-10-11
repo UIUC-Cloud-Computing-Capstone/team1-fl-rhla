@@ -899,8 +899,6 @@ class FlowerClient(fl.client.NumPyClient):
         return total_loss, num_examples
     
 
-        
-
     def _get_num_examples(self) -> int:
         """Get number of training examples for this client."""
         if hasattr(self, 'client_data_indices'):
@@ -924,6 +922,10 @@ class FlowerClient(fl.client.NumPyClient):
             'noniid_type': self.dataset_info.get(CONFIG_KEY_NONIID_TYPE, DEFAULT_UNKNOWN_VALUE)
         }
         return self._ensure_flower_compatible_types(metrics)
+    
+    # =============================================================================
+    # EVALUATION
+    # =============================================================================
     
     def evaluate(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[float, int, Dict[str, Any]]:
         """
