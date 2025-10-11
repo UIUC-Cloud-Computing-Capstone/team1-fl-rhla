@@ -707,87 +707,10 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 
+    # =============================================================================
+    # TRAINING
+    # =============================================================================
 
-
-    
-    def _get_evaluation_dataset(self):
-        """Get evaluation dataset (test only)."""
-        return get_evaluation_dataset(self.dataset_test)
-    
-    def _create_evaluation_dataloader(self, eval_dataset):
-        """Create DataLoader for evaluation."""
-        return create_evaluation_dataloader(eval_dataset, self.args_loaded, self.args)
-    
-    def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
-        """Perform evaluation on all batches."""
-        metrics = {CONFIG_KEY_TOTAL_LOSS: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_CORRECT: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_SAMPLES: DEFAULT_ZERO_VALUE, CONFIG_KEY_NUM_BATCHES: DEFAULT_ZERO_VALUE}
-        
-        logging.info(f"Client {self.client_id} evaluating on {len(eval_dataloader)} test batches")
-
-        for batch_idx, batch in enumerate(eval_dataloader):
-            self._process_evaluation_batch(batch, server_round, batch_idx, metrics)
-
-        return self._compute_overall_evaluation_metrics(
-            metrics[CONFIG_KEY_TOTAL_LOSS], metrics[CONFIG_KEY_TOTAL_CORRECT], 
-            metrics[CONFIG_KEY_TOTAL_SAMPLES], metrics[CONFIG_KEY_NUM_BATCHES]
-        )
-    
-    def _process_evaluation_batch(self, batch, server_round: int, batch_idx: int, metrics: Dict) -> None:
-        """Process a single evaluation batch."""
-        pixel_values, label = extract_evaluation_batch_data(batch)
-        batch_loss, batch_correct, batch_size = self._compute_batch_evaluation_metrics(
-            pixel_values, label, server_round, batch_idx
-        )
-
-        metrics[CONFIG_KEY_TOTAL_LOSS] += batch_loss
-        metrics[CONFIG_KEY_TOTAL_CORRECT] += batch_correct
-        metrics[CONFIG_KEY_TOTAL_SAMPLES] += batch_size
-        metrics[CONFIG_KEY_NUM_BATCHES] += 1
-
-        # Log progress for first few batches
-        if batch_idx < self.args.get(CONFIG_KEY_EVAL_BATCHES, DEFAULT_EVAL_BATCHES):
-            batch_accuracy = batch_correct / batch_size if batch_size > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
-            logging.debug(f"Client {self.client_id} eval batch {batch_idx + DEFAULT_ONE_VALUE}: "
-                          f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
-    
-    
-    def _compute_overall_evaluation_metrics(self, total_loss: float, total_correct: int, 
-                                          total_samples: int, num_batches: int) -> Tuple[float, float]:
-        """Compute overall evaluation metrics."""
-        if num_batches > DEFAULT_ZERO_VALUE and total_samples > DEFAULT_ZERO_VALUE:
-            avg_loss = total_loss / num_batches
-            accuracy = total_correct / total_samples
-
-            logging.info(f"Client {self.client_id} evaluation completed: "
-                         f"loss={avg_loss:.4f}, accuracy={accuracy:.4f} "
-                         f"({total_samples} samples, {num_batches} batches)")
-
-            return accuracy, avg_loss
-        else:
-            raise ValueError("No batches processed during evaluation")
-
-    def _compute_batch_evaluation_metrics(self, pixel_values, labels, server_round: int, batch_idx: int) -> Tuple[float, int, int]:
-        """
-        Compute actual evaluation metrics for a batch of data.
-
-        Args:
-            pixel_values: Batch of image data (tensor or None)
-            labels: Batch of labels (tensor or None)
-            server_round: Current server round
-            batch_idx: Batch index within evaluation
-
-        Returns:
-            Tuple of (batch_loss, num_correct, batch_size)
-        """
-        return compute_batch_evaluation_metrics(
-            pixel_values, labels, self.model, server_round, batch_idx, self.client_id
-        )
-
-
-
-    
-
-    
     def fit(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[List[np.ndarray], int, Dict[str, Any]]:
         """
         Train the model on local data.
@@ -997,6 +920,79 @@ class FlowerClient(fl.client.NumPyClient):
         metrics = self._perform_evaluation(eval_dataloader, server_round)
         
         return metrics
+    
+    def _get_evaluation_dataset(self):
+        """Get evaluation dataset (test only)."""
+        return get_evaluation_dataset(self.dataset_test)
+    
+    def _create_evaluation_dataloader(self, eval_dataset):
+        """Create DataLoader for evaluation."""
+        return create_evaluation_dataloader(eval_dataset, self.args_loaded, self.args)
+
+    def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
+        """Perform evaluation on all batches."""
+        metrics = {CONFIG_KEY_TOTAL_LOSS: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_CORRECT: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_SAMPLES: DEFAULT_ZERO_VALUE, CONFIG_KEY_NUM_BATCHES: DEFAULT_ZERO_VALUE}
+        
+        logging.info(f"Client {self.client_id} evaluating on {len(eval_dataloader)} test batches")
+
+        for batch_idx, batch in enumerate(eval_dataloader):
+            self._process_evaluation_batch(batch, server_round, batch_idx, metrics)
+
+        return self._compute_overall_evaluation_metrics(
+            metrics[CONFIG_KEY_TOTAL_LOSS], metrics[CONFIG_KEY_TOTAL_CORRECT], 
+            metrics[CONFIG_KEY_TOTAL_SAMPLES], metrics[CONFIG_KEY_NUM_BATCHES]
+        )
+    
+    def _process_evaluation_batch(self, batch, server_round: int, batch_idx: int, metrics: Dict) -> None:
+        """Process a single evaluation batch."""
+        pixel_values, label = extract_evaluation_batch_data(batch)
+        batch_loss, batch_correct, batch_size = self._compute_batch_evaluation_metrics(
+            pixel_values, label, server_round, batch_idx
+        )
+
+        metrics[CONFIG_KEY_TOTAL_LOSS] += batch_loss
+        metrics[CONFIG_KEY_TOTAL_CORRECT] += batch_correct
+        metrics[CONFIG_KEY_TOTAL_SAMPLES] += batch_size
+        metrics[CONFIG_KEY_NUM_BATCHES] += 1
+
+        # Log progress for first few batches
+        if batch_idx < self.args.get(CONFIG_KEY_EVAL_BATCHES, DEFAULT_EVAL_BATCHES):
+            batch_accuracy = batch_correct / batch_size if batch_size > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
+            logging.debug(f"Client {self.client_id} eval batch {batch_idx + DEFAULT_ONE_VALUE}: "
+                          f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
+    
+    
+    def _compute_overall_evaluation_metrics(self, total_loss: float, total_correct: int, 
+                                          total_samples: int, num_batches: int) -> Tuple[float, float]:
+        """Compute overall evaluation metrics."""
+        if num_batches > DEFAULT_ZERO_VALUE and total_samples > DEFAULT_ZERO_VALUE:
+            avg_loss = total_loss / num_batches
+            accuracy = total_correct / total_samples
+
+            logging.info(f"Client {self.client_id} evaluation completed: "
+                         f"loss={avg_loss:.4f}, accuracy={accuracy:.4f} "
+                         f"({total_samples} samples, {num_batches} batches)")
+
+            return accuracy, avg_loss
+        else:
+            raise ValueError("No batches processed during evaluation")
+
+    def _compute_batch_evaluation_metrics(self, pixel_values, labels, server_round: int, batch_idx: int) -> Tuple[float, int, int]:
+        """
+        Compute actual evaluation metrics for a batch of data.
+
+        Args:
+            pixel_values: Batch of image data (tensor or None)
+            labels: Batch of labels (tensor or None)
+            server_round: Current server round
+            batch_idx: Batch index within evaluation
+
+        Returns:
+            Tuple of (batch_loss, num_correct, batch_size)
+        """
+        return compute_batch_evaluation_metrics(
+            pixel_values, labels, self.model, server_round, batch_idx, self.client_id
+        )
 
     def _create_evaluation_metrics(self, accuracy: float) -> Dict[str, Any]:
         """Create evaluation metrics dictionary with proper types for Flower."""
