@@ -681,38 +681,6 @@ class FlowerClient(fl.client.NumPyClient):
         return DEFAULT_GROUP_ID  # Default to group 0
         
 
-    
-
-
-
-    
-    def _create_optimizer(self, learning_rate: float) -> torch.optim.Optimizer:
-        """Create optimizer for training."""
-        # Only optimize LoRA parameters if using LoRA
-        if self.args.get(CONFIG_KEY_PEFT) == DEFAULT_LORA_PEFT:
-            # Get only LoRA parameters
-            lora_params = []
-            # TODO Liam: refactor this
-            for name, param in self.model.named_parameters():
-                if 'lora' in name or 'classifier' in name:
-                    lora_params.append(param)
-            optimizer = torch.optim.AdamW(lora_params, lr=learning_rate)
-        else:
-            # Optimize all parameters
-            optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate)
-        
-        logging.debug(f"Created optimizer with {len(list(optimizer.param_groups[0]['params']))} parameters")
-        return optimizer
-    
-    
-    def _log_training_results(self, client_indices_list: List[int], total_loss: float, local_epochs: int) -> None:
-        """Log final training results."""
-        avg_total_loss = total_loss / local_epochs if local_epochs > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
-        logging.info(f"Client {self.client_id} trained on {len(client_indices_list)} actual samples, "
-                     f"avg_loss={avg_total_loss:.4f}")
-    
-    
-
 
 
     # =============================================================================
