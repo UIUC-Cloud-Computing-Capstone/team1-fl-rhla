@@ -42,6 +42,12 @@ from algorithms.solver.shared_utils import (
 )
 from algorithms.solver.local_solver import LocalUpdate
 from utils.model_utils import model_setup
+from data_loading import (
+    DatasetArgs, load_dataset_config, load_dataset, store_dataset_data,
+    get_client_data_indices, create_training_dataloader, create_client_dataset,
+    get_evaluation_dataset, create_evaluation_dataloader, extract_batch_data,
+    extract_evaluation_batch_data, compute_batch_evaluation_metrics
+)
 
 # Constants
 DATASET_LOADING_AVAILABLE = True
@@ -252,65 +258,6 @@ DEFAULT_DROP_LAST_EVAL = False
 # HELPER CLASSES
 # =============================================================================
 
-class DatasetArgs:
-    """
-    Arguments class for dataset loading compatibility.
-    
-    This class provides a bridge between the configuration dictionary and the 
-    dataset loading functions, ensuring compatibility with the existing data 
-    preprocessing pipeline.
-    
-    Example:
-        config_dict = {CONFIG_KEY_DATASET: DEFAULT_DATASET, CONFIG_KEY_BATCH_SIZE: DEFAULT_BATCH_SIZE}
-        args = DatasetArgs(config_dict, client_id=DEFAULT_CLIENT_ID)
-    """
-    
-    def __init__(self, config_dict: Dict[str, Any], client_id: int):
-        """Initialize dataset args from configuration dictionary."""
-        # Store config dict for direct access instead of individual attributes
-        self.config_dict = config_dict
-        self.client_id = client_id
-        
-        # Only store essential attributes that are frequently accessed
-        self.dataset = config_dict.get(CONFIG_KEY_DATASET, DEFAULT_DATASET)
-        self.model = config_dict.get(CONFIG_KEY_MODEL, DEFAULT_MODEL)
-        self.data_type = config_dict.get(CONFIG_KEY_DATA_TYPE, DEFAULT_DATA_TYPE)
-        self.peft = config_dict.get(CONFIG_KEY_PEFT, DEFAULT_PEFT)
-        self.batch_size = config_dict.get(CONFIG_KEY_BATCH_SIZE, DEFAULT_BATCH_SIZE)
-        self.num_users = config_dict.get(CONFIG_KEY_NUM_USERS, DEFAULT_NUM_USERS)
-        
-        # Device configuration
-        self.device = torch.device(DEFAULT_CUDA_DEVICE if torch.cuda.is_available() else DEFAULT_CPU_DEVICE)
-        
-        # Logger
-        self.logger = self._create_simple_logger()
-        
-        # Additional attributes that might be needed
-        self.num_classes = config_dict.get(CONFIG_KEY_NUM_CLASSES, DEFAULT_NUM_CLASSES)
-        self.labels = None  # Will be set by load_partition
-        self.label2id = None  # Will be set by load_partition
-        self.id2label = None  # Will be set by load_partition
-        
-        # Computed attributes
-        self.iid = config_dict.get(CONFIG_KEY_IID, DEFAULT_ZERO_VALUE) == DEFAULT_ONE_VALUE
-        self.noniid = not self.iid
-
-    def _create_simple_logger(self):
-        """Create a simple logger for compatibility."""
-        class SimpleLogger:
-            def info(self, msg, main_process_only=False):
-                logging.info(msg)
-        return SimpleLogger()
-    
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get configuration value with default."""
-        return self.config_dict.get(key, default)
-    
-    def __getattr__(self, name: str) -> Any:
-        """Get attribute from config_dict if not found as direct attribute."""
-        if name in self.config_dict:
-            return self.config_dict[name]
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
   
 class Config:
     """
@@ -415,7 +362,11 @@ class FlowerClient(fl.client.NumPyClient):
         }
         
         # Load dataset configuration and data
-        self.dataset_info = self._load_dataset_config()
+        self.dataset_info = load_dataset_config(self.args, self.client_id)
+        
+        # Load actual dataset if configuration indicates it should be loaded
+        if self.dataset_info.get(CONFIG_KEY_DATA_LOADED, False):
+            self._load_and_store_dataset()
         
         # Initialize heterogeneous group configuration if needed
         self._initialize_heterogeneous_config()
@@ -447,101 +398,14 @@ class FlowerClient(fl.client.NumPyClient):
         
         return self._loss_func
     
-    def _load_dataset_config(self) -> Dict[str, Any]:
-        """
-        Load dataset configuration and prepare dataset information.
+    def _load_and_store_dataset(self) -> None:
+        """Load and store dataset data using the data_loading module."""
+        dataset_name = self.dataset_info.get(CONFIG_KEY_DATASET_NAME, DEFAULT_DATASET)
         
-        Returns:
-            Dictionary containing dataset information with the following keys:
-            - dataset_name: Name of the dataset
-            - data_type: Type of data (image/text)
-            - model_name: Name of the model architecture
-            - batch_size: Batch size for training
-            - num_classes: Number of output classes
-            - labels: Dataset labels (if available)
-            - label2id: Label to ID mapping (if available)
-            - id2label: ID to label mapping (if available)
-            - data_loaded: Whether actual data was loaded
-            
-        Raises:
-            ValueError: If dataset configuration is invalid
-        """
-        dataset_name = self._get_dataset_name()
-        dataset_info = self._create_base_dataset_info(dataset_name)
+        # Load dataset using the data_loading module
+        load_dataset(dataset_name, self.args, self.client_id)
         
-        self._validate_dataset_name(dataset_name)
-        self._apply_dataset_specific_config(dataset_info, dataset_name)
-        
-        # Load actual dataset if available
-        dataset_info[CONFIG_KEY_DATA_LOADED] = self._load_dataset(dataset_name)
-        logging.info(f"Dataset loading result: {dataset_info[CONFIG_KEY_DATA_LOADED]}")
-        
-        # Update with actual data if loaded successfully
-        if dataset_info[CONFIG_KEY_DATA_LOADED]:
-            self._update_dataset_info_with_loaded_data(dataset_info)
-
-        logging.info(f"Dataset configuration loaded: {dataset_name} "
-                     f"({dataset_info[CONFIG_KEY_NUM_CLASSES]} classes, {dataset_info[CONFIG_KEY_DATA_TYPE]} data)")
-
-        return dataset_info
-    
-    def _get_dataset_name(self) -> str:
-        """Get dataset name from configuration."""
-        return self.args.get(CONFIG_KEY_DATASET, DEFAULT_DATASET)
-    
-    def _create_base_dataset_info(self, dataset_name: str) -> Dict[str, Any]:
-        """Create base dataset information dictionary."""
-        return {
-            CONFIG_KEY_DATASET_NAME: dataset_name,
-            CONFIG_KEY_DATA_TYPE: self.args.get(CONFIG_KEY_DATA_TYPE, DEFAULT_IMAGE_DATA_TYPE),
-            CONFIG_KEY_MODEL_NAME: self.args.get(CONFIG_KEY_MODEL, DEFAULT_MODEL),
-            CONFIG_KEY_BATCH_SIZE: self.args.get(CONFIG_KEY_BATCH_SIZE, DEFAULT_BATCH_SIZE),
-            CONFIG_KEY_NUM_CLASSES: None,
-            CONFIG_KEY_LABELS: None,
-            CONFIG_KEY_LABEL2ID: None,
-            CONFIG_KEY_ID2LABEL: None,
-            CONFIG_KEY_DATA_LOADED: False
-        }
-    
-    def _validate_dataset_name(self, dataset_name: str) -> None:
-        """Validate dataset name."""
-        if not dataset_name or not isinstance(dataset_name, str):
-            raise ValueError(f"Invalid dataset name: {dataset_name}")
-        logging.info(f"Loading dataset configuration for: {dataset_name}")
-    
-    def _apply_dataset_specific_config(self, dataset_info: Dict[str, Any], dataset_name: str) -> None:
-        """Apply dataset-specific configuration."""
-        if dataset_name in DATASET_CONFIGS:
-            config = DATASET_CONFIGS[dataset_name]
-            dataset_info[CONFIG_KEY_NUM_CLASSES] = config[CONFIG_KEY_NUM_CLASSES]
-            dataset_info[CONFIG_KEY_DATA_TYPE] = config[CONFIG_KEY_DATA_TYPE]
-        else:
-            raise ValueError(ERROR_INVALID_DATASET.format(dataset_name=dataset_name))
-    
-    def _update_dataset_info_with_loaded_data(self, dataset_info: Dict[str, Any]) -> None:
-        """Update dataset info with actual loaded data."""
-        if hasattr(self, 'dataset_train'):
-            dataset_info.update({
-                CONFIG_KEY_TRAIN_SAMPLES: len(self.dataset_train) if self.dataset_train else DEFAULT_ZERO_VALUE,
-                CONFIG_KEY_TEST_SAMPLES: len(self.dataset_test) if self.dataset_test else DEFAULT_ZERO_VALUE,
-                CONFIG_KEY_NUM_USERS: len(self.client_data_partition) if self.client_data_partition else DEFAULT_ZERO_VALUE,
-                CONFIG_KEY_CLIENT_DATA_INDICES: getattr(self, CONFIG_KEY_DATASET_INFO, {}).get(CONFIG_KEY_CLIENT_DATA_INDICES, set()),
-                CONFIG_KEY_NONIID_TYPE: getattr(self.args_loaded, CONFIG_KEY_NONIID_TYPE, DEFAULT_DIRICHLET_TYPE) if hasattr(self, 'args_loaded') else DEFAULT_DIRICHLET_TYPE
-            })
-    
-    def _load_dataset(self, dataset_name: str) -> bool:
-        """
-        Attempt to load actual dataset data.
-        
-        Args:
-            dataset_name: Name of the dataset to load
-            
-        Returns:
-            True if dataset was loaded successfully, False otherwise
-        """
-        logging.info(f"Loading dataset: {dataset_name}")
-
-        # Create dataset args and load dataset
+        # Store the loaded data
         dataset_args = DatasetArgs(self.args.to_dict(), self.client_id)
         dataset_data = self._load_dataset_with_partition(dataset_args)
         
@@ -550,41 +414,11 @@ class FlowerClient(fl.client.NumPyClient):
             
         # Store dataset information
         self._store_dataset_data(dataset_data)
-        
-        # Log dataset statistics
-        self._log_dataset_statistics(dataset_name, dataset_data)
-        
-        return True
     
     def _load_dataset_with_partition(self, dataset_args: DatasetArgs) -> Optional[Tuple]:
         """Load dataset using shared load_data function."""
-        
-        logging.info(f"Loading dataset: {dataset_args.dataset} with model: {dataset_args.model}")
-        logging.info(f"Non-IID configuration: {dataset_args.noniid_type}, {dataset_args.pat_num_cls} classes per client")
-
-        # Use shared load_data function for consistency
-        args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim = load_data(dataset_args)
-
-        # Log dataset loading information
-        logging.info(f'Dataset train length: {len(dataset_train)}')
-        logging.info(f'Dataset test length: {len(dataset_test)}')
-        logging.info(f'Client data partition length: {len(client_data_partition)}')
-        logging.info(f'Dataset FIM length: {len(dataset_fim) if dataset_fim else 0}')
-        logging.debug(f'Args loaded: {args_loaded}')
-
-        # Validate that we have the required data
-        if not dataset_train:
-            raise ValueError("Failed to load training dataset")
-            
-        if not client_data_partition:
-            raise ValueError("Failed to load user data partition")
-
-        # TODO Liam: other edge cases
-
-        return (args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim)
-            
-    
-
+        from data_loading import load_dataset_with_partition
+        return load_dataset_with_partition(dataset_args)
     
     def _store_dataset_data(self, dataset_data: Tuple) -> None:
         """Store loaded dataset data in instance variables."""
@@ -605,34 +439,7 @@ class FlowerClient(fl.client.NumPyClient):
             logging.warning(f"Client {self.client_id} not found in user data partition")
             self.client_data_indices = set()
     
-    def _log_dataset_statistics(self, dataset_name: str, dataset_data: Tuple) -> None:
-        """Log comprehensive dataset statistics."""
-        args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim = dataset_data
-        
-        logging.info(LOG_DATASET_LOADED.format(dataset_name=dataset_name))
-        logging.info(f"Train samples: {len(dataset_train) if dataset_train else 0}")
-        logging.info(f"Test samples: {len(dataset_test) if dataset_test else 0}")
-        logging.info(f"Total clients: {len(client_data_partition) if client_data_partition else 0}")
-        logging.info(f"Client {self.client_id} has {len(client_data_partition.get(self.client_id, set())) if client_data_partition else 0} data samples")
-
-        # Log non-IID distribution information
-        self._log_client_class_distribution(client_data_partition, args_loaded)
     
-    def _log_client_class_distribution(self, client_data_partition: Dict, args_loaded) -> None:
-        """Log client-specific class distribution information."""
-        if not client_data_partition or self.client_id not in client_data_partition:
-            return
-            
-        client_indices = list(client_data_partition[self.client_id])
-        if not hasattr(args_loaded, CONFIG_KEY_TR_LABELS) or args_loaded._tr_labels is None:
-            return
-            
-        client_labels = args_loaded._tr_labels[client_indices]
-        unique_labels = np.unique(client_labels)
-        class_counts = dict(zip(*np.unique(client_labels, return_counts=True)))
-        
-        logging.info(f"Client {self.client_id} has classes: {unique_labels.tolist()}")
-        logging.info(f"Client {self.client_id} class distribution: {class_counts}")
     
     def get_dataset_info(self) -> Dict[str, Any]:
         """
@@ -904,48 +711,21 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_client_data_indices(self) -> List[int]:
         """Get and validate client data indices."""
-        if hasattr(self, 'client_data_indices'):
-            client_indices = self.client_data_indices
-        else:
-            client_indices = self.dataset_info.get(CONFIG_KEY_CLIENT_DATA_INDICES, set())
-        
-        if not client_indices:
-            raise ValueError(ERROR_NO_DATA_INDICES.format(client_id=self.client_id))
-        return list(client_indices)
+        client_data_indices = getattr(self, 'client_data_indices', None)
+        return get_client_data_indices(client_data_indices, self.dataset_info, self.client_id)
     
     # TODO Liam: refactor this
     def _create_training_dataloader(self, client_dataset):
         """Create DataLoader for training using shared utilities."""
-        collate_fn = self._get_collate_function(self.args_loaded)
-        
-        # Use shared create_client_dataloader function
-        return create_client_dataloader(client_dataset, self.args, collate_fn)
+        return create_training_dataloader(client_dataset, self.args_loaded, self.args)
     
-    def _get_collate_function(self, args_loaded):
-        """Get the appropriate collate function based on dataset type."""
-        if self._is_cifar100_dataset(args_loaded):
-            return vit_collate_fn
-        elif self._is_ledgar_dataset(args_loaded):
-            return getattr(args_loaded, CONFIG_KEY_DATA_COLLATOR, None)
-        else:
-            raise ValueError(f"Invalid dataset: {args_loaded.dataset}")
-    
-    def _is_cifar100_dataset(self, args_loaded) -> bool:
-        """Check if the dataset is CIFAR-100."""
-        return (hasattr(args_loaded, 'dataset') and 
-                args_loaded.dataset == DEFAULT_CIFAR100_DATASET)
-    
-    def _is_ledgar_dataset(self, args_loaded) -> bool:
-        """Check if the dataset is LEDGAR."""
-        return (hasattr(args_loaded, 'dataset') and 
-                DEFAULT_LEDGAR_DATASET in args_loaded.dataset)
     
     
     # TODO Liam: is this correct?
     def _process_training_batch_with_gradients(self, batch, batch_idx: int, epoch: int, optimizer: torch.optim.Optimizer) -> float:
         """Process a single training batch with actual gradients."""
         # Extract batch data
-        pixel_values, labels = self._extract_batch_data(batch)
+        pixel_values, labels = extract_batch_data(batch)
         
         # Move to device
         device = next(self.model.parameters()).device
@@ -983,29 +763,6 @@ class FlowerClient(fl.client.NumPyClient):
             logging.warning(f"Client {self.client_id} epoch {epoch + DEFAULT_ONE_VALUE}: no batches processed")
             return DEFAULT_ZERO_VALUE
     
-    def _extract_batch_data(self, batch) -> Tuple:
-        """Extract pixel_values and labels from batch."""
-        if isinstance(batch, dict):
-            return self._extract_from_dict_batch(batch)
-        elif len(batch) == DEFAULT_BATCH_FORMAT_3_ELEMENTS:
-            return self._extract_from_three_element_batch(batch)
-        elif len(batch) == DEFAULT_BATCH_FORMAT_2_ELEMENTS:
-            return self._extract_from_two_element_batch(batch)
-        else:
-            raise ValueError(ERROR_INVALID_BATCH_FORMAT.format(batch_type=type(batch)))
-    
-    def _extract_from_dict_batch(self, batch: Dict) -> Tuple:
-        """Extract data from dictionary format batch."""
-        return batch[CONFIG_KEY_PIXEL_VALUES], batch[CONFIG_KEY_LABELS]
-    
-    def _extract_from_three_element_batch(self, batch) -> Tuple:
-        """Extract data from three-element batch (image, label, pixel_values)."""
-        image, label, pixel_values = batch
-        return pixel_values, label
-    
-    def _extract_from_two_element_batch(self, batch) -> Tuple:
-        """Extract data from two-element batch (pixel_values, labels)."""
-        return batch[DEFAULT_ZERO_VALUE], batch[DEFAULT_ONE_VALUE]
 
     def _create_client_dataset(self, client_indices: List[int], dataset_train, args_loaded):
         """
@@ -1020,7 +777,7 @@ class FlowerClient(fl.client.NumPyClient):
             Dataset subset for this client
         """
         # Use shared create_client_dataset function
-        client_dataset = create_client_dataset(dataset_train, client_indices, args_loaded)
+        client_dataset = create_client_dataset(client_indices, dataset_train, args_loaded)
 
         logging.debug(f"Client {self.client_id} created dataset subset with {len(client_dataset)} samples")
         return client_dataset
@@ -1056,22 +813,11 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _get_evaluation_dataset(self):
         """Get evaluation dataset (test only)."""
-        return self.dataset_test
+        return get_evaluation_dataset(self.dataset_test)
     
     def _create_evaluation_dataloader(self, eval_dataset):
         """Create DataLoader for evaluation."""
-        from torch.utils.data import DataLoader
-        batch_size = len(eval_dataset)  # Use full dataset for evaluation
-        collate_fn = self._get_collate_function(self.args_loaded)
-        
-        return DataLoader(
-            eval_dataset,
-            batch_size=batch_size,
-            shuffle=self.args.get(CONFIG_KEY_SHUFFLE_EVAL, DEFAULT_SHUFFLE_EVAL),
-            drop_last=self.args.get(CONFIG_KEY_DROP_LAST_EVAL, DEFAULT_DROP_LAST_EVAL),
-            num_workers=self.args.get(CONFIG_KEY_NUM_WORKERS, DEFAULT_NUM_WORKERS),
-            collate_fn=collate_fn
-        )
+        return create_evaluation_dataloader(eval_dataset, self.args_loaded, self.args)
     
     def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
         """Perform evaluation on all batches."""
@@ -1089,7 +835,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _process_evaluation_batch(self, batch, server_round: int, batch_idx: int, metrics: Dict) -> None:
         """Process a single evaluation batch."""
-        pixel_values, label = self._extract_evaluation_batch_data(batch)
+        pixel_values, label = extract_evaluation_batch_data(batch)
         batch_loss, batch_correct, batch_size = self._compute_batch_evaluation_metrics(
             pixel_values, label, server_round, batch_idx
         )
@@ -1105,15 +851,6 @@ class FlowerClient(fl.client.NumPyClient):
             logging.debug(f"Client {self.client_id} eval batch {batch_idx + DEFAULT_ONE_VALUE}: "
                           f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
     
-    def _extract_evaluation_batch_data(self, batch) -> Tuple:
-        """Extract batch data for evaluation."""
-        if len(batch) == DEFAULT_BATCH_FORMAT_3_ELEMENTS:  # DatasetSplit format
-            image, label, pixel_values = batch
-            return pixel_values, label
-        elif len(batch) == DEFAULT_BATCH_FORMAT_2_ELEMENTS:  # Standard format
-            return batch[DEFAULT_ZERO_VALUE], batch[DEFAULT_ONE_VALUE]
-        else:
-            raise ValueError(f"Invalid batch length for evaluation: {len(batch)}")
     
     def _compute_overall_evaluation_metrics(self, total_loss: float, total_correct: int, 
                                           total_samples: int, num_batches: int) -> Tuple[float, float]:
@@ -1143,33 +880,9 @@ class FlowerClient(fl.client.NumPyClient):
         Returns:
             Tuple of (batch_loss, num_correct, batch_size)
         """
-        if pixel_values is None or labels is None:
-            raise ValueError(f"Invalid pixel_values or labels: {pixel_values}, {labels}")
-        
-        batch_size = pixel_values.shape[0] if hasattr(pixel_values, 'shape') else labels.shape[0]
-        
-        # Move to device
-        device = next(self.model.parameters()).device
-        pixel_values = pixel_values.to(device)
-        labels = labels.to(device)
-        
-        # Set model to evaluation mode
-        self.model.eval()
-        
-        with torch.no_grad():
-            # Forward pass
-            outputs = self.model(pixel_values=pixel_values, labels=labels)
-            loss = outputs.loss
-            logits = outputs.logits
-            
-            # Get predictions
-            predictions = torch.argmax(logits, dim=DEFAULT_DIMENSION_1)
-            num_correct = int(torch.sum(predictions == labels).item())
-
-        logging.debug(f"Eval batch {batch_idx}: size={batch_size}, "
-                      f"loss={loss:.4f}, correct={num_correct}")
-
-        return float(loss.item()), num_correct, batch_size
+        return compute_batch_evaluation_metrics(
+            pixel_values, labels, self.model, server_round, batch_idx, self.client_id
+        )
 
 
 
