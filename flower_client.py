@@ -648,7 +648,24 @@ class FlowerClient(fl.client.NumPyClient):
         client_data_indices = getattr(self, 'client_data_indices', None)
         return get_client_data_indices(client_data_indices, self.dataset_info, self.client_id)
     
-    # TODO Liam: refactor this
+    def _create_client_dataset(self, client_indices: List[int], dataset_train, args_loaded):
+        """
+        Create a client-specific dataset subset using shared utilities.
+
+        Args:
+            client_indices: List of indices for this client's data
+            dataset_train: Training dataset
+            args_loaded: Loaded arguments
+
+        Returns:
+            Dataset subset for this client
+        """
+        # Use shared create_client_dataset function
+        client_dataset = create_client_dataset(client_indices, dataset_train, args_loaded)
+
+        logging.debug(f"Client {self.client_id} created dataset subset with {len(client_dataset)} samples")
+        return client_dataset
+
     def _create_training_dataloader(self, client_dataset):
         """Create DataLoader for training using shared utilities."""
         return create_training_dataloader(client_dataset, self.args_loaded, self.args)
@@ -688,23 +705,7 @@ class FlowerClient(fl.client.NumPyClient):
     
     
 
-    def _create_client_dataset(self, client_indices: List[int], dataset_train, args_loaded):
-        """
-        Create a client-specific dataset subset using shared utilities.
 
-        Args:
-            client_indices: List of indices for this client's data
-            dataset_train: Training dataset
-            args_loaded: Loaded arguments
-
-        Returns:
-            Dataset subset for this client
-        """
-        # Use shared create_client_dataset function
-        client_dataset = create_client_dataset(client_indices, dataset_train, args_loaded)
-
-        logging.debug(f"Client {self.client_id} created dataset subset with {len(client_dataset)} samples")
-        return client_dataset
 
 
     def _evaluate_with_actual_data(self, server_round: int) -> Tuple[float, float]:
