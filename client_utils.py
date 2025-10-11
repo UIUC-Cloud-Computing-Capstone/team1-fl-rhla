@@ -13,13 +13,12 @@ import logging
 import os
 import torch
 import yaml
-from typing import Dict, Any
 
 from client_config import Config
 from client_constants import (
     DEFAULT_CONFIG_PATH, DEFAULT_SERVER_ADDRESS, DEFAULT_SERVER_PORT,
     DEFAULT_CLIENT_ID, DEFAULT_SEED, DEFAULT_GPU_ID, DEFAULT_LOG_LEVEL,
-    DEFAULT_CPU_DEVICE, DEFAULT_CUDA_DEVICE, ERROR_INVALID_CONFIG
+    DEFAULT_CPU_DEVICE, DEFAULT_CUDA_DEVICE
 )
 
 
