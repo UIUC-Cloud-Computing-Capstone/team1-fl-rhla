@@ -16,6 +16,8 @@ from typing import Dict, List, Tuple, Optional, Any, Union
 # Third-party imports
 import numpy as np
 import torch
+from flwr_datasets import FederatedDataset
+from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
 
 # Local imports
 from algorithms.solver.shared_utils import (
@@ -256,6 +258,14 @@ class DatasetArgs:
         # Computed attributes
         self.iid = config_dict.get(CONFIG_KEY_IID, DEFAULT_ZERO_VALUE) == DEFAULT_ONE_VALUE
         self.noniid = not self.iid
+        
+        # Non-IID configuration
+        self.noniid_type = config_dict.get(CONFIG_KEY_NONIID_TYPE, DEFAULT_DIRICHLET_TYPE)
+        self.dir_cls_alpha = config_dict.get(CONFIG_KEY_DIR_CLS_ALPHA, DEFAULT_ONE_POINT_ZERO)  # Use alpha 1.0 for balanced non-IID
+        self.pat_num_cls = config_dict.get(CONFIG_KEY_PAT_NUM_CLS, DEFAULT_PAT_NUM_CLS)
+        self.partition_mode = config_dict.get(CONFIG_KEY_PARTITION_MODE, DEFAULT_PARTITION_MODE)
+        self.model_heterogeneity = config_dict.get(CONFIG_KEY_MODEL_HETEROGENEITY, DEFAULT_MODEL_HETEROGENEITY)
+        self.freeze_datasplit = config_dict.get(CONFIG_KEY_FREEZE_DATASPLIT, False)
 
     def _create_simple_logger(self):
         """Create a simple logger for compatibility."""
@@ -273,6 +283,10 @@ class DatasetArgs:
         if name in self.config_dict:
             return self.config_dict[name]
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for compatibility with existing code."""
+        return self.config_dict.copy()
 
 
 # =============================================================================
@@ -361,15 +375,25 @@ def apply_dataset_specific_config(dataset_info: Dict[str, Any], dataset_name: st
 
 def update_dataset_info_with_loaded_data(dataset_info: Dict[str, Any], args, client_id: int) -> None:
     """Update dataset info with actual loaded data."""
-    # This function would need access to the loaded dataset objects
-    # For now, we'll provide a placeholder implementation
-    dataset_info.update({
-        CONFIG_KEY_TRAIN_SAMPLES: 0,  # Will be updated by caller
-        CONFIG_KEY_TEST_SAMPLES: 0,   # Will be updated by caller
-        CONFIG_KEY_NUM_USERS: 0,      # Will be updated by caller
-        CONFIG_KEY_CLIENT_DATA_INDICES: set(),  # Will be updated by caller
-        CONFIG_KEY_NONIID_TYPE: getattr(args, CONFIG_KEY_NONIID_TYPE, DEFAULT_DIRICHLET_TYPE)
-    })
+    # Get stored dataset data
+    if hasattr(args, 'dataset_data') and args.dataset_data:
+        stored_data = args.dataset_data
+        dataset_info.update({
+            CONFIG_KEY_TRAIN_SAMPLES: len(stored_data['dataset_train']) if hasattr(stored_data['dataset_train'], '__len__') else 0,
+            CONFIG_KEY_TEST_SAMPLES: len(stored_data['dataset_test']) if hasattr(stored_data['dataset_test'], '__len__') else 0,
+            CONFIG_KEY_NUM_USERS: len(stored_data['client_data_partition']) if stored_data['client_data_partition'] else 0,
+            CONFIG_KEY_CLIENT_DATA_INDICES: stored_data['client_data_indices'],
+            CONFIG_KEY_NONIID_TYPE: getattr(args, CONFIG_KEY_NONIID_TYPE, DEFAULT_DIRICHLET_TYPE)
+        })
+    else:
+        # Fallback to placeholder values
+        dataset_info.update({
+            CONFIG_KEY_TRAIN_SAMPLES: 0,
+            CONFIG_KEY_TEST_SAMPLES: 0,
+            CONFIG_KEY_NUM_USERS: 0,
+            CONFIG_KEY_CLIENT_DATA_INDICES: set(),
+            CONFIG_KEY_NONIID_TYPE: getattr(args, CONFIG_KEY_NONIID_TYPE, DEFAULT_DIRICHLET_TYPE)
+        })
 
 
 # =============================================================================
@@ -396,6 +420,10 @@ def load_dataset(dataset_name: str, args, client_id: int) -> bool:
     
     if dataset_data is None:
         raise ValueError("Failed to load dataset")
+    
+    # Store dataset data in args for later use
+    stored_data = store_dataset_data(dataset_data, client_id)
+    args.dataset_data = stored_data
         
     # Log dataset statistics
     log_dataset_statistics(dataset_name, dataset_data, client_id)
@@ -404,17 +432,25 @@ def load_dataset(dataset_name: str, args, client_id: int) -> bool:
 
 
 def load_dataset_with_partition(dataset_args: DatasetArgs) -> Optional[Tuple]:
-    """Load dataset using shared load_data function."""
+    """Load dataset using efficient Flower Datasets partitioning."""
     
     logging.info(f"Loading dataset: {dataset_args.dataset} with model: {dataset_args.model}")
     logging.info(f"Non-IID configuration: {dataset_args.noniid_type}, {dataset_args.pat_num_cls} classes per client")
 
-    # Use shared load_data function for consistency
-    args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim = load_data(dataset_args)
+    # Use efficient Flower Datasets partitioning
+    args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim = load_data_efficient(dataset_args)
 
     # Log dataset loading information
-    logging.info(f'Dataset train length: {len(dataset_train)}')
-    logging.info(f'Dataset test length: {len(dataset_test)}')
+    if hasattr(dataset_train, '__len__'):
+        logging.info(f'Dataset train length: {len(dataset_train)}')
+    else:
+        logging.info(f'Dataset train type: {type(dataset_train)}')
+    
+    if hasattr(dataset_test, '__len__'):
+        logging.info(f'Dataset test length: {len(dataset_test)}')
+    else:
+        logging.info(f'Dataset test type: {type(dataset_test)}')
+    
     logging.info(f'Client data partition length: {len(client_data_partition)}')
     logging.info(f'Dataset FIM length: {len(dataset_fim) if dataset_fim else 0}')
     logging.debug(f'Args loaded: {args_loaded}')
@@ -427,6 +463,256 @@ def load_dataset_with_partition(dataset_args: DatasetArgs) -> Optional[Tuple]:
         raise ValueError("Failed to load user data partition")
 
     return (args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim)
+
+
+def load_data_efficient(dataset_args: DatasetArgs) -> Tuple:
+    """
+    Load dataset using efficient Flower Datasets partitioning with DirichletPartitioner.
+    
+    This function uses the Flower Datasets library to efficiently partition data
+    using DirichletPartitioner with alpha 1.0 for balanced non-IID distribution.
+    
+    Args:
+        dataset_args: Configuration arguments for dataset loading
+        
+    Returns:
+        Tuple of (args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim)
+    """
+    logging.info("Using efficient Flower Datasets partitioning")
+    
+    # Create partitioner based on configuration
+    if dataset_args.iid:
+        partitioner = IidPartitioner(num_partitions=dataset_args.num_users)
+        logging.info(f"Using IID partitioning for {dataset_args.num_users} clients")
+    else:
+        # Use DirichletPartitioner with alpha 1.0 for balanced non-IID distribution
+        alpha = getattr(dataset_args, 'dir_cls_alpha', 1.0)
+        partitioner = DirichletPartitioner(
+            num_partitions=dataset_args.num_users,
+            alpha=alpha,
+            partition_by="fine_label" if dataset_args.dataset == 'cifar100' else "label"
+        )
+        logging.info(f"Using DirichletPartitioner with alpha={alpha} for {dataset_args.num_users} clients")
+    
+    # Create federated dataset
+    if dataset_args.dataset == 'cifar100':
+        fds = FederatedDataset(
+            dataset="cifar100",
+            partitioners={"train": partitioner}
+        )
+    elif dataset_args.dataset == 'ledgar':
+        fds = FederatedDataset(
+            dataset="lex_glue",
+            subset="ledgar",
+            partitioners={"train": partitioner}
+        )
+    else:
+        raise ValueError(f"Unsupported dataset: {dataset_args.dataset}")
+    
+    # Load test dataset (no partitioning needed)
+    if dataset_args.dataset == 'cifar100':
+        from datasets import load_dataset
+        test_dataset = load_dataset("cifar100", split="test")
+    elif dataset_args.dataset == 'ledgar':
+        from datasets import load_dataset
+        test_dataset = load_dataset("lex_glue", "ledgar", split="test")
+    
+    # Extract all partitions and combine into a single dataset for compatibility
+    all_partitions = []
+    client_data_partition = {}
+    current_index = 0
+    
+    for client_id in range(dataset_args.num_users):
+        try:
+            partition = fds.load_partition(partition_id=client_id)
+            partition_size = len(partition)
+            
+            # Add partition data to combined dataset
+            for i in range(partition_size):
+                all_partitions.append(partition[i])
+            
+            # Create indices for this client
+            client_indices = set(range(current_index, current_index + partition_size))
+            client_data_partition[client_id] = client_indices
+            current_index += partition_size
+            
+        except Exception as e:
+            logging.warning(f"Failed to load partition for client {client_id}: {e}")
+            client_data_partition[client_id] = set()
+    
+    # Create a combined dataset that can be indexed
+    combined_dataset = create_combined_dataset(all_partitions, dataset_args)
+    
+    # Create args_loaded object for compatibility
+    args_loaded = create_compatible_args(dataset_args, combined_dataset, len(all_partitions))
+    
+    # Handle FIM dataset if needed
+    dataset_fim = None
+    if hasattr(dataset_args, 'model_heterogeneity') and 'depthffm_fim' in dataset_args.model_heterogeneity:
+        dataset_fim = create_fim_dataset(dataset_args)
+    
+    return (args_loaded, combined_dataset, test_dataset, client_data_partition, dataset_fim)
+
+
+def create_combined_dataset(all_partitions: List, dataset_args: DatasetArgs):
+    """
+    Create a combined dataset from all partitions that can be indexed.
+    
+    Args:
+        all_partitions: List of all partition data
+        dataset_args: Dataset configuration arguments
+        
+    Returns:
+        Combined dataset that supports indexing
+    """
+    class CombinedDataset:
+        def __init__(self, data, dataset_name, model_name):
+            self.data = data
+            self.dataset_name = dataset_name
+            self.model_name = model_name
+            
+            # Set up transforms for compatibility
+            if dataset_name == 'cifar100':
+                from transformers import AutoImageProcessor
+                from torchvision.transforms import Compose, Normalize, RandomResizedCrop, RandomHorizontalFlip, ToTensor, Resize
+                
+                image_processor = AutoImageProcessor.from_pretrained('google/vit-base-patch16-224-in21k')
+                normalize = Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
+                
+                if model_name == 'google/vit-base-patch16-224-in21k':
+                    self.train_transforms = Compose([
+                        RandomResizedCrop(image_processor.size["height"]),
+                        RandomHorizontalFlip(),
+                        ToTensor(),
+                        normalize,
+                    ])
+                else:
+                    self.train_transforms = Compose([
+                        RandomResizedCrop((32, 32)),
+                        RandomHorizontalFlip(),   
+                        ToTensor(),
+                        normalize,
+                    ])
+        
+        def __len__(self):
+            return len(self.data)
+        
+        def __getitem__(self, idx):
+            item = self.data[idx]
+            
+            if self.dataset_name == 'cifar100':
+                # Apply transforms to create pixel_values
+                image = item['img']
+                if hasattr(self, 'train_transforms'):
+                    pixel_values = self.train_transforms(image.convert("RGB"))
+                else:
+                    # Fallback if transforms not available
+                    pixel_values = None
+                
+                return {
+                    'img': image,
+                    'fine_label': item['fine_label'],
+                    'coarse_label': item.get('coarse_label', 0),
+                    'pixel_values': pixel_values
+                }
+            else:
+                return item
+    
+    return CombinedDataset(all_partitions, dataset_args.dataset, dataset_args.model)
+
+
+def create_compatible_args(dataset_args: DatasetArgs, combined_dataset, total_samples: int = 0):
+    """
+    Create a compatible args object for existing code.
+    
+    Args:
+        dataset_args: Original dataset arguments
+        combined_dataset: Combined dataset object
+        total_samples: Total number of samples across all partitions
+        
+    Returns:
+        Compatible args object
+    """
+    class CompatibleArgs:
+        def __init__(self, dataset_args, combined_dataset, total_samples):
+            # Copy all attributes from dataset_args
+            for attr in dir(dataset_args):
+                if not attr.startswith('_'):
+                    setattr(self, attr, getattr(dataset_args, attr))
+            
+            # Add dataset reference
+            self.dataset_train = combined_dataset  # For compatibility
+            self.total_samples = total_samples
+            
+            # Set labels and mappings
+            if dataset_args.dataset == 'cifar100':
+                self.labels = [f"class_{i}" for i in range(100)]
+                self.label2id = {f"class_{i}": i for i in range(100)}
+                self.id2label = {i: f"class_{i}" for i in range(100)}
+                self.num_classes = 100
+            elif dataset_args.dataset == 'ledgar':
+                self.labels = ["class_0", "class_1"]
+                self.label2id = {"class_0": 0, "class_1": 1}
+                self.id2label = {0: "class_0", 1: "class_1"}
+                self.num_classes = 2
+            
+            # Extract labels for compatibility with existing code
+            self._tr_labels = extract_labels_from_dataset(combined_dataset, dataset_args.dataset)
+    
+    return CompatibleArgs(dataset_args, combined_dataset, total_samples)
+
+
+def extract_labels_from_dataset(dataset, dataset_name: str):
+    """
+    Extract labels from the combined dataset for compatibility.
+    
+    Args:
+        dataset: Combined dataset
+        dataset_name: Name of the dataset
+        
+    Returns:
+        Array of labels
+    """
+    try:
+        labels = []
+        for i in range(len(dataset)):
+            item = dataset[i]
+            if dataset_name == 'cifar100':
+                labels.append(item['fine_label'])
+            elif dataset_name == 'ledgar':
+                labels.append(item['label'])
+        return np.array(labels)
+    except Exception as e:
+        logging.warning(f"Failed to extract labels: {e}")
+        return None
+
+
+def create_fim_dataset(dataset_args: DatasetArgs):
+    """
+    Create FIM dataset for model heterogeneity.
+    
+    Args:
+        dataset_args: Dataset configuration arguments
+        
+    Returns:
+        FIM dataset or None
+    """
+    if dataset_args.dataset == 'cifar100':
+        from datasets import load_dataset
+        dataset = load_dataset("cifar100", split="train")
+        # Select random samples for FIM
+        import numpy as np
+        selected_indices = np.random.choice(len(dataset), 100, replace=False)
+        return dataset.select(selected_indices)
+    elif dataset_args.dataset == 'ledgar':
+        from datasets import load_dataset
+        dataset = load_dataset("lex_glue", "ledgar", split="train")
+        # Select random samples for FIM
+        import numpy as np
+        selected_indices = np.random.choice(len(dataset), 50, replace=False)
+        return dataset.select(selected_indices)
+    
+    return None
 
 
 def store_dataset_data(dataset_data: Tuple, client_id: int) -> Dict[str, Any]:
@@ -457,8 +743,18 @@ def log_dataset_statistics(dataset_name: str, dataset_data: Tuple, client_id: in
     args_loaded, dataset_train, dataset_test, client_data_partition, dataset_fim = dataset_data
     
     logging.info(LOG_DATASET_LOADED.format(dataset_name=dataset_name))
-    logging.info(f"Train samples: {len(dataset_train) if dataset_train else 0}")
-    logging.info(f"Test samples: {len(dataset_test) if dataset_test else 0}")
+    
+    # Handle different dataset types
+    if hasattr(dataset_train, '__len__'):
+        logging.info(f"Train samples: {len(dataset_train) if dataset_train else 0}")
+    else:
+        logging.info(f"Train dataset type: {type(dataset_train)}")
+    
+    if hasattr(dataset_test, '__len__'):
+        logging.info(f"Test samples: {len(dataset_test) if dataset_test else 0}")
+    else:
+        logging.info(f"Test dataset type: {type(dataset_test)}")
+    
     logging.info(f"Total clients: {len(client_data_partition) if client_data_partition else 0}")
     logging.info(f"Client {client_id} has {len(client_data_partition.get(client_id, set())) if client_data_partition else 0} data samples")
 
@@ -473,6 +769,7 @@ def log_client_class_distribution(client_data_partition: Dict, args_loaded, clie
         
     client_indices = list(client_data_partition[client_id])
     if not hasattr(args_loaded, CONFIG_KEY_TR_LABELS) or args_loaded._tr_labels is None:
+        logging.info(f"Client {client_id} has {len(client_indices)} data samples (label distribution not available)")
         return
         
     client_labels = args_loaded._tr_labels[client_indices]
