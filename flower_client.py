@@ -595,14 +595,8 @@ class FlowerClient(fl.client.NumPyClient):
         
         logging.info(f"Client {self.client_id} using LocalUpdate for heterogeneous training")
         
-        # Create LocalUpdate instance
-        local_solver = LocalUpdate(args=self.args)
-        
-        # Get client group ID for heterogeneous training
-        hete_group_id = self._get_client_group_id()
-        
-        
         # Use LocalUpdate for training
+        local_solver = LocalUpdate(args=self.args)
         local_model, local_loss, no_weight_lora = local_solver.lora_tuning(
                 model=copy.deepcopy(self.model),
                 ldr_train=dataloader,
@@ -610,13 +604,13 @@ class FlowerClient(fl.client.NumPyClient):
                 client_index=self.client_id,
                 client_real_id=self.client_id,
                 round=server_round,
-                hete_group_id=hete_group_id
-            )
+                hete_group_id=self._get_client_group_id()
+        )
             
-            # Update model with trained parameters
+        # Update model with trained parameters
         self.model.load_state_dict(local_model)
             
-            # Log results
+        # Log results
         if local_loss is not None:
             logging.info(f"Client {self.client_id} LocalUpdate training completed: loss={local_loss:.4f}")
             return float(local_loss)  # Ensure float type
