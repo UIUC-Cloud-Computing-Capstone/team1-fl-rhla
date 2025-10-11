@@ -687,16 +687,6 @@ class FlowerClient(fl.client.NumPyClient):
                      f"avg_loss={avg_total_loss:.4f}")
     
     
-    def _compute_epoch_metrics(self, epoch: int, epoch_loss: float, num_batches: int) -> float:
-        """Compute and log epoch metrics."""
-        if num_batches > DEFAULT_ZERO_VALUE:
-            avg_epoch_loss = epoch_loss / num_batches
-            logging.info(f"Client {self.client_id} epoch {epoch + DEFAULT_ONE_VALUE}: avg_loss={avg_epoch_loss:.4f} ({num_batches} batches)")
-            return avg_epoch_loss
-        else:
-            logging.warning(f"Client {self.client_id} epoch {epoch + DEFAULT_ONE_VALUE}: no batches processed")
-            return DEFAULT_ZERO_VALUE
-    
 
     def _create_client_dataset(self, client_indices: List[int], dataset_train, args_loaded):
         """
