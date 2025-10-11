@@ -773,6 +773,7 @@ class FlowerClient(fl.client.NumPyClient):
                     raise ValueError(f"Parameter shape mismatch at index {param_idx}")
                 param_idx += 1
             else:
+                # TODO Liam: is this correct? 
                 logging.warning(f"Not enough parameters provided: expected {param_idx + 1}, got {len(params)}")
                 break
 
