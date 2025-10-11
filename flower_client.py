@@ -356,6 +356,12 @@ class FlowerClient(fl.client.NumPyClient):
             CONFIG_KEY_ROUNDS: []
         }
         
+        # Initialize LoRA optimization attributes
+        self.trained_model = None
+        self.no_weight_lora = None
+        self.lora_mapping = None
+        self.lora_metadata = None
+        
         # Load dataset configuration and data
         self.dataset_info = load_dataset_config(self.args, self.client_id)
         
@@ -605,6 +611,13 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Use LocalUpdate for training
         local_solver = LocalUpdate(args=self.args)
+        
+        # Store original model state for debugging
+        original_model_state = copy.deepcopy(self.model.state_dict())
+        
+        # Validate the current model state before training
+        self._validate_model_state_dict(self.model.state_dict(), "current model before training")
+        
         local_model, local_loss, no_weight_lora = local_solver.lora_tuning(
                 model=copy.deepcopy(self.model),
                 ldr_train=dataloader,
@@ -614,10 +627,20 @@ class FlowerClient(fl.client.NumPyClient):
                 round=server_round,
                 hete_group_id=self._get_client_group_id()
         )
+        
+        # Validate that the trained model state dict is reasonable
+        self._validate_model_state_dict(local_model, "trained model")
             
-        # TODO Liam: this is inefficient
-        # Update model with trained parameters
-        self.model.load_state_dict(local_model)
+        # Store the trained model and no_weight_lora for efficient parameter sending
+        self.trained_model = local_model
+        self.no_weight_lora = no_weight_lora
+        
+        # Create parameter mapping for efficient LoRA parameter tracking
+        from algorithms.solver.shared_utils import get_lora_parameter_mapping
+        self.lora_mapping = get_lora_parameter_mapping(local_model, no_weight_lora)
+        
+        # Update only the LoRA parameters in the client's model, preserving base model
+        self._update_model_lora_parameters_only(local_model)
             
         # Log results
         if local_loss is not None:
@@ -695,6 +718,17 @@ class FlowerClient(fl.client.NumPyClient):
         logging.info(LOG_TRAINING_COMPLETED.format(client_id=self.client_id, loss=avg_loss))
         
         metrics = self._create_training_metrics(avg_loss, local_epochs, learning_rate)
+        
+        # Add LoRA metadata to metrics if available (convert to Flower-compatible format)
+        if hasattr(self, 'lora_metadata') and self.lora_metadata is not None:
+            # Convert LoRA metadata to Flower-compatible format
+            lora_metadata = self.lora_metadata
+            # Convert list to string for Flower compatibility
+            trained_layers = lora_metadata.get('trained_layers', [])
+            metrics['lora_trained_layers'] = ','.join(map(str, trained_layers)) if trained_layers else ""
+            metrics['lora_param_count'] = len(lora_metadata.get('param_names', []))
+            metrics['lora_untrained_layers'] = len(lora_metadata.get('no_weight_lora', []))
+        
         return self.get_parameters(config), int(num_examples), metrics
     
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
@@ -713,11 +747,69 @@ class FlowerClient(fl.client.NumPyClient):
     
     def _numpy_params_to_model(self, params: List[np.ndarray]) -> None:
         """Set model parameters from numpy arrays."""
+        # Determine if this is a LoRA-only update or full model update
+        # by comparing the number of parameters with the expected model parameters
+        model_param_count = sum(1 for _ in self.model.parameters())
+        
+        if len(params) < model_param_count:
+            # This is likely a LoRA-only update
+            logging.info(f"Detected LoRA-only parameter update: {len(params)} params vs {model_param_count} model params")
+            self._set_lora_parameters_from_numpy(params)
+        else:
+            # This is a full model update
+            logging.info(f"Detected full model parameter update: {len(params)} params")
+            self._set_full_model_parameters_from_numpy(params)
+    
+    def _set_full_model_parameters_from_numpy(self, params: List[np.ndarray]) -> None:
+        """Set full model parameters from numpy arrays."""
         param_idx = 0
         for param in self.model.parameters():
             if param_idx < len(params):
-                param.data = torch.from_numpy(params[param_idx]).to(param.device)
+                # Validate shape before setting
+                param_tensor = torch.from_numpy(params[param_idx])
+                if param_tensor.shape == param.shape:
+                    param.data = param_tensor.to(param.device)
+                else:
+                    logging.error(f"Shape mismatch for parameter {param_idx}: "
+                                f"received {param_tensor.shape} vs expected {param.shape}")
+                    raise ValueError(f"Parameter shape mismatch at index {param_idx}")
                 param_idx += 1
+            else:
+                logging.warning(f"Not enough parameters provided: expected {param_idx + 1}, got {len(params)}")
+                break
+    
+    def _set_lora_parameters_from_numpy(self, params: List[np.ndarray]) -> None:
+        """Set LoRA parameters from numpy arrays using the mapping."""
+        if not hasattr(self, 'lora_mapping') or self.lora_mapping is None:
+            logging.warning("No LoRA mapping available, cannot set LoRA parameters. This might be the first round.")
+            # For the first round, we might receive full model parameters even if we expect LoRA
+            # Try to set them as full model parameters
+            self._set_full_model_parameters_from_numpy(params)
+            return
+        
+        # Get current model state dict
+        current_state_dict = self.model.state_dict()
+        updated_params = 0
+        
+        # Set LoRA parameters using the mapping
+        for param_name, mapping_info in self.lora_mapping.items():
+            param_index = mapping_info['index']
+            if param_index < len(params):
+                param_tensor = torch.from_numpy(params[param_index])
+                if param_name in current_state_dict:
+                    if param_tensor.shape == current_state_dict[param_name].shape:
+                        current_state_dict[param_name] = param_tensor
+                        updated_params += 1
+                    else:
+                        logging.error(f"Shape mismatch for LoRA parameter {param_name}: "
+                                    f"received {param_tensor.shape} vs expected {current_state_dict[param_name].shape}")
+                        raise ValueError(f"LoRA parameter shape mismatch for {param_name}")
+                else:
+                    logging.warning(f"LoRA parameter {param_name} not found in model state dict")
+        
+        # Load the updated state dict
+        self.model.load_state_dict(current_state_dict, strict=False)
+        logging.info(f"Set {updated_params} LoRA parameters using mapping")
 
     def _extract_training_config(self, config: Dict[str, Any]) -> Tuple[int, int, float]:
         """Extract and validate training configuration."""
@@ -785,15 +877,19 @@ class FlowerClient(fl.client.NumPyClient):
 
     def get_parameters(self, config: Dict[str, Any]) -> List[np.ndarray]:
         """
-        Get current model parameters.
+        Get current model parameters, optimized for LoRA to only send changed parts.
         
         Args:
             config: Configuration dictionary
             
         Returns:
-            List of model parameters as numpy arrays
+            List of model parameters as numpy arrays (only LoRA parameters that were updated)
         """
-        return self._model_to_numpy_params()
+        if self.trained_model is not None and self.no_weight_lora is not None:
+            return self._get_lora_parameters_only()
+        else:
+            # Fallback to full model parameters if no LoRA training has occurred
+            return self._model_to_numpy_params()
     
     def _model_to_numpy_params(self) -> List[np.ndarray]:
         """Convert model parameters to numpy arrays."""
@@ -801,6 +897,123 @@ class FlowerClient(fl.client.NumPyClient):
         for param in self.model.parameters():
             params.append(param.detach().cpu().numpy())
         return params
+    
+    def _get_lora_parameters_only(self) -> List[np.ndarray]:
+        """
+        Get only the LoRA parameters that were actually updated during training.
+        Also includes metadata about which layers were trained.
+        
+        Returns:
+            List of numpy arrays containing only the updated LoRA parameters
+        """
+        if self.lora_mapping is None:
+            logging.warning(f"Client {self.client_id}: No LoRA mapping available, falling back to full model")
+            return self._model_to_numpy_params()
+        
+        lora_params = []
+        param_names = []
+        trained_layers = []
+        
+        # Get the trained model state dict
+        trained_state_dict = self.trained_model
+        
+        # Use the mapping to extract only the trained LoRA parameters
+        for param_name, mapping_info in self.lora_mapping.items():
+            if param_name in trained_state_dict:
+                param = trained_state_dict[param_name]
+                lora_params.append(param.detach().cpu().numpy())
+                param_names.append(param_name)
+                trained_layers.append(mapping_info['layer_num'])
+        
+        # Store metadata for server-side aggregation
+        self.lora_metadata = {
+            'trained_layers': list(set(trained_layers)),  # Unique layer numbers
+            'param_names': param_names,
+            'no_weight_lora': self.no_weight_lora
+        }
+        
+        logging.info(f"Client {self.client_id} sending {len(lora_params)} LoRA parameters from layers {self.lora_metadata['trained_layers']} (skipped {len(self.no_weight_lora)} untrained layers)")
+        logging.debug(f"LoRA parameter names: {param_names}")
+        
+        return lora_params
+    
+    def _update_model_lora_parameters_only(self, trained_state_dict):
+        """
+        Update only the LoRA parameters in the client's model, preserving base model parameters.
+        
+        Args:
+            trained_state_dict: State dict from LoRA training containing LoRA parameters
+        """
+        current_state_dict = self.model.state_dict()
+        updated_params = 0
+        
+        # Only update LoRA parameters, preserve all other parameters
+        for param_name, param_value in trained_state_dict.items():
+            if 'lora' in param_name.lower() and param_name in current_state_dict:
+                # Ensure the parameter shapes match
+                if param_value.shape == current_state_dict[param_name].shape:
+                    current_state_dict[param_name] = param_value
+                    updated_params += 1
+                else:
+                    logging.warning(f"Shape mismatch for parameter {param_name}: "
+                                  f"trained {param_value.shape} vs current {current_state_dict[param_name].shape}")
+            elif 'lora' not in param_name.lower():
+                # This is a base model parameter - ensure it's preserved
+                if param_name in current_state_dict:
+                    # Keep the current base model parameter
+                    pass
+                else:
+                    logging.warning(f"Base model parameter {param_name} not found in current model")
+        
+        # Load the updated state dict
+        try:
+            self.model.load_state_dict(current_state_dict, strict=False)
+            logging.info(f"Updated {updated_params} LoRA parameters in client {self.client_id} model")
+        except Exception as e:
+            logging.error(f"Error loading state dict for client {self.client_id}: {e}")
+            # Fallback: try to load only the LoRA parameters
+            lora_state_dict = {k: v for k, v in trained_state_dict.items() if 'lora' in k.lower()}
+            try:
+                self.model.load_state_dict(lora_state_dict, strict=False)
+                logging.info(f"Fallback: Updated LoRA parameters only for client {self.client_id}")
+            except Exception as e2:
+                logging.error(f"Fallback also failed for client {self.client_id}: {e2}")
+                raise
+    
+    def _validate_model_state_dict(self, state_dict, model_name):
+        """
+        Validate that a model state dict has reasonable parameter shapes.
+        
+        Args:
+            state_dict: Model state dictionary to validate
+            model_name: Name of the model for logging
+        """
+        invalid_params = []
+        
+        for param_name, param_tensor in state_dict.items():
+            if not isinstance(param_tensor, torch.Tensor):
+                invalid_params.append(f"{param_name}: not a tensor")
+                continue
+                
+            # Check for obviously invalid shapes
+            if param_tensor.numel() == 0:
+                invalid_params.append(f"{param_name}: empty tensor")
+            elif len(param_tensor.shape) == 0:
+                invalid_params.append(f"{param_name}: scalar tensor")
+            elif any(dim <= 0 for dim in param_tensor.shape):
+                invalid_params.append(f"{param_name}: invalid dimensions {param_tensor.shape}")
+            elif torch.isnan(param_tensor).any():
+                invalid_params.append(f"{param_name}: contains NaN values")
+            elif torch.isinf(param_tensor).any():
+                invalid_params.append(f"{param_name}: contains Inf values")
+        
+        if invalid_params:
+            logging.error(f"Invalid parameters in {model_name}:")
+            for invalid_param in invalid_params:
+                logging.error(f"  - {invalid_param}")
+            raise ValueError(f"Model state dict validation failed for {model_name}")
+        else:
+            logging.debug(f"Model state dict validation passed for {model_name}")
 
     
     # =============================================================================

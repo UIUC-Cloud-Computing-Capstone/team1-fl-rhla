@@ -53,13 +53,16 @@ class ServerFederatedLearningUtils:
     
     
     def aggregate_parameter_updates(self, parameter_updates: List[List[np.ndarray]], 
-                                  num_examples: List[int]) -> List[np.ndarray]:
+                                  num_examples: List[int], 
+                                  client_metrics: List[Dict] = None) -> List[np.ndarray]:
         """
         Aggregate parameter updates from multiple clients using weighted average.
+        Supports both full model updates and heterogeneous LoRA updates.
         
         Args:
             parameter_updates: List of parameter updates from each client
             num_examples: Number of examples used by each client
+            client_metrics: List of client metrics containing LoRA metadata
             
         Returns:
             Aggregated parameter updates
@@ -72,9 +75,27 @@ class ServerFederatedLearningUtils:
         if total_examples == 0:
             raise ValueError("Total examples is zero")
         
+        # Check if we have LoRA metadata from clients
+        has_lora_metadata = (client_metrics is not None and 
+                           any('lora_trained_layers' in metrics for metrics in client_metrics))
+        
+        if has_lora_metadata:
+            logging.info("Detected LoRA updates with metadata, using heterogeneous aggregation")
+            return self._aggregate_heterogeneous_lora_parameters(parameter_updates, num_examples, client_metrics)
+        else:
+            
+            first_client_params = len(parameter_updates[0])
+            
+            logging.info(f"Detected full model updates: {first_client_params} parameters per client")
+            return self._aggregate_full_model_parameters(parameter_updates, num_examples)
+    
+    def _aggregate_full_model_parameters(self, parameter_updates: List[List[np.ndarray]], 
+                                       num_examples: List[int]) -> List[np.ndarray]:
+        """Aggregate full model parameters using weighted average."""
         # Initialize aggregated parameters
         num_params = len(parameter_updates[0])
         aggregated_params = []
+        total_examples = sum(num_examples)
         
         for param_idx in range(num_params):
             # Calculate weighted sum for this parameter
@@ -85,6 +106,119 @@ class ServerFederatedLearningUtils:
                 weighted_sum += weight * client_updates[param_idx]
             
             aggregated_params.append(weighted_sum)
+        
+        return aggregated_params
+    
+    def _aggregate_lora_parameters(self, parameter_updates: List[List[np.ndarray]], 
+                                 num_examples: List[int]) -> List[np.ndarray]:
+        """
+        Aggregate LoRA parameters using weighted average.
+        For LoRA without metadata, we assume all clients send the same set of parameters.
+        """
+        # For LoRA aggregation without metadata, we can use the same weighted average approach
+        # since all clients should be sending the same LoRA parameters
+        return self._aggregate_full_model_parameters(parameter_updates, num_examples)
+    
+    def _aggregate_heterogeneous_lora_parameters(self, parameter_updates: List[List[np.ndarray]], 
+                                               num_examples: List[int], 
+                                               client_metrics: List[Dict]) -> List[np.ndarray]:
+        """
+        Aggregate heterogeneous LoRA parameters from clients that trained different subsets of layers.
+        
+        Args:
+            parameter_updates: List of parameter updates from each client
+            num_examples: Number of examples used by each client
+            client_metrics: List of client metrics containing LoRA metadata
+            
+        Returns:
+            Aggregated parameter updates
+        """
+        # Group parameters by layer and parameter name
+        layer_param_groups = {}
+        client_weights = {}
+        total_examples = sum(num_examples)
+        
+        # Process each client's parameters and metadata
+        for client_idx, (params, num_samples, metrics) in enumerate(zip(parameter_updates, num_examples, client_metrics)):
+            if 'lora_trained_layers' not in metrics:
+                logging.warning(f"Client {client_idx} missing LoRA metadata, skipping")
+                continue
+                
+            # Parse trained layers from string format
+            trained_layers_str = metrics.get('lora_trained_layers', "")
+            trained_layers = [int(x) for x in trained_layers_str.split(',') if x.strip()] if trained_layers_str else []
+            param_count = metrics.get('lora_param_count', len(params))
+            
+            client_weight = num_samples / total_examples
+            client_weights[client_idx] = client_weight
+            
+            # Group parameters by layer (simplified approach without parameter names)
+            # Since we don't have parameter names, we'll group by layer and parameter index
+            for param_idx, param in enumerate(params):
+                # For now, we'll use a simplified grouping approach
+                # Each parameter gets its own group based on its index
+                key = f"param_{param_idx}"
+                
+                if key not in layer_param_groups:
+                    layer_param_groups[key] = []
+                
+                layer_param_groups[key].append({
+                    'param': param,
+                    'client_idx': client_idx,
+                    'weight': client_weight,
+                    'num_samples': num_samples,
+                    'layer_info': trained_layers  # Store layer info for reference
+                })
+        
+        # Aggregate parameters that were trained by multiple clients
+        aggregated_params = []
+        aggregation_stats = {
+            'total_params': 0,
+            'aggregated_params': 0,
+            'single_client_params': 0,
+            'layers_aggregated': set(),
+            'layers_single_client': set()
+        }
+        
+        for param_key, param_group in layer_param_groups.items():
+            aggregation_stats['total_params'] += 1
+            
+            if len(param_group) > 1:
+                # Multiple clients trained this parameter - aggregate
+                weighted_sum = np.zeros_like(param_group[0]['param'])
+                total_weight = 0
+                
+                for param_info in param_group:
+                    weight = param_info['weight']
+                    weighted_sum += weight * param_info['param']
+                    total_weight += weight
+                
+                if total_weight > 0:
+                    aggregated_param = weighted_sum / total_weight
+                    aggregated_params.append(aggregated_param)
+                    aggregation_stats['aggregated_params'] += 1
+                    # Add layer info from any client (they should be the same for the same parameter)
+                    if param_group[0]['layer_info']:
+                        aggregation_stats['layers_aggregated'].update(param_group[0]['layer_info'])
+                    
+                    logging.debug(f"Aggregated parameter {param_key} from {len(param_group)} clients")
+            else:
+                # Only one client trained this parameter - include it as-is
+                aggregated_params.append(param_group[0]['param'])
+                aggregation_stats['single_client_params'] += 1
+                # Add layer info from the single client
+                if param_group[0]['layer_info']:
+                    aggregation_stats['layers_single_client'].update(param_group[0]['layer_info'])
+                
+                logging.debug(f"Single client parameter {param_key} from client {param_group[0]['client_idx']}")
+        
+        # Log aggregation statistics
+        logging.info(f"LoRA aggregation complete:")
+        logging.info(f"  - Total parameters: {aggregation_stats['total_params']}")
+        logging.info(f"  - Aggregated parameters: {aggregation_stats['aggregated_params']}")
+        logging.info(f"  - Single client parameters: {aggregation_stats['single_client_params']}")
+        logging.info(f"  - Layers aggregated: {sorted(aggregation_stats['layers_aggregated'])}")
+        logging.info(f"  - Layers single client: {sorted(aggregation_stats['layers_single_client'])}")
         
         return aggregated_params
     
@@ -224,9 +358,9 @@ class CustomFedAvgStrategy(fl.server.strategy.FedAvg):
         # Use server utilities for aggregation if available
         if self.server_utils:
             try:
-                # Aggregate parameters using server utilities
+                # Aggregate parameters using server utilities with client metrics
                 aggregated_parameters = self.server_utils.aggregate_parameter_updates(
-                    parameters_list, num_examples_list
+                    parameters_list, num_examples_list, metrics_list
                 )
                 
                 # Compute aggregated metrics

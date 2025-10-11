@@ -238,6 +238,69 @@ def get_model_update(args, global_model, local_model, no_weight_lora):
     return model_update
 
 
+def get_lora_parameter_mapping(model_state_dict, no_weight_lora):
+    """
+    Create a mapping of LoRA parameters that were actually trained.
+    
+    Args:
+        model_state_dict: Model state dictionary
+        no_weight_lora: List of LoRA layers not trained
+        
+    Returns:
+        Dictionary mapping parameter names to their indices and layer numbers
+    """
+    import re
+    
+    lora_mapping = {}
+    param_index = 0
+    
+    for name, param in model_state_dict.items():
+        if 'lora' in name.lower():
+            # Extract layer number from parameter name
+            layer_numbers = re.findall(r'\d+', name)
+            if layer_numbers:
+                layer_num = int(layer_numbers[0])
+                # Only include parameters from layers that were trained
+                if layer_num not in no_weight_lora:
+                    lora_mapping[name] = {
+                        'index': param_index,
+                        'layer_num': layer_num,
+                        'shape': param.shape,
+                        'param': param
+                    }
+                    param_index += 1
+    
+    return lora_mapping
+
+
+def reconstruct_full_model_from_lora(lora_params, lora_mapping, base_model_state_dict):
+    """
+    Reconstruct full model state dict from LoRA parameters and mapping.
+    
+    Args:
+        lora_params: List of LoRA parameters (numpy arrays)
+        lora_mapping: Mapping of parameter names to indices
+        base_model_state_dict: Base model state dictionary
+        
+    Returns:
+        Full model state dictionary with LoRA parameters updated
+    """
+    import torch
+    
+    # Start with base model
+    full_state_dict = base_model_state_dict.copy()
+    
+    # Update with LoRA parameters
+    for param_name, mapping_info in lora_mapping.items():
+        param_index = mapping_info['index']
+        if param_index < len(lora_params):
+            # Convert numpy array back to tensor
+            lora_tensor = torch.from_numpy(lora_params[param_index])
+            full_state_dict[param_name] = lora_tensor
+    
+    return full_state_dict
+
+
 def get_norm_updates(model_update):
     """
     Get norm updates for model parameters.
