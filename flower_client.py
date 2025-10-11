@@ -347,7 +347,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Setup multiprocessing for optimal CPU utilization
         num_cores = setup_multiprocessing()
         logging.info(LOG_CLIENT_INITIALIZED.format(client_id=client_id, num_cores=num_cores))
-        
+
         
         # Initialize training history
         self.training_history = {
@@ -361,10 +361,10 @@ class FlowerClient(fl.client.NumPyClient):
         self.no_weight_lora = None
         self.lora_mapping = None
         self.lora_metadata = None
-        
+
         # Load dataset configuration and data
         self.dataset_info = load_dataset_config(self.args, self.client_id)
-        
+
         # Load actual dataset if configuration indicates it should be loaded
         if self.dataset_info.get(CONFIG_KEY_DATA_LOADED, False):
             self._load_and_store_dataset()
@@ -383,11 +383,11 @@ class FlowerClient(fl.client.NumPyClient):
             if not hasattr(self.args, param): 
                 logging.warning(f"Missing configuration parameter: {param}, using default")
     
-    
+
     def _load_and_store_dataset(self) -> None:
         """Load and store dataset data using the data_loading module."""
         dataset_name = self.dataset_info.get(CONFIG_KEY_DATASET_NAME, DEFAULT_DATASET)
-        
+
         # Load dataset using the data_loading module
         load_dataset(dataset_name, self.args, self.client_id)
         
@@ -424,8 +424,8 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             logging.warning(f"Client {self.client_id} not found in user data partition")
             self.client_data_indices = set()
-    
-    
+
+
     
     def get_dataset_info(self) -> Dict[str, Any]:
         """
@@ -442,24 +442,24 @@ class FlowerClient(fl.client.NumPyClient):
         # Only initialize if we have heterogeneous group configuration
         if hasattr(self.args, CONFIG_KEY_HETEROGENEOUS_GROUP):
             from algorithms.solver.shared_utils import get_group_cnt, update_user_groupid_list, update_block_ids_list
-            
+
             # Initialize user group ID list if not present
             if not hasattr(self.args, CONFIG_KEY_USER_GROUPID_LIST):
                 # Calculate group counts
                 group_cnt = get_group_cnt(self.args)
-                
+
                 # Create user group ID list
                 update_user_groupid_list(self.args, group_cnt)
-                
+
                 logging.info(f"Initialized heterogeneous groups: {group_cnt}")
-            
+
             # Initialize block IDs list if not present
             if not hasattr(self.args, CONFIG_KEY_BLOCK_IDS_LIST):
                 update_block_ids_list(self.args)
                 logging.info(f"Initialized block IDs list: {len(self.args.block_ids_list)} clients")
-            
+
             logging.info(f"Client {self.client_id} assigned to group {self._get_client_group_id()}")
-    
+
     def _create_actual_model(self):
         """
         Create actual model using shared model_setup function.
@@ -578,9 +578,9 @@ class FlowerClient(fl.client.NumPyClient):
             Total training loss
         """
         # Check if we should use LocalUpdate for heterogeneous training
-        
+
         return self._train_with_local_update(local_epochs, learning_rate, server_round)
-                
+
     # TODO Liam: fix
     def _train_with_local_update(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
         """
@@ -599,7 +599,7 @@ class FlowerClient(fl.client.NumPyClient):
             from algorithms.solver.shared_utils import update_block_ids_list
             update_block_ids_list(self.args)
             logging.info(f"Initialized block_ids_list for client {self.client_id}")
-        
+
         # Prepare training data with reduced batch size if needed
         client_indices_list = self._get_client_data_indices()
 
@@ -611,13 +611,13 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Use LocalUpdate for training
         local_solver = LocalUpdate(args=self.args)
-        
+
         # Store original model state for debugging
         original_model_state = copy.deepcopy(self.model.state_dict())
-        
+
         # Validate the current model state before training
         self._validate_model_state_dict(self.model.state_dict(), "current model before training")
-        
+
         local_model, local_loss, no_weight_lora = local_solver.lora_tuning(
                 model=copy.deepcopy(self.model),
                 ldr_train=dataloader,
@@ -627,18 +627,18 @@ class FlowerClient(fl.client.NumPyClient):
                 round=server_round,
                 hete_group_id=self._get_client_group_id()
         )
-        
+
         # Validate that the trained model state dict is reasonable
         self._validate_model_state_dict(local_model, "trained model")
             
         # Store the trained model and no_weight_lora for efficient parameter sending
         self.trained_model = local_model
         self.no_weight_lora = no_weight_lora
-        
+
         # Create parameter mapping for efficient LoRA parameter tracking
         from algorithms.solver.shared_utils import get_lora_parameter_mapping
         self.lora_mapping = get_lora_parameter_mapping(local_model, no_weight_lora)
-        
+
         # Update only the LoRA parameters in the client's model, preserving base model
         self._update_model_lora_parameters_only(local_model)
             
@@ -654,7 +654,7 @@ class FlowerClient(fl.client.NumPyClient):
         """Get and validate client data indices."""
         client_data_indices = getattr(self, 'client_data_indices', None)
         return get_client_data_indices(client_data_indices, self.dataset_info, self.client_id)
-    
+
     def _create_client_dataset(self, client_indices: List[int], dataset_train, args_loaded):
         """
         Create a client-specific dataset subset using shared utilities.
@@ -682,7 +682,7 @@ class FlowerClient(fl.client.NumPyClient):
         if hasattr(self.args, CONFIG_KEY_USER_GROUPID_LIST) and self.client_id < len(self.args.user_groupid_list):
             return self.args.user_groupid_list[self.client_id]
         return DEFAULT_GROUP_ID  # Default to group 0
-        
+
 
 
 
@@ -718,7 +718,7 @@ class FlowerClient(fl.client.NumPyClient):
         logging.info(LOG_TRAINING_COMPLETED.format(client_id=self.client_id, loss=avg_loss))
         
         metrics = self._create_training_metrics(avg_loss, local_epochs, learning_rate)
-        
+
         # Add LoRA metadata to metrics if available (convert to Flower-compatible format)
         if hasattr(self, 'lora_metadata') and self.lora_metadata is not None:
             # Convert LoRA metadata to Flower-compatible format
@@ -728,29 +728,29 @@ class FlowerClient(fl.client.NumPyClient):
             metrics['lora_trained_layers'] = ','.join(map(str, trained_layers)) if trained_layers else ""
             metrics['lora_param_count'] = len(lora_metadata.get('param_names', []))
             metrics['lora_untrained_layers'] = len(lora_metadata.get('no_weight_lora', []))
-        
+
         return self.get_parameters(config), int(num_examples), metrics
     
     def set_parameters(self, parameters: List[np.ndarray]) -> None:
         """
         Set model parameters from server.
-        
+
         Args:
             parameters: List of model parameters from server
         """
         if not parameters:
             logging.warning("Received empty parameters from server")
             return
-            
+
         self._numpy_params_to_model(parameters)
         logging.debug(f"Updated model parameters with {len(parameters)} parameter arrays")
-    
+
     def _numpy_params_to_model(self, params: List[np.ndarray]) -> None:
         """Set model parameters from numpy arrays."""
         # Determine if this is a LoRA-only update or full model update
         # by comparing the number of parameters with the expected model parameters
         model_param_count = sum(1 for _ in self.model.parameters())
-        
+
         if len(params) < model_param_count:
             # This is likely a LoRA-only update
             logging.info(f"Detected LoRA-only parameter update: {len(params)} params vs {model_param_count} model params")
@@ -759,7 +759,7 @@ class FlowerClient(fl.client.NumPyClient):
             # This is a full model update
             logging.info(f"Detected full model parameter update: {len(params)} params")
             self._set_full_model_parameters_from_numpy(params)
-    
+
     def _set_full_model_parameters_from_numpy(self, params: List[np.ndarray]) -> None:
         """Set full model parameters from numpy arrays."""
         param_idx = 0
@@ -777,7 +777,7 @@ class FlowerClient(fl.client.NumPyClient):
             else:
                 logging.warning(f"Not enough parameters provided: expected {param_idx + 1}, got {len(params)}")
                 break
-    
+
     def _set_lora_parameters_from_numpy(self, params: List[np.ndarray]) -> None:
         """Set LoRA parameters from numpy arrays using the mapping."""
         if not hasattr(self, 'lora_mapping') or self.lora_mapping is None:
@@ -786,11 +786,11 @@ class FlowerClient(fl.client.NumPyClient):
             # Try to set them as full model parameters
             self._set_full_model_parameters_from_numpy(params)
             return
-        
+
         # Get current model state dict
         current_state_dict = self.model.state_dict()
         updated_params = 0
-        
+
         # Set LoRA parameters using the mapping
         for param_name, mapping_info in self.lora_mapping.items():
             param_index = mapping_info['index']
@@ -806,7 +806,7 @@ class FlowerClient(fl.client.NumPyClient):
                         raise ValueError(f"LoRA parameter shape mismatch for {param_name}")
                 else:
                     logging.warning(f"LoRA parameter {param_name} not found in model state dict")
-        
+
         # Load the updated state dict
         self.model.load_state_dict(current_state_dict, strict=False)
         logging.info(f"Set {updated_params} LoRA parameters using mapping")
@@ -832,7 +832,7 @@ class FlowerClient(fl.client.NumPyClient):
         logging.info(f"Client {self.client_id} received config: {config}")
         logging.info(f"Client {self.client_id} starting training for round {server_round} "
                      f"(epochs={local_epochs}, lr={learning_rate:.4f})")
-        
+
     def _create_training_metrics(self, avg_loss: float, local_epochs: int, learning_rate: float) -> Dict[str, Any]:
         """Create training metrics dictionary with proper types for Flower."""
         metrics = {
@@ -878,10 +878,10 @@ class FlowerClient(fl.client.NumPyClient):
     def get_parameters(self, config: Dict[str, Any]) -> List[np.ndarray]:
         """
         Get current model parameters, optimized for LoRA to only send changed parts.
-        
+
         Args:
             config: Configuration dictionary
-            
+
         Returns:
             List of model parameters as numpy arrays (only LoRA parameters that were updated)
         """
@@ -890,33 +890,33 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             # Fallback to full model parameters if no LoRA training has occurred
             return self._model_to_numpy_params()
-    
+
     def _model_to_numpy_params(self) -> List[np.ndarray]:
         """Convert model parameters to numpy arrays."""
         params = []
         for param in self.model.parameters():
             params.append(param.detach().cpu().numpy())
         return params
-    
+
     def _get_lora_parameters_only(self) -> List[np.ndarray]:
         """
         Get only the LoRA parameters that were actually updated during training.
         Also includes metadata about which layers were trained.
-        
+
         Returns:
             List of numpy arrays containing only the updated LoRA parameters
         """
         if self.lora_mapping is None:
             logging.warning(f"Client {self.client_id}: No LoRA mapping available, falling back to full model")
             return self._model_to_numpy_params()
-        
+
         lora_params = []
         param_names = []
         trained_layers = []
-        
+
         # Get the trained model state dict
         trained_state_dict = self.trained_model
-        
+
         # Use the mapping to extract only the trained LoRA parameters
         for param_name, mapping_info in self.lora_mapping.items():
             if param_name in trained_state_dict:
@@ -924,29 +924,29 @@ class FlowerClient(fl.client.NumPyClient):
                 lora_params.append(param.detach().cpu().numpy())
                 param_names.append(param_name)
                 trained_layers.append(mapping_info['layer_num'])
-        
+
         # Store metadata for server-side aggregation
         self.lora_metadata = {
             'trained_layers': list(set(trained_layers)),  # Unique layer numbers
             'param_names': param_names,
             'no_weight_lora': self.no_weight_lora
         }
-        
+
         logging.info(f"Client {self.client_id} sending {len(lora_params)} LoRA parameters from layers {self.lora_metadata['trained_layers']} (skipped {len(self.no_weight_lora)} untrained layers)")
         logging.debug(f"LoRA parameter names: {param_names}")
-        
+
         return lora_params
-    
+
     def _update_model_lora_parameters_only(self, trained_state_dict):
         """
         Update only the LoRA parameters in the client's model, preserving base model parameters.
-        
+
         Args:
             trained_state_dict: State dict from LoRA training containing LoRA parameters
         """
         current_state_dict = self.model.state_dict()
         updated_params = 0
-        
+
         # Only update LoRA parameters, preserve all other parameters
         for param_name, param_value in trained_state_dict.items():
             if 'lora' in param_name.lower() and param_name in current_state_dict:
@@ -964,7 +964,7 @@ class FlowerClient(fl.client.NumPyClient):
                     pass
                 else:
                     logging.warning(f"Base model parameter {param_name} not found in current model")
-        
+
         # Load the updated state dict
         try:
             self.model.load_state_dict(current_state_dict, strict=False)
@@ -979,22 +979,22 @@ class FlowerClient(fl.client.NumPyClient):
             except Exception as e2:
                 logging.error(f"Fallback also failed for client {self.client_id}: {e2}")
                 raise
-    
+
     def _validate_model_state_dict(self, state_dict, model_name):
         """
         Validate that a model state dict has reasonable parameter shapes.
-        
+
         Args:
             state_dict: Model state dictionary to validate
             model_name: Name of the model for logging
         """
         invalid_params = []
-        
+
         for param_name, param_tensor in state_dict.items():
             if not isinstance(param_tensor, torch.Tensor):
                 invalid_params.append(f"{param_name}: not a tensor")
                 continue
-                
+
             # Check for obviously invalid shapes
             if param_tensor.numel() == 0:
                 invalid_params.append(f"{param_name}: empty tensor")
@@ -1006,7 +1006,7 @@ class FlowerClient(fl.client.NumPyClient):
                 invalid_params.append(f"{param_name}: contains NaN values")
             elif torch.isinf(param_tensor).any():
                 invalid_params.append(f"{param_name}: contains Inf values")
-        
+
         if invalid_params:
             logging.error(f"Invalid parameters in {model_name}:")
             for invalid_param in invalid_params:
@@ -1015,7 +1015,7 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             logging.debug(f"Model state dict validation passed for {model_name}")
 
-    
+
     # =============================================================================
     # EVALUATION
     # =============================================================================
@@ -1085,16 +1085,16 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Create evaluation DataLoader
         eval_dataloader = self._create_evaluation_dataloader(eval_dataset)
-        
+
         # Perform evaluation
         metrics = self._perform_evaluation(eval_dataloader, server_round)
-        
+
         return metrics
-    
+
     def _get_evaluation_dataset(self):
         """Get evaluation dataset (test only)."""
         return get_evaluation_dataset(self.dataset_test)
-    
+
     def _create_evaluation_dataloader(self, eval_dataset):
         """Create DataLoader for evaluation."""
         return create_evaluation_dataloader(eval_dataset, self.args_loaded, self.args)
@@ -1102,17 +1102,17 @@ class FlowerClient(fl.client.NumPyClient):
     def _perform_evaluation(self, eval_dataloader, server_round: int) -> Tuple[float, float]:
         """Perform evaluation on all batches."""
         metrics = {CONFIG_KEY_TOTAL_LOSS: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_CORRECT: DEFAULT_ZERO_VALUE, CONFIG_KEY_TOTAL_SAMPLES: DEFAULT_ZERO_VALUE, CONFIG_KEY_NUM_BATCHES: DEFAULT_ZERO_VALUE}
-        
+
         logging.info(f"Client {self.client_id} evaluating on {len(eval_dataloader)} test batches")
 
         for batch_idx, batch in enumerate(eval_dataloader):
             self._process_evaluation_batch(batch, server_round, batch_idx, metrics)
 
         return self._compute_overall_evaluation_metrics(
-            metrics[CONFIG_KEY_TOTAL_LOSS], metrics[CONFIG_KEY_TOTAL_CORRECT], 
+            metrics[CONFIG_KEY_TOTAL_LOSS], metrics[CONFIG_KEY_TOTAL_CORRECT],
             metrics[CONFIG_KEY_TOTAL_SAMPLES], metrics[CONFIG_KEY_NUM_BATCHES]
         )
-    
+
     def _process_evaluation_batch(self, batch, server_round: int, batch_idx: int, metrics: Dict) -> None:
         """Process a single evaluation batch."""
         pixel_values, label = extract_evaluation_batch_data(batch)
@@ -1130,9 +1130,9 @@ class FlowerClient(fl.client.NumPyClient):
             batch_accuracy = batch_correct / batch_size if batch_size > DEFAULT_ZERO_VALUE else DEFAULT_ZERO_VALUE
             logging.debug(f"Client {self.client_id} eval batch {batch_idx + DEFAULT_ONE_VALUE}: "
                           f"loss={batch_loss:.4f}, acc={batch_accuracy:.4f}")
-    
-    
-    def _compute_overall_evaluation_metrics(self, total_loss: float, total_correct: int, 
+
+
+    def _compute_overall_evaluation_metrics(self, total_loss: float, total_correct: int,
                                           total_samples: int, num_batches: int) -> Tuple[float, float]:
         """Compute overall evaluation metrics."""
         if num_batches > DEFAULT_ZERO_VALUE and total_samples > DEFAULT_ZERO_VALUE:
