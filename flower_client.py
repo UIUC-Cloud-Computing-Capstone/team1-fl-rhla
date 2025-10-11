@@ -549,6 +549,21 @@ class FlowerClient(fl.client.NumPyClient):
         return SimpleLogger()
     
 
+    def _train_with_actual_data(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
+        """
+        Train using actual dataset data with real batch iteration and non-IID distribution.
+        
+        Args:
+            local_epochs: Number of local training epochs
+            learning_rate: Learning rate for training
+            server_round: Current server round
+            
+        Returns:
+            Total training loss
+        """
+        # Check if we should use LocalUpdate for heterogeneous training
+        
+        return self._train_with_local_update(local_epochs, learning_rate, server_round)
                 
     # TODO Liam: fix
     def _train_with_local_update(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
@@ -573,6 +588,8 @@ class FlowerClient(fl.client.NumPyClient):
         
         # Prepare training data with reduced batch size if needed
         client_indices_list = self._get_client_data_indices()
+
+        # TODO Liam: why 2 datasets?
         client_dataset = self._create_client_dataset(client_indices_list, self.dataset_train, self.args_loaded)
         dataloader = self._create_training_dataloader(client_dataset)
         
@@ -951,21 +968,7 @@ class FlowerClient(fl.client.NumPyClient):
         logging.info(f"Client {self.client_id} trained with actual non-IID dataset: {num_examples} samples")
         return total_loss, num_examples
     
-    def _train_with_actual_data(self, local_epochs: int, learning_rate: float, server_round: int) -> float:
-        """
-        Train using actual dataset data with real batch iteration and non-IID distribution.
-        
-        Args:
-            local_epochs: Number of local training epochs
-            learning_rate: Learning rate for training
-            server_round: Current server round
-            
-        Returns:
-            Total training loss
-        """
-        # Check if we should use LocalUpdate for heterogeneous training
-        
-        return self._train_with_local_update(local_epochs, learning_rate, server_round)
+
         
 
     def _get_num_examples(self) -> int:
