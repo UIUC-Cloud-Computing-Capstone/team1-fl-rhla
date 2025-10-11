@@ -589,7 +589,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Prepare training data with reduced batch size if needed
         client_indices_list = self._get_client_data_indices()
 
-        # TODO Liam: why 2 datasets?
+        # get data
         client_dataset = self._create_client_dataset(client_indices_list, self.dataset_train, self.args_loaded)
         dataloader = self._create_training_dataloader(client_dataset)
         
