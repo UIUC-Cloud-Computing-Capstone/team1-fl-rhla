@@ -278,7 +278,7 @@ def setup_server_logging(log_level: str = "INFO") -> None:
     )
 
 
-class CustomFedAvgStrategy(fl.server.strategy.FedAvg):
+class CustomFedAvgStrategy(fl.serverapp.strategy.FedAvg):
     """
     Custom FedAvg strategy that passes round information to clients and uses server-side utilities.
     """
@@ -287,50 +287,80 @@ class CustomFedAvgStrategy(fl.server.strategy.FedAvg):
         """Initialize with optional server utilities."""
         super().__init__(*args, **kwargs)
         self.server_utils = server_utils
+        self._server_round = 0
+    
+    def initialize_parameters(self, client_manager=None):
+        """Initialize model parameters."""
+        # Return None to let clients initialize their own parameters
+        return None
+    
+    def evaluate(self, server_round: int, parameters):
+        """Evaluate the current model parameters."""
+        # Return None to skip server-side evaluation
+        # Clients will handle their own evaluation
+        return None
     
     def configure_fit(self, server_round: int, parameters, client_manager):
         """Configure the next round of training."""
-        # Get the default configuration from parent
-        config = {}
-        if hasattr(self, 'on_fit_config_fn') and self.on_fit_config_fn is not None:
-            config = self.on_fit_config_fn(server_round)
+        self._server_round = server_round
         
-        # Add server round to the configuration
-        config["server_round"] = server_round
+        # Create configuration with round information
+        config = {
+            "server_round": server_round,
+            "local_epochs": 3,  # Default value
+            "learning_rate": 0.01,  # Default value
+        }
         
-        # Get client instructions from parent
-        client_instructions = super().configure_fit(server_round, parameters, client_manager)
+        # Get available clients
+        available_clients = client_manager.num_available()
+        if available_clients == 0:
+            return []
         
-        # Update each instruction with the round information
-        for instruction in client_instructions:
-            if hasattr(instruction, 'config'):
-                if instruction.config is None:
-                    instruction.config = config.copy()
-                else:
-                    instruction.config.update(config)
+        # Select clients for training
+        num_clients = max(1, int(self.fraction_train * available_clients))
+        clients = client_manager.sample(
+            num_clients=num_clients,
+            min_num_clients=self.min_train_nodes
+        )
+        
+        # Create client instructions
+        client_instructions = []
+        for client in clients:
+            instruction = fl.common.FitIns(
+                parameters=parameters,
+                config=config
+            )
+            client_instructions.append((client, instruction))
         
         return client_instructions
     
     def configure_evaluate(self, server_round: int, parameters, client_manager):
         """Configure the next round of evaluation."""
-        # Get the default configuration from parent
-        config = {}
-        if hasattr(self, 'on_evaluate_config_fn') and self.on_evaluate_config_fn is not None:
-            config = self.on_evaluate_config_fn(server_round)
+        # Create configuration with round information
+        config = {
+            "server_round": server_round,
+        }
         
-        # Add server round to the configuration
-        config["server_round"] = server_round
+        # Get available clients
+        available_clients = client_manager.num_available()
+        if available_clients == 0:
+            return []
         
-        # Get client instructions from parent
-        client_instructions = super().configure_evaluate(server_round, parameters, client_manager)
+        # Select clients for evaluation
+        num_clients = max(1, int(self.fraction_evaluate * available_clients))
+        clients = client_manager.sample(
+            num_clients=num_clients,
+            min_num_clients=self.min_evaluate_nodes
+        )
         
-        # Update each instruction with the round information
-        for instruction in client_instructions:
-            if hasattr(instruction, 'config'):
-                if instruction.config is None:
-                    instruction.config = config.copy()
-                else:
-                    instruction.config.update(config)
+        # Create client instructions
+        client_instructions = []
+        for client in clients:
+            instruction = fl.common.EvaluateIns(
+                parameters=parameters,
+                config=config
+            )
+            client_instructions.append((client, instruction))
         
         return client_instructions
     
@@ -423,45 +453,28 @@ class CustomFedAvgStrategy(fl.server.strategy.FedAvg):
 
 
 def create_fedavg_strategy(num_rounds: int, 
-                          fraction_fit: float = 1.0,
+                          fraction_train: float = 1.0,
                           fraction_evaluate: float = 0.0,
-                          min_fit_clients: int = 1,
-                          min_evaluate_clients: int = 0,
-                          min_available_clients: int = 1,
+                          min_train_nodes: int = 1,
+                          min_evaluate_nodes: int = 0,
+                          min_available_nodes: int = 1,
                           config: Optional[ServerConfig] = None) -> CustomFedAvgStrategy:
     """
     Create a FedAvg strategy with specified parameters and round information.
     
     Args:
         num_rounds: Number of training rounds
-        fraction_fit: Fraction of clients used for training
+        fraction_train: Fraction of clients used for training
         fraction_evaluate: Fraction of clients used for evaluation
-        min_fit_clients: Minimum number of clients for training
-        min_evaluate_clients: Minimum number of clients for evaluation
-        min_available_clients: Minimum number of available clients
+        min_train_nodes: Minimum number of clients for training
+        min_evaluate_nodes: Minimum number of clients for evaluation
+        min_available_nodes: Minimum number of available clients
         config: Server configuration
         
     Returns:
         Configured CustomFedAvgStrategy with round information and server utilities
     """
     
-    def fit_config_fn(server_round: int):
-        """Configuration function for fit that includes round information."""
-        # Use configuration values if available, otherwise use defaults
-        local_epochs = config.get('tau', 3) if config else 3
-        learning_rate = config.get('local_lr', 0.01) if config else 0.01
-        
-        return {
-            "server_round": server_round,
-            "local_epochs": local_epochs,
-            "learning_rate": learning_rate,
-        }
-    
-    def evaluate_config_fn(server_round: int):
-        """Configuration function for evaluate that includes round information."""
-        return {
-            "server_round": server_round,
-        }
     
     # Create server utilities if config is available
     server_utils = None
@@ -470,13 +483,11 @@ def create_fedavg_strategy(num_rounds: int,
         logging.info("Created server-side federated learning utilities")
     
     return CustomFedAvgStrategy(
-        fraction_fit=fraction_fit,
+        fraction_train=fraction_train,
         fraction_evaluate=fraction_evaluate,
-        min_fit_clients=min_fit_clients,
-        min_evaluate_clients=min_evaluate_clients,
-        min_available_clients=min_available_clients,
-        on_fit_config_fn=fit_config_fn,
-        on_evaluate_config_fn=evaluate_config_fn,
+        min_train_nodes=min_train_nodes,
+        min_evaluate_nodes=min_evaluate_nodes,
+        min_available_nodes=min_available_nodes,
         server_utils=server_utils
     )
 
@@ -485,11 +496,11 @@ def start_flower_server(server_address: str = "0.0.0.0",
                        server_port: int = 8080, 
                        num_rounds: int = 10,
                        log_level: str = "INFO",
-                       fraction_fit: float = 1.0,
+                       fraction_train: float = 1.0,
                        fraction_evaluate: float = 0.0,
-                       min_fit_clients: int = 1,
-                       min_evaluate_clients: int = 0,
-                       min_available_clients: int = 1,
+                       min_train_nodes: int = 1,
+                       min_evaluate_nodes: int = 0,
+                       min_available_nodes: int = 1,
                        config_name: str = None) -> None:
     """
     Start a Flower server for federated learning.
@@ -499,11 +510,11 @@ def start_flower_server(server_address: str = "0.0.0.0",
         server_port: Server port to bind to
         num_rounds: Number of training rounds
         log_level: Logging level
-        fraction_fit: Fraction of clients used for training
+        fraction_train: Fraction of clients used for training
         fraction_evaluate: Fraction of clients used for evaluation
-        min_fit_clients: Minimum number of clients for training
-        min_evaluate_clients: Minimum number of clients for evaluation
-        min_available_clients: Minimum number of available clients
+        min_train_nodes: Minimum number of clients for training
+        min_evaluate_nodes: Minimum number of clients for evaluation
+        min_available_nodes: Minimum number of available clients
     """
     try:
         # Setup logging first
@@ -533,19 +544,21 @@ def start_flower_server(server_address: str = "0.0.0.0",
         # Create strategy with custom parameters
         strategy = create_fedavg_strategy(
             num_rounds=num_rounds,
-            fraction_fit=fraction_fit,
+            fraction_train=fraction_train,
             fraction_evaluate=fraction_evaluate,
-            min_fit_clients=min_fit_clients,
-            min_evaluate_clients=min_evaluate_clients,
-            min_available_clients=min_available_clients,
+            min_train_nodes=min_train_nodes,
+            min_evaluate_nodes=min_evaluate_nodes,
+            min_available_nodes=min_available_nodes,
             config=server_config
         )
         
         # Start server
         logging.info(f"Starting Flower server on {server_address}:{server_port}")
-        logging.info(f"Configuration: {num_rounds} rounds, fraction_fit={fraction_fit}, "
-                    f"fraction_evaluate={fraction_evaluate}, min_fit_clients={min_fit_clients}")
+        logging.info(f"Configuration: {num_rounds} rounds, fraction_train={fraction_train}, "
+                    f"fraction_evaluate={fraction_evaluate}, min_train_nodes={min_train_nodes}")
         
+        # Use the traditional start_server approach for now
+        # This is more compatible with the current Flower 1.22.0 setup
         fl.server.start_server(
             server_address=f"{server_address}:{server_port}",
             config=fl.server.ServerConfig(num_rounds=num_rounds),
@@ -573,15 +586,15 @@ def parse_server_arguments() -> argparse.Namespace:
     parser.add_argument("--num_rounds", type=int, default=10, help="Number of rounds")
     parser.add_argument("--log_level", type=str, default="INFO", 
                        choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Logging level")
-    parser.add_argument("--fraction_fit", type=float, default=1.0, 
+    parser.add_argument("--fraction_train", type=float, default=1.0, 
                        help="Fraction of clients used for training")
     parser.add_argument("--fraction_evaluate", type=float, default=0.0, 
                        help="Fraction of clients used for evaluation")
-    parser.add_argument("--min_fit_clients", type=int, default=1, 
+    parser.add_argument("--min_train_nodes", type=int, default=1, 
                        help="Minimum number of clients for training")
-    parser.add_argument("--min_evaluate_clients", type=int, default=0, 
+    parser.add_argument("--min_evaluate_nodes", type=int, default=0, 
                        help="Minimum number of clients for evaluation")
-    parser.add_argument("--min_available_clients", type=int, default=1, 
+    parser.add_argument("--min_available_nodes", type=int, default=1, 
                        help="Minimum number of available clients")
     
     return parser.parse_args()
@@ -631,20 +644,20 @@ def validate_server_arguments(args: argparse.Namespace) -> None:
     if args.num_rounds <= 0:
         raise ValueError(f"Number of rounds must be positive: {args.num_rounds}")
     
-    if not 0.0 <= args.fraction_fit <= 1.0:
-        raise ValueError(f"fraction_fit must be between 0.0 and 1.0: {args.fraction_fit}")
+    if not 0.0 <= args.fraction_train <= 1.0:
+        raise ValueError(f"fraction_train must be between 0.0 and 1.0: {args.fraction_train}")
     
     if not 0.0 <= args.fraction_evaluate <= 1.0:
         raise ValueError(f"fraction_evaluate must be between 0.0 and 1.0: {args.fraction_evaluate}")
     
-    if args.min_fit_clients < 0:
-        raise ValueError(f"min_fit_clients must be non-negative: {args.min_fit_clients}")
+    if args.min_train_nodes < 0:
+        raise ValueError(f"min_train_nodes must be non-negative: {args.min_train_nodes}")
     
-    if args.min_evaluate_clients < 0:
-        raise ValueError(f"min_evaluate_clients must be non-negative: {args.min_evaluate_clients}")
+    if args.min_evaluate_nodes < 0:
+        raise ValueError(f"min_evaluate_nodes must be non-negative: {args.min_evaluate_nodes}")
     
-    if args.min_available_clients < 0:
-        raise ValueError(f"min_available_clients must be non-negative: {args.min_available_clients}")
+    if args.min_available_nodes < 0:
+        raise ValueError(f"min_available_nodes must be non-negative: {args.min_available_nodes}")
 
 
 def main() -> None:
@@ -665,11 +678,11 @@ def main() -> None:
             server_port=args.server_port,
             num_rounds=num_rounds,
             log_level=args.log_level,
-            fraction_fit=args.fraction_fit,
+            fraction_train=args.fraction_train,
             fraction_evaluate=args.fraction_evaluate,
-            min_fit_clients=args.min_fit_clients,
-            min_evaluate_clients=args.min_evaluate_clients,
-            min_available_clients=args.min_available_clients,
+            min_train_nodes=args.min_train_nodes,
+            min_evaluate_nodes=args.min_evaluate_nodes,
+            min_available_nodes=args.min_available_nodes,
             config_name=args.config_name
         )
         

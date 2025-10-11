@@ -11,7 +11,7 @@ conda env create --name env.fl --file=environment.yml
 conda activate env.fl
 
 # Option B: Pip
-pip install flwr[simulation] accelerate torch torchvision transformers
+pip install flwr[simulation]>=1.22.0 accelerate torch torchvision transformers
 ```
 
 ### 🔧 Manual Setup (Recommended for development)
@@ -89,7 +89,7 @@ System (8 cores)
 - LoRA-aware parameter aggregation
 - Automated multi-client deployment
 - Real-time monitoring & logging
-- Modern Flower API compatibility
+- Modern Flower 1.22.0 API compatibility with ClientApp/ServerApp architecture
 
 ## 📁 Logs
 

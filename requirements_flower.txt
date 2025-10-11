@@ -2,7 +2,7 @@
 # Install with: pip install -r requirements_flower.txt
 
 # Core Flower framework
-flwr[simulation]>=1.5.0
+flwr[simulation]>=1.22.0
 
 # Additional dependencies for enhanced functionality
 numpy>=1.21.0

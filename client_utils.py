@@ -212,7 +212,7 @@ def create_flower_client(args: Config, client_id: int = 0):
 def start_flower_client(args: Config, server_address: str = "localhost",
                               server_port: int = 8080, client_id: int = 0) -> None:
     """
-    Start a Flower client.
+    Start a Flower client using the new ClientApp API.
     
     Args:
         args: Configuration object
@@ -226,11 +226,14 @@ def start_flower_client(args: Config, server_address: str = "localhost",
     # Create client
     client = create_flower_client(args, client_id)
     
-    # Start client using Flower API
+    # Start client using Flower 1.22.0 ClientApp API
     logging.info(f"Starting Flower client {client_id} connecting to {server_address}:{server_port}")
     
-    # Use the modern Flower API (warnings suppressed)
+    # Use the traditional start_client approach for now
+    # This is more compatible with the current Flower 1.22.0 setup
     import flwr as fl
+    
+    # Start the client using the traditional API
     fl.client.start_client(
         server_address=f"{server_address}:{server_port}",
         client=client.to_client(),

@@ -260,20 +260,20 @@ class FlowerClient(fl.client.NumPyClient, ClientTrainingMixin, ClientEvaluationM
             
             logging.info(f"Client {self.client_id} assigned to group {self._get_client_group_id()}")
     
-    # Flower client interface methods
-    def get_parameters(self, config: Dict[str, Any]) -> List[np.ndarray]:
+    # Flower client interface methods (compatible with both old and new APIs)
+    def get_parameters(self, config=None):
         """
         Get current model parameters.
         
         Args:
-            config: Configuration dictionary
+            config: Configuration dictionary (for NumPyClient compatibility)
             
         Returns:
             List of model parameters as numpy arrays
         """
         return self._model_to_numpy_params()
     
-    def set_parameters(self, parameters: List[np.ndarray]) -> None:
+    def set_parameters(self, parameters):
         """
         Set model parameters from server.
         
@@ -287,7 +287,7 @@ class FlowerClient(fl.client.NumPyClient, ClientTrainingMixin, ClientEvaluationM
         self._numpy_params_to_model(parameters)
         logging.debug(f"Updated model parameters with {len(parameters)} parameter arrays")
     
-    def fit(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[List[np.ndarray], int, Dict[str, Any]]:
+    def fit(self, parameters, config):
         """
         Train the model on local data.
         
@@ -379,7 +379,7 @@ class FlowerClient(fl.client.NumPyClient, ClientTrainingMixin, ClientEvaluationM
         }
         return self._ensure_flower_compatible_types(metrics)
     
-    def evaluate(self, parameters: List[np.ndarray], config: Dict[str, Any]) -> Tuple[float, int, Dict[str, Any]]:
+    def evaluate(self, parameters, config):
         """
         Evaluate the model on local test data.
         
