@@ -7,8 +7,8 @@ Comprehensive Flower-based federated learning with LoRA allocation, multi-core C
 ### Prerequisites
 ```bash
 # Option A: Conda (Recommended)
-conda env create --name env.fl --file=environment.yml
-conda activate env.fl
+conda env create --name env_flower.fl --file=environment-flower.yml
+conda activate env_flower.fl
 
 # Option B: Pip
 pip install flwr[simulation] accelerate torch torchvision transformers

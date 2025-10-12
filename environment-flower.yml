@@ -1,0 +1,39 @@
+name: env_flower.fl
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  # Core Python
+  - python=3.13
+  - pip
+  - numpy>=2.1.0
+  - scikit-learn>=1.6.0
+  - matplotlib>=3.10.0
+  - pyyaml>=6.0.2
+  - tqdm>=4.67.0
+  - dill>=0.3.8
+
+  # PyTorch and related packages
+  - pytorch>=1.12
+  - torchvision>=0.23.0
+  - pytorch-cuda=12.4  # optional, choose version matching your GPU drivers
+
+  # TensorBoard
+  - tensorboard>=2.20.0
+
+  # pip-only packages
+  - pip:
+      - flwr>=1.22.0
+      - flwr-datasets[vision]>=0.5.0
+      - transformers>=4.57.0
+      - peft>=0.17.1
+      - accelerate>=1.10.1
+      - datasets>=3.1.0
+      - evaluate>=0.4.0
+      - mmengine>=0.10.7
+      # Optional performance/monitoring tools:
+      # - numba>=0.58.0
+      # - psutil>=7.1.0
+
+prefix: /home/username/anaconda3/envs/env_flower.fl
