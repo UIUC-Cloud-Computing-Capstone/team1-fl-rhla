@@ -23,8 +23,8 @@ def model_setup(args):
     if args.model == 'bert-base-uncased':
         model = AutoModelForSequenceClassification.from_pretrained(args.model, num_labels=args.num_classes)
         config = LoraConfig(
-            r=16,
-            lora_alpha=16,
+            r=6,
+            lora_alpha=6,
             target_modules=["query", "value"],
             lora_dropout=0.1,
             bias="none"
@@ -40,8 +40,8 @@ def model_setup(args):
         )
 
         config = LoraConfig(
-            r=16,
-            lora_alpha=16,
+            r=6,
+            lora_alpha=6,
             target_modules=["query", "value"],
             lora_dropout=0.1,
             bias="none",
