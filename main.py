@@ -95,3 +95,7 @@ if __name__ == '__main__':
             args.logger.info('repeated '+ key +' scores: ' + str(score_box[index]), main_process_only=True)
             avg_score = np.average(score_box[index])
             args.logger.info('avg of the '+ key +' scores ' + str(avg_score), main_process_only=True)
+
+    f = open(file_name, 'a+')  # open file in append mode
+    f.write(f"Training ended: {datetime.now()}")
+    f.close()
