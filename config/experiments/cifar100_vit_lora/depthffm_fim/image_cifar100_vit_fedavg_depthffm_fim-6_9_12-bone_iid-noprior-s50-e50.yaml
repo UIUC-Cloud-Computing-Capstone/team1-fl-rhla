@@ -16,7 +16,7 @@ batch_size: 32 # local batch size
 optimizer: adamw
 local_lr: 0.001 # local learning rate default:0.005
 local_momentum: 0.5 # SGD Momentum default 0.5
-decay_weight: 0.99 # learning rate decay weight default 0.5
+decay_weight: 0.95 # learning rate decay weight default 0.5
 global_momentum: 0.9 # global momentum
 # clip: 1 # clipping threshold
 ########### base differential ends ###########

@@ -33,15 +33,15 @@ def model_setup(args):
         net_glob.to(args.device)
     elif args.model == 'google/vit-base-patch16-224-in21k':
         model = AutoModelForImageClassification.from_pretrained(
-            'facebook/deit-tiny-patch16-224',
+            'facebook/deit-small-patch16-224',
             label2id=args.label2id,
             id2label=args.id2label,
             ignore_mismatched_sizes=True,  # provide this in case you're planning to fine-tune an already fine-tuned checkpoint
         )
 
         config = LoraConfig(
-            r=6,
-            lora_alpha=6,
+            r=48,
+            lora_alpha=48,
             target_modules=["query", "value"],
             lora_dropout=0.1,
             bias="none",

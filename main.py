@@ -51,6 +51,8 @@ if __name__ == '__main__':
     ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
     meta_args.accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
     meta_args.device = meta_args.accelerator.device
+
+    print('##### %s',str(meta_args.device))
     logging.basicConfig(level=logging.INFO)
     meta_args.logger = get_logger(__name__)
     meta_args.log_path = set_log_path(meta_args)
