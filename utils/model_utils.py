@@ -20,6 +20,50 @@ from peft import LoraConfig, get_peft_model
 
 ################################### model setup ########################################
 def model_setup(args):
+    """
+    Set up and configure models for federated learning with LoRA (Low-Rank Adaptation).
+    
+    This function initializes different types of pre-trained models and applies LoRA configuration
+    for efficient fine-tuning in federated learning scenarios. It supports both text classification
+    (BERT) and image classification (Vision Transformer) models.
+    
+    Args:
+        args: Configuration object containing model parameters. Expected attributes:
+            - model (str): Model identifier ('bert-base-uncased' or 'google/vit-base-patch16-224-in21k')
+            - num_classes (int): Number of output classes for classification
+            - device (torch.device): Device to move the model to (CPU/GPU)
+            - label2id (dict): Mapping from labels to IDs (for ViT models)
+            - id2label (dict): Mapping from IDs to labels (for ViT models)
+    
+    Returns:
+        tuple: A tuple containing:
+            - args: The input arguments (unchanged)
+            - net_glob: The configured model with LoRA adapters applied
+            - global_model: Deep copy of the model's state dictionary for federated learning
+            - model_dim: Total number of parameters in the model
+    
+    Supported Models:
+        1. BERT ('bert-base-uncased'):
+           - Uses AutoModelForSequenceClassification for text classification
+           - LoRA config: r=6, alpha=6, targets query/value modules
+           - Dropout: 0.1, no bias adaptation
+        
+        2. Vision Transformer ('google/vit-base-patch16-224-in21k'):
+           - Uses facebook/deit-small-patch16-224 as base model
+           - LoRA config: r=48, alpha=48, targets query/value modules
+           - Dropout: 0.1, no bias adaptation
+           - Saves classifier module for fine-tuning
+    
+    Raises:
+        SystemExit: If an unrecognized model is specified
+    
+    Example:
+        >>> args = argparse.Namespace()
+        >>> args.model = 'bert-base-uncased'
+        >>> args.num_classes = 10
+        >>> args.device = torch.device('cuda')
+        >>> args, model, global_state, dim = model_setup(args)
+    """
     if args.model == 'bert-base-uncased':
         model = AutoModelForSequenceClassification.from_pretrained(args.model, num_labels=args.num_classes)
         config = LoraConfig(
