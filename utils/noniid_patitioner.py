@@ -217,6 +217,7 @@ class ClassWisePartitioner(Partitioner):
                 for s in range(n_user):
                     s_classes = [label_sampler.next() for _ in range(self.n_class_per_share)]
                     for c in s_classes:
+                        # group the clients with the class type as the key
                         user_ids_by_class[c].append(s)
 
             # assign sample indexes to clients
@@ -230,6 +231,7 @@ class ClassWisePartitioner(Partitioner):
                 l = len(idx_by_class[c])
                 log(f" class-{c} => {len(user_ids_by_class[c])} shares")
                 l_by_user = self._aux_partitioner(l, len(user_ids_by_class[c]), log=log) # num of sample for each client id in this categories
+                # partition each class samples into differnt users.
                 base_idx = 0
                 for i_user, tl in zip(user_ids_by_class[c], l_by_user): # i_user: client_id, tl: num of sample
                     idx_by_user[i_user].extend(idx_by_class[c][base_idx:base_idx+tl])

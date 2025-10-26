@@ -1,15 +1,16 @@
 _base_ : ['../../base_ffm.yaml']
 
-############## base differential #############
-num_users: 100 # number of users: K
-num_selected_users: 10 # number of selected users: 100, for shakespeare, it is 10, femnist 20
-round: 500 # rounds of training
+num_users: 20 # number of users: K
+num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
+round: 200
 tau: 1 # 5
-batch_size: 128 # local batch size
+# TODO Liam: for dev, change later
+#batch_size: 128 # local batch size
+batch_size: 32 # local batch size
 optimizer: adamw
-local_lr: 0.01 # local learning rate default:0.005
+local_lr: 0.001 # local learning rate default:0.005
 local_momentum: 0.5 # SGD Momentum default 0.5
-decay_weight: 0.99 # learning rate decay weight default 0.5
+decay_weight: 0.95 # learning rate decay weight default 0.5
 global_momentum: 0.9 # global momentum
 # clip: 1 # clipping threshold
 ########### base differential ends ###########

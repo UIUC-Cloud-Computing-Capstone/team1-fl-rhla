@@ -5,10 +5,9 @@ _base_ : ['../../base_ffm.yaml']
 #num_selected_users: 10 # number of selected users: 100, for shakespeare, it is 10, femnist 20
 #round: 500 # rounds of training
 
-# TODO Liam: for dev, change later
 num_users: 20 # number of users: K
 num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
-round: 500
+round: 200
 tau: 1 # 5
 # TODO Liam: for dev, change later
 #batch_size: 128 # local batch size
