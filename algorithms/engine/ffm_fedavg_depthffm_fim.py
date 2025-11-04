@@ -319,12 +319,25 @@ def ffm_fedavg_depthffm_fim(args):
     best_test_macro_f1 = 0.0
     best_test_micro_f1 = 0.0
     metric_keys = {'Accuracy': 0, 'F1': 0, 'Macro_F1': 0, "Micro_F1": 0}
+    saved_block_ids_list = list()
+    saved_rank_list = list()
+    fim_prior_epoch = max(args.fim_prior_epoch,1)
 
     for t in range(args.round):
         args.logger.info('Round: ' + str(t) + '/' + str(args.round), main_process_only=True)
         
-        # block ids for each clients
-        update_block_ids_list(args, dataset_fim, net_glob, t)
+        # block ids for each clients, update every {fim_every_iter} round with pre-defined warm-start
+        if t < fim_prior_epoch:
+            update_block_ids_list_predefined(args, dataset_fim, net_glob, t)
+            saved_block_ids_list = args.block_ids_list
+            saved_rank_list = args.rank_list
+        elif t >= fim_prior_epoch and t % args.fim_every_iter == 0:
+            update_block_ids_list(args, dataset_fim, net_glob, t)
+            saved_block_ids_list = args.block_ids_list
+            saved_rank_list = args.rank_list
+        else:
+            args.block_ids_list = saved_block_ids_list
+            args.saved_rank_list = saved_rank_list
 
         ## learning rate decaying
         decay_learning_rate(args, t)
@@ -702,31 +715,57 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
           of LoRA layers per user group
         - All selected layer lists are sorted for consistency
     """
-    if t > args.fim_prior_epoch-1 and t % args.fim_every_iter == 0:
-        gpu_lock.acquire()
-        calc = FIMCalculator(args, copy.deepcopy(net_glob), dataset_fim)
-        fim = calc.compute_fim(empirical=True, verbose=True, every_n=None)
-        gpu_lock.release()
-            # select those with lowest FIM layers to freeze
-        layers_rank, cluster_labels = calc.bottom_k_layers(fim, k=args.lora_layer)
-        observed_probability = get_observed_probability(cluster_labels)
-        args.block_ids_list = []
-        for id in args.user_groupid_list:
-            layer_list = np.random.choice(range(args.lora_layer),
-                                            p=observed_probability,
-                                            size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
-                                            replace=False)
-            args.block_ids_list.append(sorted(layer_list))
-    else:
-        if hasattr(args, 'heterogeneous_group0_lora'):
-            if isinstance(getattr(args, 'heterogeneous_group0_lora'), int):
-                args.block_ids_list = []
-                for id in args.user_groupid_list:
-                    layer_list = np.random.choice(range(args.lora_layer),
-                                                    p=[float(Fraction(x)) for x in args.layer_prob],
-                                                    size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
-                                                    replace=False)
-                    args.block_ids_list.append(sorted(layer_list))
+
+    gpu_lock.acquire()
+    calc = FIMCalculator(args, copy.deepcopy(net_glob), dataset_fim)
+    fim = calc.compute_fim(empirical=True, verbose=True, every_n=None)
+    gpu_lock.release()
+        # select those with lowest FIM layers to freeze
+    layers_rank, cluster_labels = calc.bottom_k_layers(fim, k=args.lora_layer)
+    observed_probability = get_observed_probability(cluster_labels)
+    args.block_ids_list = []
+    for id in args.user_groupid_list:
+        layer_list = np.random.choice(range(args.lora_layer),
+                                        p=observed_probability,
+                                        size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
+                                        replace=False)
+        args.block_ids_list.append(sorted(layer_list))
+        if args.enable_rank_var:
+            get_rank_list(args, layer_list, fim, id)
+        else:
+            get_rank_list(args, layer_list, [1]*args.lora_layer, id)
+
+def update_block_ids_list_predefined(args, dataset_fim, net_glob, t):
+    if hasattr(args, 'heterogeneous_group0_lora'):
+        if isinstance(getattr(args, 'heterogeneous_group0_lora'), int):
+            args.block_ids_list = []
+            for id in args.user_groupid_list:
+                layer_list = np.random.choice(range(args.lora_layer),
+                                                p=[float(Fraction(x)) for x in args.layer_prob],
+                                                size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
+                                                replace=False)
+                args.block_ids_list.append(sorted(layer_list))
+                get_rank_list(args, layer_list, [1]*args.lora_layer, id)
+
+
+def get_rank_list(args, layer_list, fim, id):
+    args.rank_list = []
+    # Get the rank list based on the fim value
+    sorted_layer_list = sorted(layer_list)
+    selected_layer_fim = [fim[x] for x in sorted_layer_list]
+    # reserve 1-rank for each selected block
+    rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora') - len(layer_list)
+    normalized_selected_layer_fim = [x/sum(selected_layer_fim) for x in selected_layer_fim]
+    rank_list = [int(x*rank_budget) for x in normalized_selected_layer_fim]
+    left_over = rank_budget - sum(rank_list)
+    max_index = normalized_selected_layer_fim.index(max(normalized_selected_layer_fim))
+    rank_list[max_index] += left_over
+
+    # add back the reserved rank for each block.
+    final_rank_list = [x + 1 for x in rank_list]
+    args.rank_list.append(final_rank_list)
+
+    #print(f'rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list} ')
 
 def get_observed_probability(cluster_labels):
     """
@@ -781,7 +820,7 @@ def get_observed_probability(cluster_labels):
         elif label == 1:
             observed_probability.append('2/27')
         elif label == 2:
-            observed_probability.append('1/9')
+            observed_probability.append('3/27')
     observed_probability = np.array([float(Fraction(x)) for x in observed_probability])
     observed_probability /= sum(observed_probability)
     return observed_probability

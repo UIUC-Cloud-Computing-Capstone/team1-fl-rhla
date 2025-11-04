@@ -36,6 +36,7 @@ class FIMCalculator:
         self.device = args.accelerator.device
         self.model.to(self.device)
         self.num_samples = len(self.test_data) 
+        self.args = args
 
     def compute_fim(self, empirical=True, verbose=True, every_n=None):
         # ipdb.set_trace()
@@ -47,7 +48,7 @@ class FIMCalculator:
                                  verbose=verbose, 
                                  every_n=every_n)
         
-        fim_diag_by_layer = self.aggregate_fisher_information(all_fims, self.model_name)
+        fim_diag_by_layer = self.aggregate_fisher_information(all_fims, self.model_name, self.args.lora_layer)
         return fim_diag_by_layer
 
     @staticmethod
@@ -98,7 +99,7 @@ class FIMCalculator:
                 torch.autograd.backward(samples[idx], retain_graph=True)
                 for name, param in model.named_parameters():
                     if param.requires_grad and 'classifier' not in name:
-                        fim[name] += (param.grad * param.grad)
+                        fim[name] += (param.grad) # no gradient square here. ||.||_F in the next step do the square
                         fim[name].detach_()
                 seen_no += 1
                 idx += 1
@@ -109,7 +110,7 @@ class FIMCalculator:
                     tic, last = toc, seen_no
                     sys.stdout.write(f"\rSamples: {seen_no:5d}. Fps: {fps:2.4f} samples/s.")
 
-                if every_n and seen_no % every_n == 0:
+                if None and seen_no % every_n == 0:
                     all_fims[seen_no] = {n: f.clone().div_(seen_no).detach_()
                                         for (n, f) in fim.items()}
 
@@ -127,24 +128,35 @@ class FIMCalculator:
         return all_fims
 
     @staticmethod
-    def aggregate_fisher_information(all_fims, model_name):
+    def aggregate_fisher_information(all_fims, model_name, lora_layer):
         latest_fim_diag = all_fims[max(all_fims.keys())]
-        fim_diag_by_layer = {}
+        fim_diag_by_layer = [0]*lora_layer
         
+        #print(latest_fim_diag)
+        #print('##################################################')
         for param_name, param_fim_diag in latest_fim_diag.items():
-            layer_name = '-'.join(param_name.split('.')[:6])
-            if layer_name not in fim_diag_by_layer:
-                fim_diag_by_layer[layer_name] = 0.0
-
+            # TODO (Done): check the layer name actually follow this convention.
+            layer_name = int(re.search(r'\.layer\.(\d+)\.', param_name).group(1))
+            # layer_name is the model index
+            # combined lora_A lora_B gradient
             fim_diag_by_layer[layer_name] += torch.norm(param_fim_diag, p='fro').item()
         return fim_diag_by_layer
 
     @staticmethod
-    def bottom_k_layers(input_dict, k):
-        sorted_items = sorted(input_dict.items(), key=lambda x: x[1])
-        keys = [int(re.findall(r'\d+', item[0])[0]) for item in sorted_items[:k]]
+    def bottom_k_layers(input_list, k):
+        sorted_items = sorted(input_list)
+        keys = [sorted_items]
 
-        kmeans = KMeans(n_clusters=3)
-        kmeans.fit(np.array([x[1] for x in input_dict.items()]).reshape(-1,1))
-        cluster_labels = kmeans.labels_
+        values = np.array([v for v in input_list], dtype=float).reshape(-1, 1)
+
+        kmeans = KMeans(n_clusters=3, random_state=0)
+        kmeans.fit(values)
+
+        # Relabel clusters by ascending centroid
+        centers = kmeans.cluster_centers_.ravel()          # shape: (n_clusters,)
+        order = np.argsort(centers)                        # e.g., [2, 0, 1]
+        remap = {old: new for new, old in enumerate(order)}# smallest center -> 0, etc.
+        cluster_labels = np.array([remap[l] for l in kmeans.labels_], dtype=int)
+        # TODO (Remap done): the label needs to associated with the fim score! layer with smallest fim score should be label-2. So with the highest probablity to be selected as the blocked layer.
         return keys, cluster_labels
+

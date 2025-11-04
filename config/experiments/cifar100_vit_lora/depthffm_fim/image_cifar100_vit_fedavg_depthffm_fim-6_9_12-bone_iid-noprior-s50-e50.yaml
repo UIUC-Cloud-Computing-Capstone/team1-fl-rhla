@@ -46,6 +46,18 @@ heterogeneous_group1_lora: 9
 heterogeneous_group2_lora: 12
 layer_prob: [1/9, 1/9, 1/9, 2/27, 2/27, 1/27, 1/27, 1/27, 2/27, 1/9, 1/9, 1/9]
 
+##### rank variation
+enable_rank_var: false
+var_rank_group0_lora: 6
+var_rank_group1_lora: 12
+var_rank_group2_lora: 48
+
+##### fixed A for training
+only_train_b: false
+
+##### apply SVD for aggregation
+apply_svd_aggregation: false
+
 # Dataset configure
 data_type: image
 dataset: cifar100
@@ -66,5 +78,5 @@ iid: 1 # whether i.i.d or not
 
 #####################################
 ########### fim params ##############
-fim_every_iter: 50
-fim_prior_epoch: 50
+fim_every_iter: 1
+fim_prior_epoch: 1

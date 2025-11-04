@@ -43,7 +43,11 @@ def average_lora_depthfl(args, global_model, loc_updates):
     model_update_avg_dict = {}
 
     for k in global_model.keys():
-        if 'lora' in k or 'classifier' in k:
+        lora_str = 'lora'
+        if args.only_train_b:
+            lora_str = 'lora_B'
+            print('Only train Lora_B')
+        if lora_str in k or 'classifier' in k:
             for loc_update in loc_updates:
                 if k in loc_update:
                     if k in model_update_avg_dict:
@@ -55,6 +59,22 @@ def average_lora_depthfl(args, global_model, loc_updates):
     for k in global_model.keys():
         if k in model_update_avg_dict:
             global_model[k] = global_model[k].detach().cpu() +  sum(model_update_avg_dict[k]) / len(model_update_avg_dict[k])
+            ## run svd
+            if args.only_train_b and args.apply_svd_aggregation and 'lora_B' in k:
+                print('Apply SVD update')
+                B = global_model[k].detach().cpu()
+                new_name = k.replace('lora_B', 'lora_A')
+                A = global_model[new_name].detach().cpu()
+                U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
+                global_model[k] = (U@torch.diag(S))[:,0:48]
+                global_model[new_name] = VT[0:48,:]
+
+                
+            # null to rank 24
+            #if 'lora_A' in k:
+            #    global_model[k][24:,:] = 0
+            #elif 'lora_B' in k:
+            #    global_model[k][:,24:] = 0
 
     return global_model
 

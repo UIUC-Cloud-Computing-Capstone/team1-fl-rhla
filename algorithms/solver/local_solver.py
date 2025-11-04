@@ -47,16 +47,25 @@ class LocalUpdate(object):
         if len(no_weight_lora) == args.lora_layer:
             return model.state_dict(), None, no_weight_lora
 
-        optimizer_grouped_parameters = [
-                {
-                    "params": [p for n, p in model.named_parameters() if not any(str(nd) in n for nd in no_weight_lora)]
-                },
-                {
-                    "params": [p for n, p in model.named_parameters() if any(str(nd) in n for nd in no_weight_lora)],
-                    'lr': 0.0
-                }
-        ]
-        optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.local_lr)
+        # only train the lora module.
+        for name, param in model.named_parameters():
+            if ('lora' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+        
+        if args.only_train_b:
+            for name, param in model.named_parameters():
+                if 'lora_A' in name:
+                    param.requires_grad = False
+
+        #print('############## trainable param ############')
+        #print(f'args.block_ids_list[client_real_id] = {args.block_ids_list[client_real_id]}')
+        #for name, param in model.named_parameters():
+        #    if param.requires_grad:
+        #        print(name) 
+
+        optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.local_lr)
         # # Prepare everything with our `accelerator`.
         model, optimizer, train_dataloader = accelerator.prepare(model, optimizer, ldr_train)
         total_loss = []
