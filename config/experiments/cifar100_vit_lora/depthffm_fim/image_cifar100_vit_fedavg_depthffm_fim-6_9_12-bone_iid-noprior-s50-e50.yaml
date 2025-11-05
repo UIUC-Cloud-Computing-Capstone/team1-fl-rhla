@@ -48,17 +48,20 @@ layer_prob: [1/9, 1/9, 1/9, 2/27, 2/27, 1/27, 1/27, 1/27, 2/27, 1/9, 1/9, 1/9]
 
 ##### rank variation
 enable_rank_var: false
-var_rank_group0_lora: 144 # 48*6
-var_rank_group1_lora: 216
-var_rank_group2_lora: 288
+var_rank_group0_lora: 288 # 48*6
+var_rank_group1_lora: 432
+var_rank_group2_lora: 576
 
-lora_max_rank: 48
+lora_max_rank: 576
 
 ##### fixed A for training
 only_train_b: false
 
 ##### apply SVD for aggregation
 apply_svd_aggregation: false
+
+###### Whether to train classifier (default: false)
+train_classifier: false
 
 # Dataset configure
 data_type: image
@@ -81,4 +84,4 @@ iid: 1 # whether i.i.d or not
 #####################################
 ########### fim params ##############
 fim_every_iter: 10
-fim_prior_epoch: 1
+fim_prior_epoch: 10

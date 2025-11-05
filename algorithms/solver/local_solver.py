@@ -61,30 +61,34 @@ class LocalUpdate(object):
                     param.requires_grad = False
 
         # add register to truncate the rank
-        def lora_A_hook(idx: int):
+        def lora_A_hook(cut_rank: int):
             def hook(grad):
-                # grad is a tensor
-                grad[rank:,:] = 0       # zero out rows from idx onward
+                grad = grad.clone()  # ensure writable
+                grad[cut_rank:, :] = 0
+                return grad       # zero out rows from idx onward
             return hook
 
-        def lora_B_hook(idx: int):
+        def lora_B_hook(cut_rank: int):
             def hook(grad):
                 # grad is a tensor
-                grad[:,rank:] = 0       # zero out rows from idx onward
+                grad = grad.clone()
+                grad[:,cut_rank:] = 0       # zero out cols from idx onward
+                return grad
             return hook
 
+        print(f'client {client_real_id} block_ids_list = {args.block_ids_list[client_real_id]}, rank_list = {args.rank_list[client_real_id]}')
         for name, param in model.named_parameters():
             if 'lora' in name and param.requires_grad:
                 layer_id = int(re.findall(r"\d+", name)[0])
-                #print(f'args.block_ids_list = {args.block_ids_list}')
-                #print(f'args.rank_list = {args.rank_list}')
                 layer_index = args.block_ids_list[client_real_id].index(layer_id)
                 
                 rank = args.rank_list[client_real_id][layer_index]
                 #print(f'layer id {layer_id}, rank = {rank}')
                 if 'lora_A' in name:
+                    #print(f'lora_A name {name}')
                     param.register_hook(lora_A_hook(rank) )
                 elif 'lora_B' in name:
+                    #print(f'lora_B name {name}')
                     param.register_hook(lora_B_hook(rank) )
 
         #print('############## trainable param ############')
@@ -93,10 +97,13 @@ class LocalUpdate(object):
         #    if param.requires_grad:
         #        print(name) 
 
-        optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.local_lr)
+        # Note: Have to set the weight_decay to zero otherwise 0 gradient part will still be updated.
+        optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.local_lr,weight_decay=0.0)
         # # Prepare everything with our `accelerator`.
         model, optimizer, train_dataloader = accelerator.prepare(model, optimizer, ldr_train)
         total_loss = []
+
+        #unwrapped_model = accelerator.unwrap_model(model)
         for t_au in range(self.args.tau):
             with accelerator.accumulate(model):
                 for step, batch in tqdm(enumerate(train_dataloader), desc='Local Training Client '+str(client_index)+' Tau: '+str(t_au), total=len(train_dataloader), disable=(not accelerator.is_local_main_process)):
@@ -104,6 +111,17 @@ class LocalUpdate(object):
                     outputs = model(**batch)
                     loss = outputs.loss
                     accelerator.backward(loss)
+
+                    # ---- check gradients here ----
+
+                    #for name, param in unwrapped_model.named_parameters():
+                    #    if param.requires_grad and 'lora_A' in name:
+                    #        grad_norm = param.grad.detach().data
+                    #        accelerator.print(f"[step {step}] {name} grad = {grad_norm}")
+                    #        #accelerator.print(f"param -")
+                            #break  # uncomment if you only want the first layer’s grad
+                    # --------------------------------
+
                     optimizer.step()
                     # lr_scheduler.step()
                     if accelerator.is_local_main_process:

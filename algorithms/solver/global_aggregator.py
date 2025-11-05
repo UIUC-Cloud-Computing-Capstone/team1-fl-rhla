@@ -42,11 +42,12 @@ def average_lora_depthfl(args, global_model, loc_updates):
     '''
     model_update_avg_dict = {}
 
+    print('############## global aggregation ####################')
+    lora_str = 'lora'
+    if args.only_train_b:
+        lora_str = 'lora_B'
+        print('Only train Lora_B')
     for k in global_model.keys():
-        lora_str = 'lora'
-        if args.only_train_b:
-            lora_str = 'lora_B'
-            print('Only train Lora_B')
         if lora_str in k or 'classifier' in k:
             for loc_update in loc_updates:
                 if k in loc_update:
@@ -55,13 +56,17 @@ def average_lora_depthfl(args, global_model, loc_updates):
                     else:
                         model_update_avg_dict[k] = []
                         model_update_avg_dict[k].append(loc_update[k])
+                        # Print the update content to check the rank variation and update param
+                        #print(k)
+                        #print(loc_update[k])
+                        #print(loc_update[k].shape)
 
     for k in global_model.keys():
         if k in model_update_avg_dict:
             global_model[k] = global_model[k].detach().cpu() +  sum(model_update_avg_dict[k]) / len(model_update_avg_dict[k])
             ## run svd
             if args.only_train_b and args.apply_svd_aggregation and 'lora_B' in k:
-                print('Apply SVD update')
+                print(f'Apply SVD update for {k}')
                 B = global_model[k].detach().cpu()
                 new_name = k.replace('lora_B', 'lora_A')
                 A = global_model[new_name].detach().cpu()

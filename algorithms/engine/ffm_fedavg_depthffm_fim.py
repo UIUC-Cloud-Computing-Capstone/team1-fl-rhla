@@ -339,6 +339,10 @@ def ffm_fedavg_depthffm_fim(args):
             args.block_ids_list = saved_block_ids_list
             args.saved_rank_list = saved_rank_list
 
+        # debug list and rank:
+        #args.block_ids_list[14] = [0,1]
+        #args.rank_list[14] = [3,1]
+
         ## learning rate decaying
         decay_learning_rate(args, t)
 
@@ -469,6 +473,15 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
     local_models, local_losses, local_updates, delta_norms, num_samples = [], [], [], [], []
     for num_index, i in enumerate(selected_idxs):
         if args.peft == 'lora':
+
+            #net_model = net_glob.state_dict()
+            #print('################### before $$$$$$$$$$$$$$$$$$$$$')
+            #for k in global_model.keys():
+            #    if 'lora_A' in k:
+            #        print(f'{k}, {net_model[k].detach() - global_model[k].detach()}')
+
+
+
             local_model, local_loss, no_weight_lora =  local_solver.lora_tuning(model=copy.deepcopy(net_glob),
                                                                                     ldr_train=data_loader_list[i],
                                                                                     args=args,
@@ -476,7 +489,11 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
                                                                                     client_real_id=i,
                                                                                     round=t,
                                                                                     hete_group_id=args.user_groupid_list[i])
-            
+            #print('################### after $$$$$$$$$$$$$$$$$$$$$')
+            #for k in global_model.keys():
+            #    if 'lora_A' in k:
+            #        print(f'{k}, {local_model[k].detach() - global_model[k].detach()}')
+                    
         if local_loss:
             local_losses.append(local_loss)
             # compute model update
@@ -524,8 +541,8 @@ def get_model_update(args, global_model, local_model, no_weight_lora):
             if 'lora' in k: # no classifier
                 if int(re.findall(r"\d+", k)[0]) not in no_weight_lora:
                     model_update[k] = local_model[k].detach().cpu() - global_model[k].detach().cpu() 
-            #elif 'classifier' in k:
-            #    model_update[k] = local_model[k].detach().cpu() - global_model[k].detach().cpu() 
+            elif args.train_classifier and 'classifier' in k:
+                model_update[k] = local_model[k].detach().cpu() - global_model[k].detach().cpu() 
     else:
         model_update = {k: local_model[k].detach().cpu() - global_model[k].detach().cpu() for k in global_model.keys()}
     return model_update
@@ -768,7 +785,7 @@ def get_rank_list(args, layer_list, fim, id):
     final_rank_list = [x + 1 for x in rank_list]
     args.rank_list.append(final_rank_list)
 
-    print(f'{id} client: rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list} ')
+    print(f'group {id}: rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list} ')
     #print(f'args.rank_list = {args.rank_list}')
 
 def get_observed_probability(cluster_labels):

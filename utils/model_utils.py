@@ -101,12 +101,12 @@ def model_setup(args):
 
     global_model = copy.deepcopy(net_glob.state_dict())
     ##print(global_model.keys())
-    # Truncate to 24 rank
+    # Set all the lora matrix to 0.
     #for k in global_model.keys():
     #    if 'lora_A' in k:
-    #        global_model[k][24:,:] = 0
+    #        global_model[k][:,:] = 0
     #    elif 'lora_B' in k:
-    #        global_model[k][:,24:] = 0
+    #        global_model[k][:,:] = 0
     #net_glob.load_state_dict(global_model)
 
     return args, net_glob, global_model, model_dim(global_model)
