@@ -26,14 +26,14 @@ class RankEstimator:
 
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
 
-        # Total GPU memory = (1) base model + (2) LoRA params + (3) optimizer states (part for base model (3.1) + part for LoRA (3.2)) + (4) activations + (5) safety margin
+        # Total GPU memory = (1) base model + (2) LoRA params + (3) optimizer states (part for base model (3.1) + part for LoRA (3.2)) + (4) activations and safety margin
         base_model_memory_size_in_bytes = self._get_base_model_memory_size_in_bytes(args, model)
-        activations_memory_size_in_bytes = self._get_activations_memory_size_in_bytes(model)
+        activations_and_safety_margin_memory_size_in_bytes = self._get_activations_memory_size_in_bytes(model)
         optimizer_states_memory_for_base_model_size_in_bytes = self._get_optimizer_states_memory_for_base_model_size_in_bytes(args, base_model_memory_size_in_bytes)
-        safety_margin_memory_size_in_bytes = self._get_safety_margin_memory_size_in_bytes(args, model, base_model_memory_size_in_bytes, activations_memory_size_in_bytes, optimizer_states_memory_for_base_model_size_in_bytes)
+        
 
-        # (2) + (3.2) = Total GPU memory - (1) - (3.1) - (4) - (5)
-        lora_memory_size_in_bytes = total_gpu_memory_size_in_bytes - base_model_memory_size_in_bytes - activations_memory_size_in_bytes - optimizer_states_memory_for_base_model_size_in_bytes - safety_margin_memory_size_in_bytes
+        # (2) + (3.2) = Total GPU memory - (1) - (3.1) - (4)
+        lora_memory_size_in_bytes = total_gpu_memory_size_in_bytes - base_model_memory_size_in_bytes - activations_and_safety_margin_memory_size_in_bytes - optimizer_states_memory_for_base_model_size_in_bytes
 
         return self._get_rank_based_on_lora_memory_size_in_bytes(lora_memory_size_in_bytes)
 
@@ -65,10 +65,46 @@ class RankEstimator:
         else:
             raise ValueError(f'Invalid precision: {precision}')
     
-    def _get_activations_memory_size_in_bytes(self, model):
-        # TODO Abdul
-        # Depends on actual batch size and image size
-        pass
+    def _get_activations_memory_size_in_bytes(self, args, model):
+        # TODO Liam
+        # is this correct?
+        # How about the LoRA part?
+        # sanity check
+        # unit test
+
+        """
+        B: batch size
+        S: sequence length. number of tokens per image (patches + special tokens)
+        D: hidden dimension
+        dtype_bytes: bytes per parameter
+        num_blocks: number of blocks
+        num_heads: number of heads
+        workspace_margin: workspace margin, 20% by default
+        
+        bytes_per_block = B * S * D * dtype_bytes
+        total_forward = bytes_per_block * num_blocks
+        attn_scores = B * num_heads * S * S * dtype_bytes
+        peak_activations ≈ (total_forward + attn_scores) * (1 + workspace_margin)
+        """
+        batch_size = args.batch_size
+        
+        # we use facebook/deit-small-patch16-224
+        
+        # (224 / 16)² + 1 = 197
+        sequence_length = 197
+        hidden_dimension = 384
+        dtype_bytes = self._get_byte_per_parameter(args.precision)
+        num_blocks = 12
+        num_heads = 6
+        workspace_margin = 0.2
+
+        bytes_per_block = batch_size * sequence_length * hidden_dimension * dtype_bytes
+        total_forward = bytes_per_block * num_blocks
+        attn_scores = batch_size * num_heads * sequence_length * sequence_length * dtype_bytes
+        peak_activations = (total_forward + attn_scores) * (1 + workspace_margin)
+
+        return peak_activations
+        
     
     def _get_optimizer_states_memory_for_base_model_size_in_bytes(self, args, base_model_memory_size_in_bytes):
         '''
