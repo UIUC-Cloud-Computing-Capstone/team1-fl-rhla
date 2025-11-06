@@ -9,7 +9,7 @@ num_users: 20 # number of users: K
 num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
 round: 200
 tau: 1 # 5
-# TODO Liam: for dev, change later
+
 #batch_size: 128 # local batch size
 batch_size: 32 # local batch size
 optimizer: adamw
@@ -45,6 +45,16 @@ heterogeneous_group0_lora: 6
 heterogeneous_group1_lora: 9
 heterogeneous_group2_lora: 12
 layer_prob: [1/9, 1/9, 1/9, 2/27, 2/27, 1/27, 1/27, 1/27, 2/27, 1/9, 1/9, 1/9]
+
+##### rank estimator params
+precision: fp32 # fp16, fp32
+rank_estimator_method: Ours # FedHello, Ours
+gpu_memory_size_for_each_group_in_GB: [24, 24, 8]
+# unit: megabits per second
+avg_upload_network_speed_for_each_group_in_Mbps: [1, 7, 7] 
+avg_download_network_speed_for_each_group_in_Mbps: [10, 50, 50]
+desired_uploading_time_for_each_group_in_seconds: [60, 60, 60]
+desired_downloading_time_for_each_group_in_seconds: [60, 60, 60]
 
 ##### rank variation
 enable_rank_var: false
@@ -85,3 +95,5 @@ iid: 1 # whether i.i.d or not
 ########### fim params ##############
 fim_every_iter: 10
 fim_prior_epoch: 10
+
+target_acc: 70.0

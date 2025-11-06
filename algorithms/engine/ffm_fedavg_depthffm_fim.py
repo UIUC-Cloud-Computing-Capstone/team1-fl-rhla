@@ -305,7 +305,7 @@ def ffm_fedavg_depthffm_fim(args):
     args.logger.info('model dim: '+str(args.dim), main_process_only=True)
 
     ###################################### model initialization ###########################
-    t1 = time.time()
+    trainining_start_time = time.time()
     args.logger.info("{:<50}".format("-" * 15 + " training... " + "-" * 50)[0:60], main_process_only=True)
     # initialize data loader for training and/or public dataset
     data_loader_list = get_data_loader_list(args, dataset_train, dict_users)
@@ -322,7 +322,7 @@ def ffm_fedavg_depthffm_fim(args):
     saved_block_ids_list = list()
     saved_rank_list = list()
     fim_prior_epoch = max(args.fim_prior_epoch,1)
-
+    first_time_reaching_target_acc = False
     for t in range(args.round):
         args.logger.info('Round: ' + str(t) + '/' + str(args.round), main_process_only=True)
         
@@ -351,6 +351,7 @@ def ffm_fedavg_depthffm_fim(args):
         print('selected client idxs: '+str(selected_idxs))
         
         ## local training
+        simulate_downloading_time()
         local_losses, local_updates, delta_norms, num_samples = train_selected_clients(args, net_glob, global_model, data_loader_list, t, selected_idxs)
 
         if len(local_updates) == 0:
@@ -361,14 +362,44 @@ def ffm_fedavg_depthffm_fim(args):
         norm, train_loss = log_metrics(args, writer, t, local_losses, delta_norms)
 
         # global model update
+        simulate_uploading_time(local_updates)
         global_model = update_global_model(args, global_model, local_updates, num_samples)
 
         # test global model on server side   
         best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1 = test_global_model(args, dataset_test, writer, net_glob, global_model, best_test_acc, best_test_f1, best_test_micro_f1, best_test_macro_f1, metric_keys, t, norm, train_loss)
 
+        first_time_reaching_target_acc = log_training_time(args, trainining_start_time, best_test_acc, first_time_reaching_target_acc)
         args.accelerator.wait_for_everyone()
 
     return (best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1), metric_keys
+
+def log_training_time(args, trainining_start_time, best_test_acc, first_time_reaching_target_acc):
+
+    if args.target_acc is None:
+        args.target_acc = 0.7
+        args.logger.info(f'Target acc is not set, using default value: {args.target_acc}', main_process_only=True)
+    
+    round_end_time = time.time()
+    curr_training_time = round_end_time - trainining_start_time
+    args.logger.info(f'Best test acc: {best_test_acc}, training time: {curr_training_time} seconds, equivalent to {curr_training_time / 60} minutes', main_process_only=True)
+    if not first_time_reaching_target_acc and best_test_acc >= args.target_acc:
+        first_time_reaching_target_acc = True
+        args.logger.info(f'Best test acc: {best_test_acc}, first time that best_test_acc >= {args.target_acc}, training time: {curr_training_time} seconds, equivalent to {curr_training_time / 60} minutes', main_process_only=True)
+    return first_time_reaching_target_acc
+
+def simulate_downloading_time():
+    # TODO Abdul
+    # 1. Check if FedHello's implementation is the most efficient way to communicate the parameters
+    # 2. If not, think about how to minimize the number of parameters to be communicated
+    # 3. Implement: sleep for some time to simulated the uploading time, based on the network speed and communicated parameter size
+    pass
+
+def simulate_uploading_time(local_updates):
+    # TODO Abdul
+    # 1. Check if FedHello's implementation is the most efficient way to communicate the parameters
+    # 2. If not, think about how to minimize the number of parameters to be communicated
+    # 3. Implement: sleep for some time to simulated the uploading time, based on the network speed and communicated parameter size
+    pass
 
 def log_metrics(args, writer, t, local_losses, delta_norms):
     norm = get_norm(delta_norms)
@@ -507,7 +538,6 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
     return local_losses,local_updates,delta_norms,num_samples
 
 def update_global_model(args, global_model, local_updates, num_samples):
-    # TODO Liam: add aggregation function for heterogenous rank
     if hasattr(args, 'aggregation'):
         if args.aggregation ==  'weighted_average':
             global_model = weighted_average_lora_depthfl(args, global_model, local_updates, num_samples)
