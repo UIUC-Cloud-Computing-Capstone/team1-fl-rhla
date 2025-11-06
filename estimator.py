@@ -25,28 +25,29 @@ class RankEstimator:
     def _get_rank_based_on_gpu_memory(self, args, model, total_gpu_memory_size_in_GB):
 
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
+        base_model_portion = self._get_base_model_portion(args, model)
+        lora_portion = total_gpu_memory_size_in_bytes - base_model_portion
 
-        # Total GPU memory = (1) base model + (2) LoRA params + (3) optimizer states (part for base model (3.1) + part for LoRA (3.2)) + (4) activations and safety margin
-        base_model_memory_size_in_bytes = self._get_base_model_memory_size_in_bytes(args, model)
-        activations_and_safety_margin_memory_size_in_bytes = self._get_activations_memory_size_in_bytes(model)
-        optimizer_states_memory_for_base_model_size_in_bytes = self._get_optimizer_states_memory_for_base_model_size_in_bytes(args, base_model_memory_size_in_bytes)
+        return self._get_rank_based_on_lora_portion(lora_portion)
+
+    def _get_base_model_portion(self, args, model):
+        # parameter + activations + safety margin + optimizer states
         
+        base_model_parameter_memory_size_in_bytes = self._get_base_model_parameter_memory_size_in_bytes(args, model)
+        base_model_activations_and_safety_margin_memory_size_in_bytes = self._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args, model)
+        base_model_optimizer_states_memory_size_in_bytes = self._get_base_model_optimizer_states_memory_size_in_bytes(args, base_model_parameter_memory_size_in_bytes)
+        return base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes + base_model_optimizer_states_memory_size_in_bytes
 
-        # (2) + (3.2) = Total GPU memory - (1) - (3.1) - (4)
-        lora_memory_size_in_bytes = total_gpu_memory_size_in_bytes - base_model_memory_size_in_bytes - activations_and_safety_margin_memory_size_in_bytes - optimizer_states_memory_for_base_model_size_in_bytes
-
-        return self._get_rank_based_on_lora_memory_size_in_bytes(lora_memory_size_in_bytes)
-
-    def _get_rank_based_on_lora_memory_size_in_bytes(self, lora_memory_size_in_bytes):
+    def _get_rank_based_on_lora_portion(self, lora_portion):
         # TODO Liam: implement this
-        # get rank based on lora_memory_size_in_bytes 
-        # lora_memory_size_in_bytes includes parameter size, activations and safety margin size, and optimizer states size for LoRA.
+        # get rank based on lora_portion
+        # lora_portion includes parameter size, activations and safety margin size, and optimizer states size for LoRA.
         pass
 
     def _get_total_gpu_memory_size_in_bytes(self, args, total_gpu_memory_size_in_GB):
         return total_gpu_memory_size_in_GB * 1024 * 1024 * 1024
 
-    def _get_base_model_memory_size_in_bytes(self, args, model):
+    def _get_base_model_parameter_memory_size_in_bytes(self, args, model):
         '''
         model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224').state_dict()
         '''
@@ -65,7 +66,7 @@ class RankEstimator:
         else:
             raise ValueError(f'Invalid precision: {precision}')
     
-    def _get_activations_memory_size_in_bytes(self, args, model):
+    def _get_base_model_activations_and_safety_margin_memory_size_in_bytes(self, args, model):
         # TODO Liam
         # is this correct?
         # How about the LoRA part?
@@ -106,7 +107,7 @@ class RankEstimator:
         return peak_activations
         
     
-    def _get_optimizer_states_memory_for_base_model_size_in_bytes(self, args, base_model_memory_size_in_bytes):
+    def _get_base_model_optimizer_states_memory_size_in_bytes(self, args, base_model_memory_size_in_bytes):
         '''
         Optimizer states include the part for base model and the part for LoRA.
         This function only calculates the memory size for the base model portion.
