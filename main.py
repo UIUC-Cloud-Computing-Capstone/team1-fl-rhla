@@ -71,6 +71,7 @@ if __name__ == '__main__':
     poisoned_ratio_box = []
     for r in range(meta_args.repeat):
         args = copy.deepcopy(meta_args)
+        args.logger.info('Config: ' + meta_args.config_name)
         
         if meta_args.accelerator.is_local_main_process:
             args.logger.info('############ Case '+ str(r) + ' ############', main_process_only=True)

@@ -23,3 +23,5 @@ log/*
 *.db
 pretrained_model/*
 .idea/*
+config/**/temp/*
+multirun/results/*

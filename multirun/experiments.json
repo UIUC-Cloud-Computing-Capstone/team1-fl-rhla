@@ -1,0 +1,31 @@
+[
+    {
+        "$comment": "Each object is an experiment run. Add override configs here"
+    },
+    {
+        "enable_rank_var": true
+    },
+    {
+        "only_train_b": true
+    },
+    {
+        "apply_svd_aggregation": true
+    },
+    {
+        "enable_rank_var": true,
+        "only_train_b": true
+    },
+    {
+        "apply_svd_aggregation": true,
+        "only_train_b": true
+    },
+    {
+        "enable_rank_var": true,
+        "only_train_b": true
+    },
+    {
+        "enable_rank_var": true,
+        "only_train_b": true,
+        "apply_svd_aggregation": true
+    }
+]
