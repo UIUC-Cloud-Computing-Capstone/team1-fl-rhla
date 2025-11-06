@@ -26,26 +26,30 @@ class RankEstimator:
 
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
 
-        # Total GPU memory=(1) base model + (2) LoRA params +(3) activations+(4) optimizer states+(5) safety margin
+        # Total GPU memory = (1) base model + (2) LoRA params + (3) optimizer states (part for base model (3.1) + part for LoRA (3.2)) + (4) activations + (5) safety margin
         base_model_memory_size_in_bytes = self._get_base_model_memory_size_in_bytes(args, model)
         activations_memory_size_in_bytes = self._get_activations_memory_size_in_bytes(model)
-        optimizer_states_memory_size_in_bytes = self._get_optimizer_states_memory_size_in_bytes(model)
-        safety_margin_memory_size_in_bytes = self._get_safety_margin_memory_size_in_bytes(args, model, base_model_memory_size_in_bytes, activations_memory_size_in_bytes, optimizer_states_memory_size_in_bytes)
+        optimizer_states_memory_for_base_model_size_in_bytes = self._get_optimizer_states_memory_for_base_model_size_in_bytes(args, base_model_memory_size_in_bytes)
+        safety_margin_memory_size_in_bytes = self._get_safety_margin_memory_size_in_bytes(args, model, base_model_memory_size_in_bytes, activations_memory_size_in_bytes, optimizer_states_memory_for_base_model_size_in_bytes)
 
-        # (2) = Total GPU memory - (1) - (3) - (4) - (5)
-        lora_params_memory_size_in_bytes = total_gpu_memory_size_in_bytes - base_model_memory_size_in_bytes - activations_memory_size_in_bytes - optimizer_states_memory_size_in_bytes - safety_margin_memory_size_in_bytes
+        # (2) + (3.2) = Total GPU memory - (1) - (3.1) - (4) - (5)
+        lora_memory_size_in_bytes = total_gpu_memory_size_in_bytes - base_model_memory_size_in_bytes - activations_memory_size_in_bytes - optimizer_states_memory_for_base_model_size_in_bytes - safety_margin_memory_size_in_bytes
 
-        return self._get_rank_based_on_lora_params_memory_size_in_bytes(lora_params_memory_size_in_bytes)
+        return self._get_rank_based_on_lora_memory_size_in_bytes(lora_memory_size_in_bytes)
 
-    def _get_rank_based_on_lora_params_memory_size_in_bytes(self, lora_params_memory_size_in_bytes):
+    def _get_rank_based_on_lora_memory_size_in_bytes(self, lora_memory_size_in_bytes):
         # TODO Liam: implement this
-        # get rank based on lora_params_memory_size_in_bytes
+        # get rank based on lora_memory_size_in_bytes 
+        # lora_memory_size_in_bytes includes parameter size and optimizer states size for LoRA.
         pass
 
     def _get_total_gpu_memory_size_in_bytes(self, args, total_gpu_memory_size_in_GB):
         return total_gpu_memory_size_in_GB * 1024 * 1024 * 1024
 
     def _get_base_model_memory_size_in_bytes(self, args, model):
+        '''
+        model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224').state_dict()
+        '''
         
         parameter_size = 0 # TODO Abdul: Please check documentation and only include parameters of base model without LoRA
         
@@ -62,13 +66,19 @@ class RankEstimator:
             raise ValueError(f'Invalid precision: {precision}')
     
     def _get_activations_memory_size_in_bytes(self, model):
-        # TODO Liam
-        # Depends on batch size and image size
+        # TODO Abdul
+        # Depends on actual batch size and image size
         pass
     
-    def _get_optimizer_states_memory_size_in_bytes(self, model):
-        # TODO Liam
-        pass
+    def _get_optimizer_states_memory_for_base_model_size_in_bytes(self, args, base_model_memory_size_in_bytes):
+        '''
+        Optimizer states include the part for base model and the part for LoRA.
+        This function only calculates the memory size for the base model portion.
+        '''
+
+        if args.optimizer == 'adamw':
+            # AdamW keeps 2 extra states (m, v) per parameter.
+            return base_model_memory_size_in_bytes * 2
     
     def _get_safety_margin_memory_size_in_bytes(self, args, model, base_model_memory_size, activations_memory_size, optimizer_states_memory_size):
         if args.alpha is None:
