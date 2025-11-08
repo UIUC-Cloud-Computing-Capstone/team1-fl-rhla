@@ -47,14 +47,17 @@ class RankEstimator:
         # Truncating rank can save (2) activations and (3) optimizer states size, but it will not save (1) parameter size. 
 
 
-        # (1)
+        # (1) parameter memory size
         # Let r1, r2, ... be the rank of each layer. r_total = r1 + r2 + ... be the total rank.
-        # Parameter memory size is 4 * r_total * H * bytes per parameter.
+        # L is the number of layers.
+        # H is the hidden dimension.
+        # Usually, a transformer's H is the same for all layers.
+        # Parameter memory size is 4 * r_total * H * L * bytes per parameter.
 
-        # (2)
+        # (2) activations and safety margin memory size
 
 
-        # (3)
+        # (3) optimizer states memory size
         # if adamw, (3) optimizer states memory size = 2 * (1) parameter memory size.
 
 
