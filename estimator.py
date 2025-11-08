@@ -41,7 +41,15 @@ class RankEstimator:
     def _get_rank_based_on_lora_portion(self, lora_portion):
         # TODO Liam: implement this
         # get rank based on lora_portion
-        # lora_portion includes parameter size, activations and safety margin size, and optimizer states size for LoRA.
+        # lora_portion includes (1) parameter size, (2) activations and safety margin size, and (3) optimizer states size.
+        
+        # The way we achieve dynamic rank adjustment is using truncation.
+        # Truncating rank can save (2) activations and (3) optimizer states size, but it will not save (1) parameter size. 
+
+
+
+
+        
         pass
 
     def _get_total_gpu_memory_size_in_bytes(self, args, total_gpu_memory_size_in_GB):
@@ -155,8 +163,6 @@ class RankEstimator:
         pass
 
 # TODO Liam: refactor heterogeneous_group0_lora etc in YAML
-
-# TODO Liam: consider how to init rank properly
 
 # Test cases
 # Group 1: large memory size, extremely bad network -> FedHello will give higher rank, but our method will give lower rank
