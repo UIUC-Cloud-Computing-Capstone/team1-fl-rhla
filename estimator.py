@@ -131,8 +131,6 @@ class RankEstimator:
     def _get_base_model_activations_and_safety_margin_memory_size_in_bytes(self, args):
         # TODO Liam
         # is this correct?
-        # sanity check
-        # unit test
 
         """
         B: batch size
@@ -173,9 +171,12 @@ class RankEstimator:
         
         # 4. Attention scores (QK^T): B × num_heads × S × S
         attn_scores = batch_size * num_heads * sequence_length * sequence_length
+
+        # 5. Attention probabilities: B × num_heads × S × S
+        attn_probabilities = batch_size * num_heads * sequence_length * sequence_length
         
         # Total per layer
-        activations_per_layer = (input_activations + attn_output + mlp_intermediate + attn_scores)
+        activations_per_layer = (input_activations + attn_output + mlp_intermediate + attn_scores + attn_probabilities)
         
         # Peak memory = all layers simultaneously during backprop
         # Note: In practice, some activations can be recomputed (gradient checkpointing)
