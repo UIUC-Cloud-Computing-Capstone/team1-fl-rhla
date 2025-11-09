@@ -65,13 +65,29 @@ class TestRankEstimator(unittest.TestCase):
         print(result_in_MB)
 
 
-    def test_get_rank_for_all_client_groups(self):
+    def test_get_rank_for_all_client_groups_ours(self):
         args = argparse.Namespace()
         args.num_users = 3
         args.gpu_memory_size_for_each_group_in_GB = [24, 24, 8]
         args.avg_upload_network_speed_for_each_group_in_Mbps = [1, 7, 7]
         args.avg_download_network_speed_for_each_group_in_Mbps = [10, 50, 50]
         args.rank_estimator_method = 'Ours'
+        args.precision = 'fp32'
+        args.batch_size = 32
+        args.desired_uploading_time_for_each_group_in_seconds = [60, 60, 60]
+        args.desired_downloading_time_for_each_group_in_seconds = [60, 60, 60]
+        args.optimizer = 'adamw'
+        model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
+        result = self.estimator.get_rank_for_all_client_groups(args, model)
+        print(result)
+
+    def test_get_rank_for_all_client_groups_fedhello(self):
+        args = argparse.Namespace()
+        args.num_users = 3
+        args.gpu_memory_size_for_each_group_in_GB = [24, 24, 8]
+        args.avg_upload_network_speed_for_each_group_in_Mbps = [1, 7, 7]
+        args.avg_download_network_speed_for_each_group_in_Mbps = [10, 50, 50]
+        args.rank_estimator_method = 'FedHello'
         args.precision = 'fp32'
         args.batch_size = 32
         args.desired_uploading_time_for_each_group_in_seconds = [60, 60, 60]
