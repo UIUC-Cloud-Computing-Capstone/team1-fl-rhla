@@ -64,15 +64,18 @@ def average_lora_depthfl(args, global_model, loc_updates):
     for k in global_model.keys():
         if k in model_update_avg_dict:
             global_model[k] = global_model[k].detach().cpu() +  sum(model_update_avg_dict[k]) / len(model_update_avg_dict[k])
-            ## run svd
-            if args.only_train_b and args.apply_svd_aggregation and 'lora_B' in k:
-                print(f'Apply SVD update for {k}')
-                B = global_model[k].detach().cpu()
-                new_name = k.replace('lora_B', 'lora_A')
-                A = global_model[new_name].detach().cpu()
-                U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
-                global_model[k] = (U@torch.diag(S))[:,0:48]
-                global_model[new_name] = VT[0:48,:]
+        
+    for k in global_model.keys():
+        ## run svd
+        if args.apply_svd_aggregation and 'lora_B' in k:
+            B = global_model[k].detach().cpu()
+            lora_name = k.replace('lora_B', 'lora_A')
+            A = global_model[lora_name].detach().cpu()
+            U, S, VT = torch.linalg.svd(B@A, full_matrices=True) 
+            global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
+            global_model[lora_name] = VT[0:args.lora_max_rank,:]
+            print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
+            #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
 
                 
             # null to rank 24

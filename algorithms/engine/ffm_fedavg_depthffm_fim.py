@@ -807,8 +807,8 @@ def get_rank_list(args, layer_list, fim, id):
     max_index = normalized_selected_layer_fim.index(max(normalized_selected_layer_fim))
     rank_list[max_index] += left_over
 
-    # add back the reserved rank for each block.
-    final_rank_list = [x + 1 for x in rank_list]
+    # add back the reserved rank for each block. Cap the rank assignment to the full rank setting.
+    final_rank_list = [min(args.lora_max_rank,x + 1) for x in rank_list]
     args.rank_list.append(final_rank_list)
 
     print(f'group {id}: rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list} ')
