@@ -50,7 +50,7 @@ class LocalUpdate(object):
 
         # only train the lora module.
         for name, param in model.named_parameters():
-            if ('lora' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
+            if ('lora' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])):
                 param.requires_grad = True
             else:
                 param.requires_grad = False
