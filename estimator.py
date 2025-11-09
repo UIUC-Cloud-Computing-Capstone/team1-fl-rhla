@@ -46,18 +46,21 @@ class RankEstimator:
         # The way we achieve dynamic rank adjustment is masking.
 
         # (1) parameter memory size
-        # Let r1, r2, ... be the rank of each layer. r_total = r1 + r2 + ... be the total rank.
-        # L is the number of layers.
-        # H is the hidden dimension.
-        # Usually, a transformer's H is the same for all layers.
-        # Parameter memory size is 4 * r_total * H * L * bytes per parameter.
+        # Suppose we enable m number of modules on one layer.
+        # Let r be the rank of one module.
+        # Layer total rank is r * m.
+        # Number of layers is L.
+        # Hidden dimension is H.
+        # Bytes per parameter is 4 for fp32, 2 for fp16.
+        # Parameter memory size is 4 * r * m * H * L * bytes per parameter.
+
 
         # (2) activations and safety margin memory size
         # TODO Liam: analyze this
 
 
         # (3) optimizer states memory size
-        # if adamw, (3) optimizer states memory size = 2 * (1) parameter memory size.
+        # if using adam, (3) optimizer states memory size = 2 * (1) parameter memory size.
 
 
         
