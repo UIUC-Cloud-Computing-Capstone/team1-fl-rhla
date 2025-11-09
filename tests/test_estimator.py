@@ -5,6 +5,7 @@ import argparse
 import unittest
 import sys
 import os
+from transformers import AutoModelForImageClassification
 
 # Add parent directory to path to import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -62,6 +63,23 @@ class TestRankEstimator(unittest.TestCase):
         result = self.estimator._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args)
         result_in_MB = result / 1024 / 1024
         print(result_in_MB)
+
+
+    def test_get_rank_for_all_client_groups(self):
+        args = argparse.Namespace()
+        args.num_users = 3
+        args.gpu_memory_size_for_each_group_in_GB = [10, 20, 30]
+        args.avg_upload_network_speed_for_each_group_in_Mbps = [100, 200, 300]
+        args.avg_download_network_speed_for_each_group_in_Mbps = [100, 200, 300]
+        args.rank_estimator_method = 'Ours'
+        args.precision = 'fp32'
+        args.batch_size = 32
+        args.desired_uploading_time_for_each_group_in_seconds = [60, 60, 60]
+        args.desired_downloading_time_for_each_group_in_seconds = [60, 60, 60]
+        args.optimizer = 'adamw'
+        model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
+        result = self.estimator.get_rank_for_all_client_groups(args, model)
+        print(result)
 
 
 if __name__ == '__main__':

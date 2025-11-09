@@ -37,7 +37,7 @@ class RankEstimator:
         base_model_portion = self._get_base_model_portion(args, model)
         lora_portion = total_gpu_memory_size_in_bytes - base_model_portion
 
-        return self._get_rank_based_on_lora_portion(lora_portion)
+        return self._get_rank_based_on_lora_portion(args, model, lora_portion)
 
     def _get_base_model_portion(self, args, model):
         # parameter + activations + safety margin + optimizer states
@@ -211,7 +211,7 @@ class RankEstimator:
         This function only calculates the memory size for the base model portion.
         '''
 
-        if args.optimizer == 'adamw':
+        if args.optimizer == 'adamw' or args.optimizer == 'adam':
             # AdamW keeps 2 extra states (m, v) per parameter.
             return base_model_memory_size_in_bytes * 2
     
@@ -228,14 +228,14 @@ class RankEstimator:
         # 1. Based on which group this client belongs to, desired_uploading_time_for_each_group_in_seconds and upload_network_speed_in_Mbps, get parameter_size_in_bytes
         # 2. Based on the parameter_size_in_bytes, and args.precision, get rank
         # 3. add unit test for this function
-        return 1000
+        return 1000000
 
     def _get_rank_based_on_download_network_speed(self, args, download_network_speed_in_Mbps):
         # TODO Abdul
         # 1. Based on which group this client belongs to, desired_downloading_time_for_each_group_in_seconds and download_network_speed_in_Mbps, get parameter_size_in_bytes
         # 2. Based on the parameter_size_in_bytes, and args.precision, get rank
         # 3. add unit test for this function
-        return 2000
+        return 2000000
 
 # TODO Liam: refactor heterogeneous_group0_lora etc in YAML
 
