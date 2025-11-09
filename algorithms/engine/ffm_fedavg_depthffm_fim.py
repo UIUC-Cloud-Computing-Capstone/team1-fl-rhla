@@ -224,7 +224,6 @@ def ffm_fedavg_depthffm_fim(args):
             - fim_prior_epoch (int): Epochs to wait before starting FIM analysis
             - fim_every_iter (int): Interval for FIM analysis updates
             - heterogeneous_group (list): Proportions for client groups
-            - heterogeneous_group{i}_lora (int): Number of LoRA layers for group i
             - lora_layer (int): Total available LoRA layers
             - layer_prob (list): Predefined layer selection probabilities
             - local_lr (float): Local learning rate
@@ -725,7 +724,6 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
             - lora_layer (int): Total number of LoRA layers available
             - layer_prob (list): Predefined probabilities for each layer (used when FIM is not active)
             - user_groupid_list (list): Mapping of users to their heterogeneous groups
-            - heterogeneous_group{i}_lora (int): Number of LoRA layers for group i
         dataset_fim: Dataset used for FIM computation
         net_glob: Global model for FIM analysis
         t (int): Current training round/epoch
@@ -750,9 +748,6 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
         >>> args.fim_every_iter = 50
         >>> args.lora_layer = 12
         >>> args.user_groupid_list = [0, 0, 1, 1, 2, 2]
-        >>> args.heterogeneous_group0_lora = 6
-        >>> args.heterogeneous_group1_lora = 9
-        >>> args.heterogeneous_group2_lora = 12
         >>> update_block_ids_list(args, dataset_fim, net_glob, 100)
         >>> # args.block_ids_list will contain 6 lists, each with the assigned layer IDs
     
@@ -775,6 +770,7 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
     args.block_ids_list = []
     args.rank_list = []
     for id in args.user_groupid_list:
+        # TODO Liam: refactor this
         layer_max_rank_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
         layer_list = np.random.choice(range(args.lora_layer), p=observed_probability, size=layer_max_rank_budget, replace=False)
         args.block_ids_list.append(sorted(layer_list))
@@ -784,14 +780,16 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
             get_rank_list(args, layer_list, [1]*args.lora_layer, id)
 
 def update_block_ids_list_predefined(args, dataset_fim, net_glob, t):
+    # TODO Liam: refactor this
     if hasattr(args, 'heterogeneous_group0_lora'):
         if isinstance(getattr(args, 'heterogeneous_group0_lora'), int):
             args.block_ids_list = []
             args.rank_list = []
             for id in args.user_groupid_list:
+                layer_max_rank_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
                 layer_list = np.random.choice(range(args.lora_layer),
                                                 p=[float(Fraction(x)) for x in args.layer_prob],
-                                                size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
+                                                size=layer_max_rank_budget,
                                                 replace=False)
                 args.block_ids_list.append(sorted(layer_list))
                 get_rank_list(args, layer_list, [1]*args.lora_layer, id)

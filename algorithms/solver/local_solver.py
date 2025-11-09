@@ -39,6 +39,7 @@ class LocalUpdate(object):
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
 
+        # TODO Liam: refactor this
         layer_max_rank_budget = getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora')
         no_weight_lora = self._get_no_weight_lora(args, client_real_id, layer_max_rank_budget)
 
