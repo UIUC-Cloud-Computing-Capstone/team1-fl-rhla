@@ -64,26 +64,6 @@ def average_lora_depthfl(args, global_model, loc_updates):
     for k in global_model.keys():
         if k in model_update_avg_dict:
             global_model[k] = global_model[k].detach().cpu() +  sum(model_update_avg_dict[k]) / len(model_update_avg_dict[k])
-        
-    for k in global_model.keys():
-        ## run svd
-        if args.apply_svd_aggregation and 'lora_B' in k:
-            B = global_model[k].detach().cpu()
-            lora_name = k.replace('lora_B', 'lora_A')
-            A = global_model[lora_name].detach().cpu()
-            U, S, VT = torch.linalg.svd(B@A, full_matrices=True) 
-            global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
-            global_model[lora_name] = VT[0:args.lora_max_rank,:]
-            print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
-            #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
-
-                
-            # null to rank 24
-            #if 'lora_A' in k:
-            #    global_model[k][24:,:] = 0
-            #elif 'lora_B' in k:
-            #    global_model[k][:,24:] = 0
-
     return global_model
 
 def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
@@ -94,8 +74,13 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
     model_weights_cnt = {}
     model_weights_list = {}
 
+    lora_str = 'lora'
+    if args.only_train_b:
+        lora_str = 'lora_B'
+        print('Only train Lora_B')
+
     for k in global_model.keys():
-        if 'lora' in k or 'classifier' in k: # classifier is not included
+        if lora_str in k or 'classifier' in k: # classifier is not included
             for client_i, loc_update in enumerate(loc_updates):
                 if k in loc_update:
                     if k in model_update_avg_dict:
@@ -115,6 +100,8 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
             weight_based = model_weights_cnt[k]
             model_weights_list[k] = [item/weight_based for item in model_weights_list[k]]
             global_model[k] = global_model[k].detach().cpu() + sum([model*weight for model, weight in zip(model_update_avg_dict[k], model_weights_list[k])])
+
+
 
     return global_model
 
