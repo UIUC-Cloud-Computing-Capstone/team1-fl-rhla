@@ -138,6 +138,55 @@ class RankEstimator:
         safety_margin_memory_size = (base_model_memory_size + activations_memory_size + optimizer_states_memory_size) * args.alpha
         return safety_margin_memory_size
 
+    def _resolve_client_group_id(self, args):
+        for attr in ('client_group_id', 'current_group_id', 'group_id'):
+            if hasattr(args, attr) and getattr(args, attr) is not None:
+                return getattr(args, attr)
+        raise AttributeError(
+            'RankEstimator expects args.client_group_id (or current_group_id/group_id) to be set before calling the estimator.'
+        )
+
+    def _network_transfer_budget(self, speed_mbps, duration_seconds):
+        if speed_mbps <= 0 or duration_seconds <= 0:
+            raise ValueError(f'Both network speed ({speed_mbps}) and duration ({duration_seconds}) must be positive.')
+        bits_per_second = speed_mbps * 1_000_000
+        return int(bits_per_second * duration_seconds / 8)
+
+    def _bytes_to_rank_budget(self, args, group_id, byte_budget):
+        if byte_budget <= 0:
+            return 0
+        bytes_per_rank_unit = self._bytes_per_rank_unit(args, group_id)
+        if bytes_per_rank_unit <= 0:
+            raise ValueError('Per-rank byte must be positive.')
+        total_rank = byte_budget // bytes_per_rank_unit
+        return int(total_rank)
+
+    def _num_lora_layers_for_group(self, args, group_id):
+        attr = f'heterogeneous_group{group_id}_lora'
+        if not hasattr(args, attr):
+            raise AttributeError(f'Missing {attr} for group {group_id}.')
+        value = getattr(args, attr)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, (list, tuple, set)):
+            return len(value)
+        raise TypeError(f'Unsupported type for {attr}: {type(value)}')
+
+    def _bytes_per_rank_unit(self, args, group_id):
+        hidden_dim = getattr(args, 'hidden_dimension', None)
+        if hidden_dim is None:
+            model_name = getattr(args, 'model', '')
+            if 'vit' in model_name:
+                hidden_dim = 384
+            elif 'bert' in model_name:
+                hidden_dim = 128
+            else:
+                raise AttributeError('Unable to infer hidden dimension; set args.hidden_dimension.')
+        bytes_per_param = self._get_byte_per_parameter(args.precision)
+        num_lora_layers = self._num_lora_layers_for_group(args, group_id)
+        params_per_rank_per_layer = 4 * hidden_dim  # query/value × A/B
+        return num_lora_layers * params_per_rank_per_layer * bytes_per_param
+
     def _get_rank_based_on_upload_network_speed(self, args, upload_network_speed_in_Mbps):
         # TODO Abdul
 
