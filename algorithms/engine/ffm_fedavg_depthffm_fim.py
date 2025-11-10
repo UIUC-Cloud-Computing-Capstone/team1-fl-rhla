@@ -774,9 +774,8 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
     args.block_ids_list = []
     args.rank_list = []
     for id in args.user_groupid_list:
-        # TODO Liam: refactor this
-        layer_max_rank_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
-        layer_list = np.random.choice(range(args.lora_layer), p=observed_probability, size=layer_max_rank_budget, replace=False)
+        layer_count_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
+        layer_list = np.random.choice(range(args.lora_layer), p=observed_probability, size=layer_count_budget, replace=False)
         args.block_ids_list.append(sorted(layer_list))
         if args.enable_rank_var:
             get_rank_list(args, layer_list, fim, id)
@@ -784,16 +783,15 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
             get_rank_list(args, layer_list, [1]*args.lora_layer, id)
 
 def update_block_ids_list_predefined(args, dataset_fim, net_glob, t):
-    # TODO Liam: refactor this
     if hasattr(args, 'heterogeneous_group0_lora'):
         if isinstance(getattr(args, 'heterogeneous_group0_lora'), int):
             args.block_ids_list = []
             args.rank_list = []
             for id in args.user_groupid_list:
-                layer_max_rank_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
+                layer_count_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
                 layer_list = np.random.choice(range(args.lora_layer),
                                                 p=[float(Fraction(x)) for x in args.layer_prob],
-                                                size=layer_max_rank_budget,
+                                                size=layer_count_budget,
                                                 replace=False)
                 args.block_ids_list.append(sorted(layer_list))
                 get_rank_list(args, layer_list, [1]*args.lora_layer, id)

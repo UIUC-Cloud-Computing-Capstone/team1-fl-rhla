@@ -39,9 +39,8 @@ class LocalUpdate(object):
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
 
-        # TODO Liam: refactor this
-        layer_max_rank_budget = getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora')
-        no_weight_lora = self._get_no_weight_lora(args, client_real_id, layer_max_rank_budget)
+        layer_count_budget = getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora')
+        no_weight_lora = self._get_no_weight_lora(args, client_real_id, layer_count_budget)
 
         # early stop for exclusive training
         if len(no_weight_lora) == args.lora_layer:
@@ -132,10 +131,10 @@ class LocalUpdate(object):
         # optimizer.zero_grad()
         return accelerator.unwrap_model(model).state_dict(), np.mean(total_loss), no_weight_lora
 
-    def _get_no_weight_lora(self, args, client_real_id, layer_max_rank_budget):
-        if isinstance(layer_max_rank_budget, list):
-            no_weight_lora = list(set(range(args.lora_layer)) - set(layer_max_rank_budget))
-        elif isinstance(layer_max_rank_budget, int):
+    def _get_no_weight_lora(self, args, client_real_id, layer_count_budget):
+        if isinstance(layer_count_budget, list):
+            no_weight_lora = list(set(range(args.lora_layer)) - set(layer_count_budget))
+        elif isinstance(layer_count_budget, int):
             no_weight_lora = list(set(range(args.lora_layer)) - set(args.block_ids_list[client_real_id]))
         return no_weight_lora
 
