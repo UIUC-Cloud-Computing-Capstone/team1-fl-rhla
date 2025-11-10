@@ -13,6 +13,7 @@ class RankEstimator:
             desired_downloading_time_in_seconds_for_one_client_group = args.desired_downloading_time_for_each_group_in_seconds[i]
             rank_for_one_client_group = self._get_rank_for_one_client_group(args, model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group)
             rank_for_all_client_groups.append(rank_for_one_client_group)
+        print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
         return rank_for_all_client_groups
 
     def _get_rank_for_one_client_group(self, args, model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds):
