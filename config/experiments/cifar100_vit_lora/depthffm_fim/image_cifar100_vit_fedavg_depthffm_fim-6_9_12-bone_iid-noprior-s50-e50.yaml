@@ -41,7 +41,7 @@ peft: lora
 model_heterogeneity: depthffm_fim
 heterogeneous_group: [1/3, 1/3, 1/3]
 lora_layer: 12
-heterogeneous_group0_lora: 6
+heterogeneous_group0_lora: 6 # max number of layers that could have LoRA
 heterogeneous_group1_lora: 9
 heterogeneous_group2_lora: 12
 layer_prob: [1/9, 1/9, 1/9, 2/27, 2/27, 1/27, 1/27, 1/27, 2/27, 1/9, 1/9, 1/9]
