@@ -50,6 +50,9 @@ class RankEstimator:
         return base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes + base_model_optimizer_states_memory_size_in_bytes
 
     def _get_rank_based_on_lora_portion(self, args, model, lora_portion):
+
+        if lora_portion <= 0:
+            raise ValueError('GPU memory is too small to train the model')
         
         # get rank based on lora_portion
         # lora_portion includes (1) parameter size, (2) activations and safety margin size, and (3) optimizer states size.
@@ -127,7 +130,7 @@ class RankEstimator:
         model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
         '''
         
-        parameter_size = 22_000_000_000 # TODO Abdul: Please check documentation and only include parameters of base model without LoRA
+        parameter_size = 22_000_000 # TODO Abdul: Please check documentation and only include parameters of base model without LoRA
         
         byte_per_parameter = self._get_byte_per_parameter(args.precision)
 
