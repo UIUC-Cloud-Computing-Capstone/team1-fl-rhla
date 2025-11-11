@@ -55,8 +55,6 @@ class MemoryTracker:
         return {
             'total_params': total_params,
             'trainable_params': trainable_params,
-            'total_memory_bytes': param_memory_bytes,
-            'trainable_memory_bytes': trainable_memory_bytes,
             'total_memory_MB': param_memory_bytes / (1024 * 1024),
             'trainable_memory_MB': trainable_memory_bytes / (1024 * 1024),
         }
@@ -108,7 +106,6 @@ class MemoryTracker:
         
         return {
             'param_count': param_count,
-            'optimizer_memory_bytes': total_optimizer_memory,
             'optimizer_memory_MB': total_optimizer_memory / (1024 * 1024),
         }
     
@@ -196,10 +193,11 @@ class MemoryTracker:
         except Exception as e:
             return {
                 'error': str(e),
-                'forward_memory_bytes': 0,
-                'backward_memory_bytes': 0,
-                'optimizer_memory_bytes': 0,
-                'peak_memory_bytes': 0,
+                'forward_memory_MB': 0,
+                'backward_memory_MB': 0,
+                'optimizer_memory_MB': 0,
+                'peak_memory_MB': 0,
+                'profiler_table': '',
             }
         
         # Extract memory information from profiler events
@@ -344,8 +342,6 @@ class MemoryTracker:
                 'total_memory_MB': total_memory / (1024 * 1024),
                 'peak_memory_MB': peak_memory / (1024 * 1024),
                 'peak_memory_GB': peak_memory / (1024 * 1024 * 1024),
-                'baseline_memory_bytes': baseline_memory,
-                'baseline_memory_MB': baseline_memory / (1024 * 1024),
             },
             'breakdown': {
                 'parameter_memory_MB': param_memory['total_memory_MB'],
