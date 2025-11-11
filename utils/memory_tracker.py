@@ -260,7 +260,7 @@ class MemoryTracker:
         param_memory = self.get_parameter_memory(model, precision)
         optimizer_memory = self.get_optimizer_state_memory(optimizer, precision)
         
-        # Measure peak memory during full training step
+        # Measure baseline (params + optimizer states already loaded)
         model.train()
         if is_cuda:
             torch.cuda.reset_peak_memory_stats()
@@ -269,42 +269,98 @@ class MemoryTracker:
             process = self._get_cpu_process()
             baseline_memory = process.memory_info().rss
         
-        # Run a full training step to measure peak
+        # Measure peak memory during forward+backward (for activation memory calculation)
+        # Reset peak stats ONCE before forward+backward to track overall peak
+        if is_cuda:
+            torch.cuda.reset_peak_memory_stats()
+            forward_backward_baseline = torch.cuda.memory_allocated()
+        else:
+            forward_backward_baseline = process.memory_info().rss
+        
         try:
+            # Forward pass - measure peak during forward (for reporting only)
+            # Don't reset peak stats here - we want to track overall peak from forward_backward_baseline
+            if is_cuda:
+                forward_baseline = torch.cuda.memory_allocated()
+            else:
+                forward_baseline = process.memory_info().rss
+            
             outputs = model(**batch) if isinstance(batch, dict) else model(batch)
             loss = self._compute_loss(outputs, batch, loss_fn)
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
             
             if is_cuda:
-                peak_memory = torch.cuda.max_memory_allocated()
+                peak_during_forward = torch.cuda.max_memory_allocated()
             else:
-                peak_memory = process.memory_info().rss
+                peak_during_forward = process.memory_info().rss
+            
+            forward_peak_memory_bytes = max(0, peak_during_forward - forward_baseline)
+            
+            # Backward pass - measure peak during backward (for reporting only)
+            # Don't reset peak stats here - we want to track overall peak from forward_backward_baseline
+            if is_cuda:
+                backward_baseline = torch.cuda.memory_allocated()
+            else:
+                backward_baseline = process.memory_info().rss
+            
+            loss.backward()
+            
+            if is_cuda:
+                peak_during_backward = torch.cuda.max_memory_allocated()
+            else:
+                peak_during_backward = process.memory_info().rss
+            
+            backward_peak_memory_bytes = max(0, peak_during_backward - backward_baseline)
+            
+            # Get peak during forward+backward (before optimizer step)
+            # This uses the peak tracked from forward_backward_baseline (not reset between forward/backward)
+            if is_cuda:
+                peak_during_forward_backward = torch.cuda.max_memory_allocated()
+            else:
+                peak_during_forward_backward = max(peak_during_forward, peak_during_backward)
+            
+            # The total peak memory is the peak during forward+backward (before optimizer step)
+            # because optimizer.step() may free memory, making it lower than the actual peak
+            total_peak_memory = peak_during_forward_backward
+            
+            # Now do optimizer step (for completeness, but peak is already captured)
+            optimizer.step()
+            optimizer.zero_grad()
         except Exception as e:
-            peak_memory = baseline_memory
+            total_peak_memory = baseline_memory
+            peak_during_forward_backward = baseline_memory
+            forward_peak_memory_bytes = 0
+            backward_peak_memory_bytes = 0
         
-        # Profile activation memory separately for detailed breakdown
+        # Calculate activation memory as difference between peak during forward+backward and baseline
+        # This gives us the actual activation memory (stored activations during forward+backward)
+        activation_memory_bytes = max(0, peak_during_forward_backward - forward_backward_baseline)
+
+        param_memory_bytes = param_memory['total_memory_MB'] * MB_TO_BYTES
+        optimizer_memory_bytes = optimizer_memory['optimizer_memory_MB'] * MB_TO_BYTES
+        component_sum_bytes = param_memory_bytes + optimizer_memory_bytes + activation_memory_bytes
+        overhead_bytes = max(0, total_peak_memory - component_sum_bytes)
+        
+        # Get detailed profiler results (for profiler table only)
         profile_results = self.profile_forward_backward(model, optimizer, loss_fn, batch, precision)
         
         return {
             'parameters': param_memory,
             'optimizer_states': optimizer_memory,
             'activations': {
-                'forward_memory_MB': profile_results.get('forward_memory_MB', 0),
-                'backward_memory_MB': profile_results.get('backward_memory_MB', 0),
-                'peak_activation_memory_MB': profile_results.get('peak_memory_MB', 0),
+                'forward_memory_MB': self._bytes_to_mb(forward_peak_memory_bytes),
+                'backward_memory_MB': self._bytes_to_mb(backward_peak_memory_bytes),
+                'peak_activation_memory_MB': self._bytes_to_mb(activation_memory_bytes),
             },
             'total': {
-                'total_memory_MB': self._bytes_to_mb(peak_memory),
-                'peak_memory_MB': self._bytes_to_mb(peak_memory),
-                'peak_memory_GB': self._bytes_to_gb(peak_memory),
+                'total_memory_MB': self._bytes_to_mb(total_peak_memory),
+                'peak_memory_MB': self._bytes_to_mb(total_peak_memory),
             },
             'breakdown': {
                 'parameter_memory_MB': param_memory['total_memory_MB'],
                 'optimizer_memory_MB': optimizer_memory['optimizer_memory_MB'],
-                'activation_memory_MB': profile_results.get('peak_memory_MB', 0),
-                'total_memory_MB': self._bytes_to_mb(peak_memory),
+                'activation_memory_MB': self._bytes_to_mb(activation_memory_bytes),
+                'overhead_memory_MB': self._bytes_to_mb(overhead_bytes),
+                'total_memory_MB': self._bytes_to_mb(total_peak_memory),
             },
             'profiler_table': profile_results.get('profiler_table', ''),
         }
@@ -335,66 +391,27 @@ class MemoryTracker:
         if 'activations' in profile_results:
             acts = profile_results['activations']
             print(f"\nActivations (actual measured):")
-            print(f"  Forward: {acts['forward_memory_MB']:.2f} MB")
-            print(f"  Backward: {acts['backward_memory_MB']:.2f} MB")
+            # print(f"  Forward: {acts['forward_memory_MB']:.2f} MB")
+            # print(f"  Backward: {acts['backward_memory_MB']:.2f} MB")
             print(f"  Peak: {acts['peak_activation_memory_MB']:.2f} MB")
         
         if 'total' in profile_results:
             total = profile_results['total']
             print(f"\nTotal Memory Usage:")
-            print(f"  Peak Memory: {total['peak_memory_MB']:.2f} MB ({total['peak_memory_GB']:.2f} GB)")
+            print(f"  Peak Memory: {total['peak_memory_MB']:.2f} MB")
         
         if 'breakdown' in profile_results and 'total' in profile_results:
             breakdown = profile_results['breakdown']
             total = profile_results['total']
             peak_mb = total['peak_memory_MB']
-            other_mb = peak_mb - breakdown['parameter_memory_MB'] - breakdown['optimizer_memory_MB'] - breakdown['activation_memory_MB']
+
             
             if peak_mb > 0:
                 print(f"\nMemory Breakdown (based on peak memory):")
                 print(f"  Parameters: {breakdown['parameter_memory_MB']:.2f} MB ({breakdown['parameter_memory_MB']/peak_mb*100:.1f}%)")
-                print(f"  Optimizer: {breakdown['optimizer_memory_MB']:.2f} MB ({breakdown['optimizer_memory_MB']/peak_mb*100:.1f}%)")
+                print(f"  Optimizer States: {breakdown['optimizer_memory_MB']:.2f} MB ({breakdown['optimizer_memory_MB']/peak_mb*100:.1f}%)")
                 print(f"  Activations: {breakdown['activation_memory_MB']:.2f} MB ({breakdown['activation_memory_MB']/peak_mb*100:.1f}%)")
-                print(f"  Other: {other_mb:.2f} MB ({other_mb/peak_mb*100:.1f}%)")
+                print(f"  Overhead: {breakdown['overhead_memory_MB']:.2f} MB ({breakdown['overhead_memory_MB']/peak_mb*100:.1f}%)")
                 print(f"  Note: Peak memory ({peak_mb:.2f} MB) is the actual measured peak during training")
-        
-        print("=" * 80)
-    
-    def print_memory_summary(self, memory_breakdown: Dict):
-        """
-        Print a formatted memory summary.
-        
-        Args:
-            memory_breakdown: Output from get_full_memory_breakdown
-        """
-        print("=" * 80)
-        print("MEMORY BREAKDOWN")
-        print("=" * 80)
-        
-        if 'parameters' in memory_breakdown:
-            params = memory_breakdown['parameters']
-            print(f"\nParameters:")
-            print(f"  Total params: {params['total_params']:,}")
-            print(f"  Trainable params: {params['trainable_params']:,}")
-            print(f"  Total memory: {params['total_memory_MB']:.2f} MB")
-            print(f"  Trainable memory: {params['trainable_memory_MB']:.2f} MB")
-        
-        if 'optimizer_states' in memory_breakdown:
-            opt = memory_breakdown['optimizer_states']
-            print(f"\nOptimizer States:")
-            print(f"  Parameters: {opt['param_count']:,}")
-            print(f"  Memory: {opt['optimizer_memory_MB']:.2f} MB")
-        
-        if 'activations' in memory_breakdown:
-            acts = memory_breakdown['activations']
-            print(f"\nActivations (estimated):")
-            print(f"  Forward: {acts['forward_memory_MB']:.2f} MB")
-            print(f"  Backward: {acts['backward_memory_MB']:.2f} MB")
-            print(f"  Total: {acts['total_activation_memory_MB']:.2f} MB")
-        
-        if 'total' in memory_breakdown:
-            total = memory_breakdown['total']
-            print(f"\nTotal Memory:")
-            print(f"  {total['total_memory_MB']:.2f} MB ({total['total_memory_GB']:.2f} GB)")
         
         print("=" * 80)

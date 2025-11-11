@@ -49,11 +49,17 @@ class RankEstimator:
         base_model_activations_and_safety_margin_memory_size_in_bytes = self._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args)
         base_model_optimizer_states_memory_size_in_bytes = self._get_base_model_optimizer_states_memory_size_in_bytes(args, base_model_parameter_memory_size_in_bytes)
         result = base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes + base_model_optimizer_states_memory_size_in_bytes
-        print(f"base_model_portion estimated: {result}")
+        print(f"base_model_parameter_memory_size_in_MB: {self._bytes_to_mb(base_model_parameter_memory_size_in_bytes)}")
+        print(f"base_model_activations_and_safety_margin_memory_size_in_MB: {self._bytes_to_mb(base_model_activations_and_safety_margin_memory_size_in_bytes)}")
+        print(f"base_model_optimizer_states_memory_size_in_MB: {self._bytes_to_mb(base_model_optimizer_states_memory_size_in_bytes)}")
+        print(f"base_model_portion in MB estimated: {self._bytes_to_mb(result)}")
         return result
 
+    def _bytes_to_mb(self, bytes_value):
+        return bytes_value / 1024 / 1024
+
     def _get_rank_based_on_lora_portion(self, args, model, lora_portion):
-        print(f"lora_portion: {lora_portion}")
+        print(f"lora_portion_in_MB: {self._bytes_to_mb(lora_portion)}")
         if lora_portion <= 0:
             raise ValueError('GPU memory is too small to train the model')
         
@@ -204,6 +210,7 @@ class RankEstimator:
         peak_activations_bytes = peak_activations_all_layers * dtype_bytes
         
         # Add workspace margin
+        print(f"peak_activations_MB: {self._bytes_to_mb(peak_activations_bytes)}")
         return peak_activations_bytes * (1 + workspace_margin)
 
     def _get_sequence_length(self):
