@@ -6,9 +6,17 @@ Supports both GPU and CPU memory profiling including:
 - Optimizer state memory
 """
 
+import os
 import torch
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Tuple
 from torch.profiler import profile, ProfilerActivity, record_function
+
+# Constants
+MB_TO_BYTES = 1024 * 1024
+GB_TO_BYTES = 1024 * 1024 * 1024
+FP32_BYTES_PER_PARAM = 4
+FP16_BYTES_PER_PARAM = 2
+OPTIMIZER_STATE_BYTES_PER_PARAM = 4  # Optimizer states are typically fp32
 
 
 class MemoryTracker:
@@ -17,15 +25,43 @@ class MemoryTracker:
     Supports both GPU and CPU.
     """
     
-    def __init__(self, device: Optional[torch.device] = None):
-        """
-        Initialize memory tracker.
-        
-        Args:
-            device: Device to track memory on. If None, auto-detects from model.
-        """
-        # Device is auto-detected from model in each method, so we don't need to store it
+    def __init__(self):
+        """Initialize memory tracker. Device is auto-detected from model in each method."""
         pass
+    
+    @staticmethod
+    def _get_device_info(model: torch.nn.Module) -> Tuple[torch.device, bool]:
+        """Get device and CUDA status from model."""
+        device = next(model.parameters()).device if list(model.parameters()) else torch.device('cpu')
+        is_cuda = device.type == 'cuda'
+        return device, is_cuda
+    
+    @staticmethod
+    def _get_cpu_process() -> 'psutil.Process':
+        """Get current process for CPU memory tracking."""
+        import psutil
+        return psutil.Process(os.getpid())
+    
+    @staticmethod
+    def _compute_loss(outputs, batch: Union[Dict, torch.Tensor], loss_fn) -> torch.Tensor:
+        """Extract or compute loss from model outputs."""
+        if hasattr(outputs, 'loss'):
+            return outputs.loss
+        elif isinstance(outputs, torch.Tensor):
+            labels = batch.get('labels') if isinstance(batch, dict) else None
+            return loss_fn(outputs, labels) if labels is not None else outputs
+        else:
+            return outputs
+    
+    @staticmethod
+    def _bytes_to_mb(bytes_value: Union[int, float]) -> float:
+        """Convert bytes to megabytes."""
+        return bytes_value / MB_TO_BYTES
+    
+    @staticmethod
+    def _bytes_to_gb(bytes_value: Union[int, float]) -> float:
+        """Convert bytes to gigabytes."""
+        return bytes_value / GB_TO_BYTES
     
     def get_parameter_memory(self, model: torch.nn.Module, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
         """
@@ -36,18 +72,12 @@ class MemoryTracker:
             precision: 'fp32' or 'fp16'
         
         Returns:
-            Dictionary with parameter memory in bytes and MB
+            Dictionary with parameter counts and memory in MB
         """
-        bytes_per_param = 4 if precision == 'fp32' else 2
+        bytes_per_param = FP32_BYTES_PER_PARAM if precision == 'fp32' else FP16_BYTES_PER_PARAM
         
-        total_params = 0
-        trainable_params = 0
-        
-        for param in model.parameters():
-            num_params = param.numel()
-            total_params += num_params
-            if param.requires_grad:
-                trainable_params += num_params
+        total_params = sum(param.numel() for param in model.parameters())
+        trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
         
         param_memory_bytes = total_params * bytes_per_param
         trainable_memory_bytes = trainable_params * bytes_per_param
@@ -55,8 +85,8 @@ class MemoryTracker:
         return {
             'total_params': total_params,
             'trainable_params': trainable_params,
-            'total_memory_MB': param_memory_bytes / (1024 * 1024),
-            'trainable_memory_MB': trainable_memory_bytes / (1024 * 1024),
+            'total_memory_MB': self._bytes_to_mb(param_memory_bytes),
+            'trainable_memory_MB': self._bytes_to_mb(trainable_memory_bytes),
         }
     
     def get_optimizer_state_memory(self, optimizer: torch.optim.Optimizer, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
@@ -65,48 +95,35 @@ class MemoryTracker:
         
         Args:
             optimizer: PyTorch optimizer
-            precision: 'fp32' or 'fp16'
+            precision: 'fp32' or 'fp16' (optimizer states are typically fp32)
         
         Returns:
-            Dictionary with optimizer state memory in bytes and MB
+            Dictionary with parameter count and optimizer state memory in MB
         """
-        
-        # Optimizer states are typically stored in fp32 for numerical stability
-        # Even when training in fp16, optimizer states are usually fp32
-        optimizer_bytes_per_param = 4
-        
         total_optimizer_memory = 0
         param_count = 0
         
         if isinstance(optimizer, (torch.optim.Adam, torch.optim.AdamW)):
             # Adam/AdamW: 2 states per parameter (momentum m and variance v)
-            for group in optimizer.param_groups:
-                for p in group['params']:
-                    if p.requires_grad:
-                        # 2 states (m and v) per parameter
-                        total_optimizer_memory += 2 * p.numel() * optimizer_bytes_per_param
-                        param_count += p.numel()
+            states_per_param = 2
         elif isinstance(optimizer, torch.optim.SGD):
             # SGD: 1 state per parameter (momentum) if momentum > 0
             momentum = optimizer.param_groups[0].get('momentum', 0)
-            for group in optimizer.param_groups:
-                for p in group['params']:
-                    if p.requires_grad:
-                        if momentum > 0:
-                            total_optimizer_memory += p.numel() * optimizer_bytes_per_param
-                        param_count += p.numel()
+            states_per_param = 1 if momentum > 0 else 0
         else:
-            # For other optimizers, estimate based on parameter count
-            for group in optimizer.param_groups:
-                for p in group['params']:
-                    if p.requires_grad:
-                        # Conservative estimate: 1 state per parameter
-                        total_optimizer_memory += p.numel() * optimizer_bytes_per_param
-                        param_count += p.numel()
+            # For other optimizers, conservative estimate: 1 state per parameter
+            states_per_param = 1
+        
+        for group in optimizer.param_groups:
+            for p in group['params']:
+                if p.requires_grad:
+                    num_params = p.numel()
+                    total_optimizer_memory += states_per_param * num_params * OPTIMIZER_STATE_BYTES_PER_PARAM
+                    param_count += num_params
         
         return {
             'param_count': param_count,
-            'optimizer_memory_MB': total_optimizer_memory / (1024 * 1024),
+            'optimizer_memory_MB': self._bytes_to_mb(total_optimizer_memory),
         }
     
     def profile_forward_backward(
@@ -114,9 +131,9 @@ class MemoryTracker:
         model: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         loss_fn,
-        batch: Dict,
+        batch: Union[Dict, torch.Tensor],
         precision: str = 'fp32'
-    ) -> Dict[str, Union[int, float]]:
+    ) -> Dict[str, Union[int, float, str]]:
         """
         Profile actual memory usage during forward and backward pass using PyTorch Profiler.
         Works with both GPU and CPU.
@@ -129,20 +146,16 @@ class MemoryTracker:
             precision: 'fp32' or 'fp16'
         
         Returns:
-            Dictionary with detailed memory profiling results
+            Dictionary with detailed memory profiling results in MB
         """
-        device = next(model.parameters()).device if list(model.parameters()) else torch.device('cpu')
-        is_cuda = device.type == 'cuda'
+        device, is_cuda = self._get_device_info(model)
         
-        # Reset memory stats if CUDA
+        # Initialize memory tracking
         if is_cuda:
             torch.cuda.reset_peak_memory_stats()
             initial_memory = torch.cuda.memory_allocated()
         else:
-            # For CPU, use psutil to track process memory
-            import psutil
-            import os
-            process = psutil.Process(os.getpid())
+            process = self._get_cpu_process()
             initial_memory = process.memory_info().rss
             peak_memory_during_profiling = initial_memory
         
@@ -158,35 +171,20 @@ class MemoryTracker:
                 with_stack=False
             ) as prof:
                 with record_function("forward"):
-                    # Forward pass
-                    if isinstance(batch, dict):
-                        outputs = model(**batch)
-                    else:
-                        outputs = model(batch)
+                    outputs = model(**batch) if isinstance(batch, dict) else model(batch)
+                    loss = self._compute_loss(outputs, batch, loss_fn)
                     
-                    if hasattr(outputs, 'loss'):
-                        loss = outputs.loss
-                    elif isinstance(outputs, torch.Tensor):
-                        loss = loss_fn(outputs, batch.get('labels'))
-                    else:
-                        loss = outputs
-                    
-                    # Track peak memory during forward (CPU only)
                     if not is_cuda:
                         peak_memory_during_profiling = max(peak_memory_during_profiling, process.memory_info().rss)
                 
                 with record_function("backward"):
-                    # Backward pass
                     loss.backward()
-                    # Track peak memory during backward (CPU only)
                     if not is_cuda:
                         peak_memory_during_profiling = max(peak_memory_during_profiling, process.memory_info().rss)
                 
                 with record_function("optimizer_step"):
-                    # Optimizer step
                     optimizer.step()
                     optimizer.zero_grad()
-                    # Track peak memory during optimizer step (CPU only)
                     if not is_cuda:
                         peak_memory_during_profiling = max(peak_memory_during_profiling, process.memory_info().rss)
         
@@ -202,47 +200,36 @@ class MemoryTracker:
         
         # Extract memory information from profiler events
         events = prof.key_averages()
-        
         forward_memory = 0
         backward_memory = 0
         optimizer_memory = 0
         
         for event in events:
+            memory_usage = event.cuda_memory_usage if is_cuda else event.cpu_memory_usage
             if 'forward' in event.key:
-                if is_cuda:
-                    forward_memory += event.cuda_memory_usage
-                else:
-                    forward_memory += event.cpu_memory_usage
+                forward_memory += memory_usage
             elif 'backward' in event.key:
-                if is_cuda:
-                    backward_memory += event.cuda_memory_usage
-                else:
-                    backward_memory += event.cpu_memory_usage
+                backward_memory += memory_usage
             elif 'optimizer' in event.key:
-                if is_cuda:
-                    optimizer_memory += event.cuda_memory_usage
-                else:
-                    optimizer_memory += event.cpu_memory_usage
+                optimizer_memory += memory_usage
         
         # Get peak memory
         if is_cuda:
-            # For CUDA, use PyTorch's built-in peak memory tracking
             peak_memory = torch.cuda.max_memory_allocated() - initial_memory
         else:
-            # For CPU, use the peak memory tracked during profiling
-            # This gives us the actual peak RSS (Resident Set Size) during execution
             peak_memory = peak_memory_during_profiling - initial_memory
-            # If peak is negative or very small, fall back to profiler estimate
             if peak_memory <= 0:
-                print("Warning: Peak memory is negative or very small, falling back to profiler estimate")
                 peak_memory = forward_memory + backward_memory + optimizer_memory
         
         return {
-            'forward_memory_MB': forward_memory / (1024 * 1024),
-            'backward_memory_MB': backward_memory / (1024 * 1024),
-            'optimizer_memory_MB': optimizer_memory / (1024 * 1024),
-            'peak_memory_MB': peak_memory / (1024 * 1024),
-            'profiler_table': prof.key_averages().table(sort_by="cuda_memory_usage" if is_cuda else "cpu_memory_usage", row_limit=20)
+            'forward_memory_MB': self._bytes_to_mb(forward_memory),
+            'backward_memory_MB': self._bytes_to_mb(backward_memory),
+            'optimizer_memory_MB': self._bytes_to_mb(optimizer_memory),
+            'peak_memory_MB': self._bytes_to_mb(peak_memory),
+            'profiler_table': prof.key_averages().table(
+                sort_by="cuda_memory_usage" if is_cuda else "cpu_memory_usage",
+                row_limit=20
+            ),
         }
     
     def profile_total_memory(
@@ -267,68 +254,38 @@ class MemoryTracker:
         Returns:
             Dictionary with complete memory breakdown including actual measurements
         """
-        device = next(model.parameters()).device if list(model.parameters()) else torch.device('cpu')
-        is_cuda = device.type == 'cuda'
+        device, is_cuda = self._get_device_info(model)
         
-        # 1. Get parameter memory (calculated)
+        # Get calculated memory for parameters and optimizer states
         param_memory = self.get_parameter_memory(model, precision)
-        
-        # 2. Get optimizer state memory (calculated)
         optimizer_memory = self.get_optimizer_state_memory(optimizer, precision)
         
-        # 3. Measure peak memory during full training step
+        # Measure peak memory during full training step
         model.train()
         if is_cuda:
             torch.cuda.reset_peak_memory_stats()
-            # Get baseline memory (parameters + optimizer states already loaded)
             baseline_memory = torch.cuda.memory_allocated()
         else:
-            import psutil
-            import os
-            process = psutil.Process(os.getpid())
+            process = self._get_cpu_process()
             baseline_memory = process.memory_info().rss
         
         # Run a full training step to measure peak
         try:
-            if isinstance(batch, dict):
-                outputs = model(**batch)
-            else:
-                outputs = model(batch)
-            
-            if hasattr(outputs, 'loss'):
-                loss = outputs.loss
-            elif isinstance(outputs, torch.Tensor):
-                labels = batch.get('labels') if isinstance(batch, dict) else None
-                if labels is not None:
-                    loss = loss_fn(outputs, labels)
-                else:
-                    loss = outputs
-            else:
-                loss = outputs
-            
+            outputs = model(**batch) if isinstance(batch, dict) else model(batch)
+            loss = self._compute_loss(outputs, batch, loss_fn)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
             
             if is_cuda:
                 peak_memory = torch.cuda.max_memory_allocated()
-                # Peak includes everything: params + optimizer + activations
-                # So peak_memory is the total actual peak
             else:
-                # For CPU, measure process memory
                 peak_memory = process.memory_info().rss
         except Exception as e:
             peak_memory = baseline_memory
         
-        # 4. Profile activation memory separately for detailed breakdown
-        profile_results = self.profile_forward_backward(
-            model, optimizer, loss_fn, batch, precision
-        )
-        
-        # Calculate total memory
-        # peak_memory is the total actual peak including everything
-        # For breakdown, we use calculated values for params/optimizer and measured for activations
-        total_memory = peak_memory
+        # Profile activation memory separately for detailed breakdown
+        profile_results = self.profile_forward_backward(model, optimizer, loss_fn, batch, precision)
         
         return {
             'parameters': param_memory,
@@ -339,17 +296,17 @@ class MemoryTracker:
                 'peak_activation_memory_MB': profile_results.get('peak_memory_MB', 0),
             },
             'total': {
-                'total_memory_MB': total_memory / (1024 * 1024),
-                'peak_memory_MB': peak_memory / (1024 * 1024),
-                'peak_memory_GB': peak_memory / (1024 * 1024 * 1024),
+                'total_memory_MB': self._bytes_to_mb(peak_memory),
+                'peak_memory_MB': self._bytes_to_mb(peak_memory),
+                'peak_memory_GB': self._bytes_to_gb(peak_memory),
             },
             'breakdown': {
                 'parameter_memory_MB': param_memory['total_memory_MB'],
                 'optimizer_memory_MB': optimizer_memory['optimizer_memory_MB'],
                 'activation_memory_MB': profile_results.get('peak_memory_MB', 0),
-                'total_memory_MB': total_memory / (1024 * 1024),
+                'total_memory_MB': self._bytes_to_mb(peak_memory),
             },
-            'profiler_table': profile_results.get('profiler_table', '')
+            'profiler_table': profile_results.get('profiler_table', ''),
         }
     
     def print_total_memory_profile(self, profile_results: Dict):
@@ -390,15 +347,15 @@ class MemoryTracker:
         if 'breakdown' in profile_results and 'total' in profile_results:
             breakdown = profile_results['breakdown']
             total = profile_results['total']
-            # Use peak memory as the base for percentages (most accurate)
             peak_mb = total['peak_memory_MB']
             other_mb = peak_mb - breakdown['parameter_memory_MB'] - breakdown['optimizer_memory_MB'] - breakdown['activation_memory_MB']
+            
             if peak_mb > 0:
                 print(f"\nMemory Breakdown (based on peak memory):")
                 print(f"  Parameters: {breakdown['parameter_memory_MB']:.2f} MB ({breakdown['parameter_memory_MB']/peak_mb*100:.1f}%)")
                 print(f"  Optimizer: {breakdown['optimizer_memory_MB']:.2f} MB ({breakdown['optimizer_memory_MB']/peak_mb*100:.1f}%)")
                 print(f"  Activations: {breakdown['activation_memory_MB']:.2f} MB ({breakdown['activation_memory_MB']/peak_mb*100:.1f}%)")
-                print(f"  Other: {other_mb:.2f} MB ({ other_mb/peak_mb*100:.1f}%)")
+                print(f"  Other: {other_mb:.2f} MB ({other_mb/peak_mb*100:.1f}%)")
                 print(f"  Note: Peak memory ({peak_mb:.2f} MB) is the actual measured peak during training")
         
         print("=" * 80)
@@ -441,4 +398,3 @@ class MemoryTracker:
             print(f"  {total['total_memory_MB']:.2f} MB ({total['total_memory_GB']:.2f} GB)")
         
         print("=" * 80)
-

@@ -141,7 +141,7 @@ class TestRankEstimator(unittest.TestCase):
             return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
         
         # Profile total memory
-        tracker = MemoryTracker(device=device)
+        tracker = MemoryTracker()
         results = tracker.profile_total_memory(
             model=model,
             optimizer=optimizer,
