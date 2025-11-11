@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from estimator import RankEstimator
 from peft import LoraConfig, get_peft_model
 from torchinfo import summary  # Better alternative to torchsummary for HuggingFace models
+from utils.memory_tracker import MemoryTracker
 
 
 class TestRankEstimator(unittest.TestCase):
@@ -118,6 +119,50 @@ class TestRankEstimator(unittest.TestCase):
         
         result = self.estimator.get_rank_for_all_client_groups(args, model)
         print(result)
+    
+    def test_profile_total_memory(self):
+        """Test total actual memory profiling"""
+        import torch
+        
+        # Create model
+        model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+        
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = model.to(device)
+        
+        # Create batch
+        batch = {
+            'pixel_values': torch.randn(2, 3, 224, 224).to(device),
+            'labels': torch.randint(0, 1000, (2,)).to(device)
+        }
+        
+        def loss_fn(outputs, labels):
+            return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
+        
+        # Profile total memory
+        tracker = MemoryTracker(device=device)
+        results = tracker.profile_total_memory(
+            model=model,
+            optimizer=optimizer,
+            loss_fn=loss_fn,
+            batch=batch,
+            precision='fp32'
+        )
+        
+        # Verify structure
+        self.assertIn('parameters', results)
+        self.assertIn('optimizer_states', results)
+        self.assertIn('activations', results)
+        self.assertIn('total', results)
+        self.assertIn('breakdown', results)
+        
+        # Verify peak memory is measured
+        peak_memory = results['total']['peak_memory_MB']
+        self.assertGreater(peak_memory, 0)
+        
+        # Print full profile
+        tracker.print_total_memory_profile(results)
 
 
 if __name__ == '__main__':
