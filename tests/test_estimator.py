@@ -11,6 +11,7 @@ from transformers import AutoModelForImageClassification
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from estimator import RankEstimator
+from peft import LoraConfig, get_peft_model
 from torchinfo import summary  # Better alternative to torchsummary for HuggingFace models
 
 
@@ -81,9 +82,23 @@ class TestRankEstimator(unittest.TestCase):
         args.heterogeneous_group = [1/3, 1/3, 1/3]
         model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
         # torchinfo works with HuggingFace models - shows model summary
-        summary(model, input_size=(1, 3, 224, 224), col_names=["input_size", "output_size", "num_params", "trainable"])
+        
         result = self.estimator.get_rank_for_all_client_groups(args, model)
         print(result)
+
+        r=384
+        config = LoraConfig(
+            r=r,
+            lora_alpha=r,
+            target_modules=["query", "value"],
+            lora_dropout=0.1,
+            bias="none",
+            modules_to_save=["classifier"],
+        )
+        model = get_peft_model(model, config)
+        summary(model, input_size=(1, 3, 224, 224), col_names=["input_size", "output_size", "num_params", "trainable"])
+
+        
 
     def test_get_rank_for_all_client_groups_fedhello(self):
         args = argparse.Namespace()
@@ -100,6 +115,7 @@ class TestRankEstimator(unittest.TestCase):
         args.heterogeneous_group = [1/3, 1/3, 1/3]
         
         model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
+        
         result = self.estimator.get_rank_for_all_client_groups(args, model)
         print(result)
 
