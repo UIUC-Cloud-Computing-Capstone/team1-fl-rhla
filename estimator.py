@@ -18,9 +18,9 @@ class RankEstimator:
             
             
             memory_summary_dict['total_parameters_in_MB'] = memory_summary_dict['base_model_parameter_memory_size_in_MB'] + memory_summary_dict['lora_portion_parameter_size_in_MB']
-            memory_summary_dict['total_activations_with_safety_margin_in_MB'] = memory_summary_dict['base_model_activations_and_safety_margin_memory_size_in_MB'] + memory_summary_dict['lora_portion_activations_size_in_MB_with_workspace_margin']
+            memory_summary_dict['total_activations_gradients_and_with_safety_margin_in_MB'] = memory_summary_dict['base_model_activations_gradients_and_safety_margin_memory_size_in_MB'] + memory_summary_dict['lora_portion_activations_gradients_and_workspace_margin_in_MB']
             memory_summary_dict['total_optimizer_states_in_MB'] = memory_summary_dict.get('base_model_optimizer_states_memory_size_in_MB', 0) + memory_summary_dict['lora_portion_optimizer_states_size_in_MB']
-            memory_summary_dict['total_memory_in_MB'] = memory_summary_dict['total_parameters_in_MB'] + memory_summary_dict['total_activations_with_safety_margin_in_MB'] + memory_summary_dict['total_optimizer_states_in_MB']
+            memory_summary_dict['total_memory_in_MB'] = round(memory_summary_dict['total_parameters_in_MB'] + memory_summary_dict['total_activations_gradients_and_with_safety_margin_in_MB'] + memory_summary_dict['total_optimizer_states_in_MB'], 2)
             
             self._print_memory_summary(memory_summary_dict)
 
@@ -35,12 +35,12 @@ class RankEstimator:
 
     def _print_memory_summary(self, memory_summary_dict):
         total_parameters_in_MB = memory_summary_dict['total_parameters_in_MB']
-        total_activations_with_safety_margin_in_MB = memory_summary_dict['total_activations_with_safety_margin_in_MB']
+        total_activations_gradients_and_with_safety_margin_in_MB = memory_summary_dict['total_activations_gradients_and_with_safety_margin_in_MB']
         total_optimizer_states_in_MB = memory_summary_dict['total_optimizer_states_in_MB']
         total_memory_in_MB = memory_summary_dict['total_memory_in_MB']
         print(f"Parameters: {total_parameters_in_MB} MB ({total_parameters_in_MB / total_memory_in_MB * 100:.2f}%)")
         print(f"Optimizer States: {total_optimizer_states_in_MB} MB ({total_optimizer_states_in_MB / total_memory_in_MB * 100:.2f}%)")
-        print(f"Activations and Safety Margin: {total_activations_with_safety_margin_in_MB} MB ({total_activations_with_safety_margin_in_MB / total_memory_in_MB * 100:.2f}%)")
+        print(f"Activations, Gradients and Safety Margin: {total_activations_gradients_and_with_safety_margin_in_MB} MB ({total_activations_gradients_and_with_safety_margin_in_MB / total_memory_in_MB * 100:.2f}%)")
         print(f"Total Memory: {total_memory_in_MB} MB ({total_memory_in_MB / total_memory_in_MB * 100:.2f}%)")
 
     def _get_rank_for_one_client_group(self, args, model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
@@ -73,14 +73,27 @@ class RankEstimator:
         # parameter + activations + safety margin + optimizer states
         
         base_model_parameter_memory_size_in_bytes = self._get_base_model_parameter_memory_size_in_bytes(args, model)
+
+        # During backprop, gradients are computed layer-by-layer in reverse
+        # For conservative estimate, assume all gradients stored simultaneously
+        # In practice, only a subset exists at any time (typically 1-2 layers)
+        # Option 1: Conservative (all gradients)
+        #gradient_memory_bytes = base_model_parameter_memory_size_in_bytes
+
+        # Option 2: More realistic (only gradients for layers being processed)
+        # Typically 1-2 layers' gradients exist at peak during backprop
+        # But this is harder to estimate, so conservative approach is safer
+        # gradient_memory_bytes = base_model_parameter_memory_bytes * 0.2  # 20% if only 1-2 layers
+        gradient_memory_bytes = base_model_parameter_memory_size_in_bytes * 0.2
+
         base_model_activations_and_safety_margin_memory_size_in_bytes = self._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args)
         #base_model_optimizer_states_memory_size_in_bytes = self._get_base_model_optimizer_states_memory_size_in_bytes(args, base_model_parameter_memory_size_in_bytes)
-        result = base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes 
+        result = base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes + gradient_memory_bytes
         #+ base_model_optimizer_states_memory_size_in_bytes
         
         if memory_summary_dict is not None:
             memory_summary_dict['base_model_parameter_memory_size_in_MB'] = self._bytes_to_mb(base_model_parameter_memory_size_in_bytes)
-            memory_summary_dict['base_model_activations_and_safety_margin_memory_size_in_MB'] = self._bytes_to_mb(base_model_activations_and_safety_margin_memory_size_in_bytes)
+            memory_summary_dict['base_model_activations_gradients_and_safety_margin_memory_size_in_MB'] = self._bytes_to_mb(base_model_activations_and_safety_margin_memory_size_in_bytes) + self._bytes_to_mb(gradient_memory_bytes)
             memory_summary_dict['base_model_portion_in_MB'] = self._bytes_to_mb(result)
         return result
 
@@ -146,13 +159,17 @@ class RankEstimator:
         # multiplier is 2 for fp32, 4 for fp16.
         # optimizer states memory size = multiplier * total_dimension_size * r.
 
-        # (4) total memory size
-        # total memory size = (1) + (2) + (3)
-        # total memory size = r * total_dimension_size + (h + r) * total_sequence_length_with_margin + multiplier * r * total_dimension_size = (total_dimension_size + total_sequence_length_with_margin + multiplier * total_dimension_size) * r + h * total_sequence_length_with_margin
+        # (4) gradient memory size
+        gradient_percentage = 0.2
+        #gradient_memory_size = total_dimension_size * gradient_percentage
+
+        # (5) total memory size
+        # total memory size = (1) + (2) + (3) + (4)
+        # total memory size = r * total_dimension_size * (1 + gradient_percentage) + (h + r) * total_sequence_length_with_margin + multiplier * r * total_dimension_size
         # r = (total memory size - h * total_sequence_length_with_margin) / (total_dimension_size + total_sequence_length_with_margin + multiplier * total_dimension_size)
         
         multiplier = 2
-        result = int((lora_portion - H * total_sequence_length_with_margin) / (total_dimension_size + total_sequence_length_with_margin + multiplier * total_dimension_size))
+        result = int((lora_portion - H * total_sequence_length_with_margin) / (total_dimension_size * (1 + gradient_percentage) + total_sequence_length_with_margin + multiplier * total_dimension_size))
         result = min(result, H) # cap the rank by the hidden dimension
         
         # print the result in MB
@@ -168,9 +185,12 @@ class RankEstimator:
         if memory_summary_dict is not None:
             memory_summary_dict['lora_portion_activations_size_in_MB_with_workspace_margin'] = lora_portion_activations_size_in_MB
         lora_portion_activations_size_in_MB /= (1 + workspace_margin) # 20% workspace margin
+        gradient_percentage = 0.2
+        gradient_memory_size_in_MB = lora_portion_parameter_size_in_MB * gradient_percentage
         if memory_summary_dict is not None:
+            memory_summary_dict['lora_portion_gradient_size_in_MB'] = gradient_memory_size_in_MB
             memory_summary_dict['lora_portion_activations_size_in_MB'] = lora_portion_activations_size_in_MB
-            memory_summary_dict['lora_portion_activations_workspace_margin_in_MB'] = lora_portion_activations_size_in_MB * workspace_margin
+            memory_summary_dict['lora_portion_activations_gradients_and_workspace_margin_in_MB'] = lora_portion_activations_size_in_MB * (1 + workspace_margin) + gradient_memory_size_in_MB
         # optimizer states memory size = multiplier * total_dimension_size * r.
         lora_portion_optimizer_states_size = result * multiplier * total_dimension_size
         lora_portion_optimizer_states_size_in_MB = self._bytes_to_mb(lora_portion_optimizer_states_size)
@@ -260,6 +280,8 @@ class RankEstimator:
         
         # Convert to bytes
         peak_activations_bytes = peak_activations_all_layers * dtype_bytes
+
+        
         
         # Add workspace margin
         #print(f"peak_activations_MB: {self._bytes_to_mb(peak_activations_bytes)}")
