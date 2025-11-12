@@ -6,6 +6,7 @@ class RankEstimator:
     def get_rank_for_all_client_groups(self, args, model):
         rank_for_all_client_groups = []
         for i in range(len(args.heterogeneous_group)):
+            print(f"client group {i}")
             total_gpu_memory_size_in_GB_for_one_client_group = args.gpu_memory_size_for_each_group_in_GB[i]
             upload_network_speed_in_Mbps_for_one_client_group = args.avg_upload_network_speed_for_each_group_in_Mbps[i]
             download_network_speed_in_Mbps_for_one_client_group = args.avg_download_network_speed_for_each_group_in_Mbps[i]
@@ -13,6 +14,7 @@ class RankEstimator:
             desired_downloading_time_in_seconds_for_one_client_group = args.desired_downloading_time_for_each_group_in_seconds[i]
             rank_for_one_client_group = self._get_rank_for_one_client_group(args, model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group)
             rank_for_all_client_groups.append(rank_for_one_client_group)
+            print('------------------------------------------------------------------------------------------------')
         print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
         return rank_for_all_client_groups
 
@@ -47,16 +49,17 @@ class RankEstimator:
         
         base_model_parameter_memory_size_in_bytes = self._get_base_model_parameter_memory_size_in_bytes(args, model)
         base_model_activations_and_safety_margin_memory_size_in_bytes = self._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args)
-        base_model_optimizer_states_memory_size_in_bytes = self._get_base_model_optimizer_states_memory_size_in_bytes(args, base_model_parameter_memory_size_in_bytes)
-        result = base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes + base_model_optimizer_states_memory_size_in_bytes
+        #base_model_optimizer_states_memory_size_in_bytes = self._get_base_model_optimizer_states_memory_size_in_bytes(args, base_model_parameter_memory_size_in_bytes)
+        result = base_model_parameter_memory_size_in_bytes + base_model_activations_and_safety_margin_memory_size_in_bytes 
+        #+ base_model_optimizer_states_memory_size_in_bytes
         print(f"base_model_parameter_memory_size_in_MB: {self._bytes_to_mb(base_model_parameter_memory_size_in_bytes)}")
         print(f"base_model_activations_and_safety_margin_memory_size_in_MB: {self._bytes_to_mb(base_model_activations_and_safety_margin_memory_size_in_bytes)}")
-        print(f"base_model_optimizer_states_memory_size_in_MB: {self._bytes_to_mb(base_model_optimizer_states_memory_size_in_bytes)}")
+        #print(f"base_model_optimizer_states_memory_size_in_MB: {self._bytes_to_mb(base_model_optimizer_states_memory_size_in_bytes)}")
         print(f"base_model_portion in MB estimated: {self._bytes_to_mb(result)}")
         return result
 
     def _bytes_to_mb(self, bytes_value):
-        return bytes_value / 1024 / 1024
+        return round(bytes_value / 1024 / 1024, 2)
 
     def _get_rank_based_on_lora_portion(self, args, model, lora_portion):
         print(f"lora_portion_in_MB: {self._bytes_to_mb(lora_portion)}")
@@ -114,7 +117,7 @@ class RankEstimator:
         # For numerical stability, these states are almost always stored in 32-bit precision (4 bytes), even if the model is being trained in 16-bit (fp16/bf16)
         # (3) optimizer states memory size = 2 * (1) parameter memory size if model is trained in fp32, 4 * (1) parameter memory size if model is trained in fp16.
         # multiplier is 2 for fp32, 4 for fp16.
-        # optimizer states memory size = multiplier * a * r.
+        # optimizer states memory size = multiplier * total_dimension_size * r.
 
         # (4) total memory size
         # total memory size = (1) + (2) + (3)
@@ -124,6 +127,27 @@ class RankEstimator:
         multiplier = 2
         result = int((lora_portion - H * total_sequence_length_with_margin) / (total_dimension_size + total_sequence_length_with_margin + multiplier * total_dimension_size))
         result = min(result, H) # cap the rank by the hidden dimension
+        
+        # print the result in MB
+        # Parameter memory size is r * total_dimension_size.
+        lora_portion_parameter_size = result * total_dimension_size
+        lora_portion_parameter_size_in_MB = self._bytes_to_mb(lora_portion_parameter_size)
+        print(f"lora_portion_parameter_size_in_MB: {lora_portion_parameter_size_in_MB}")
+
+
+        # peak_activations_bytes = (hidden_dimension + r) * total_sequence_length_with_margin.
+        lora_portion_activations_size = (H + result) * total_sequence_length_with_margin
+        lora_portion_activations_size_in_MB = self._bytes_to_mb(lora_portion_activations_size)
+        print(f"lora_portion_activations_size_in_MB with workspace margin: {lora_portion_activations_size_in_MB}")
+        lora_portion_activations_size_in_MB /= 1.2 # 20% workspace margin
+        print(f"lora_portion_activations_size_in_MB: {lora_portion_activations_size_in_MB}")
+        print(f"safety margin is {lora_portion_activations_size_in_MB * 0.2} MB")
+
+        # optimizer states memory size = multiplier * total_dimension_size * r.
+        lora_portion_optimizer_states_size = result * multiplier * total_dimension_size
+        lora_portion_optimizer_states_size_in_MB = self._bytes_to_mb(lora_portion_optimizer_states_size)
+        print(f"lora_portion_optimizer_states_size_in_MB: {lora_portion_optimizer_states_size_in_MB}")
+
         return result 
     
     def _get_hidden_dimension(self, args, model):

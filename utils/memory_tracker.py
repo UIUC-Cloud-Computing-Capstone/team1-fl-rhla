@@ -255,6 +255,8 @@ class MemoryTracker:
             Dictionary with complete memory breakdown including actual measurements
         """
         device, is_cuda = self._get_device_info(model)
+        print(f"device: {device}")
+        print(f"is_cuda: {is_cuda}")
         
         # Get calculated memory for parameters and optimizer states
         param_memory = self.get_parameter_memory(model, precision)

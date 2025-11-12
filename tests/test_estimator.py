@@ -93,7 +93,7 @@ class TestRankEstimator(unittest.TestCase):
             target_modules=["query", "value"],
             lora_dropout=0.1,
             bias="none",
-            modules_to_save=["classifier"],
+            #modules_to_save=["classifier"],
         )
         model = get_peft_model(model, config)
         #summary(model, input_size=(1, 3, 224, 224), col_names=["input_size", "output_size", "num_params", "trainable"], depth=11)
@@ -126,16 +126,16 @@ class TestRankEstimator(unittest.TestCase):
         model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
 
 
-        # r=384
-        # config = LoraConfig(
-        #     r=r,
-        #     lora_alpha=r,
-        #     target_modules=["query", "value"],
-        #     lora_dropout=0.1,
-        #     bias="none",
-        #     modules_to_save=["classifier"],
-        # )
-        # model = get_peft_model(model, config)
+        r=384
+        config = LoraConfig(
+            r=r,
+            lora_alpha=r,
+            target_modules=["query", "value"],
+            lora_dropout=0.1,
+            bias="none",
+            #modules_to_save=["classifier"],
+        )
+        model = get_peft_model(model, config)
 
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
         
