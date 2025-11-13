@@ -211,18 +211,18 @@ class TestGetAvgUpdate(unittest.TestCase):
 
 class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
     """Test cases for get_module_name_to_updates_and_weights function"""
-    
+
     def setUp(self):
         """Set up test fixtures"""
         self.args = Mock()
         self.args.only_train_b = False
-        
+
         # Setup block_ids_list and rank_list for get_rank function
         # Client 0: has layer 0 with rank 4, layer 1 with rank 6
         # Client 1: has layer 0 with rank 6, layer 1 with rank 8
         self.args.block_ids_list = [[0, 1], [0, 1]]
         self.args.rank_list = [[4, 6], [6, 8]]
-        
+
         self.global_model = {
             'base_model.layer.0.attention.lora_A': torch.zeros(12, 384),
             'base_model.layer.0.attention.lora_B': torch.zeros(384, 12),
@@ -231,7 +231,7 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
             'classifier.weight': torch.zeros(100, 384),
             'base_model.embedding.weight': torch.zeros(1000, 384),  # Should be ignored
         }
-    
+
     def test_basic_functionality(self):
         """Test basic functionality with LoRA modules"""
         loc_updates = [
@@ -246,32 +246,32 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [10, 20]
         selected_idxs = [0, 1]  # Client indices
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Check that lora modules are included
         self.assertIn('base_model.layer.0.attention.lora_A', updates_dict)
         self.assertIn('base_model.layer.0.attention.lora_B', updates_dict)
-        
+
         # Check that non-lora modules are excluded
         self.assertNotIn('base_model.embedding.weight', updates_dict)
-        
+
         # Check updates
         self.assertEqual(len(updates_dict['base_model.layer.0.attention.lora_A']), 2)
-        
+
         # Check weights - should be masked based on rank
         # Client 0: rank 4 for layer 0, so rows 4: should be 0
         weight_0 = weights_dict['base_model.layer.0.attention.lora_A'][0]
         self.assertEqual(weight_0[0, 0].item(), 10.0)  # First 4 rows should have weight 10
         self.assertEqual(weight_0[4, 0].item(), 0.0)   # Row 4 onwards should be 0
-        
+
         # Client 1: rank 6 for layer 0, so rows 6: should be 0
         weight_1 = weights_dict['base_model.layer.0.attention.lora_A'][1]
         self.assertEqual(weight_1[0, 0].item(), 20.0)  # First 6 rows should have weight 20
         self.assertEqual(weight_1[6, 0].item(), 0.0)   # Row 6 onwards should be 0
-    
+
     def test_lora_B_column_masking(self):
         """Test that lora_B weights are masked by columns"""
         loc_updates = [
@@ -284,21 +284,21 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [10, 20]
         selected_idxs = [0, 1]
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Client 0: rank 4 for layer 0, so columns 4: should be 0
         weight_0 = weights_dict['base_model.layer.0.attention.lora_B'][0]
         self.assertEqual(weight_0[0, 0].item(), 10.0)  # First 4 columns should have weight 10
         self.assertEqual(weight_0[0, 4].item(), 0.0)   # Column 4 onwards should be 0
-        
+
         # Client 1: rank 6 for layer 0, so columns 6: should be 0
         weight_1 = weights_dict['base_model.layer.0.attention.lora_B'][1]
         self.assertEqual(weight_1[0, 0].item(), 20.0)  # First 6 columns should have weight 20
         self.assertEqual(weight_1[0, 6].item(), 0.0)   # Column 6 onwards should be 0
-    
+
     def test_classifier_no_masking(self):
         """Test that classifier weights are not masked"""
         loc_updates = [
@@ -311,25 +311,25 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [15, 25]
         selected_idxs = [0, 1]
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Classifier should be included
         self.assertIn('classifier.weight', updates_dict)
-        
+
         # Weights should not be masked (all values should be num_samples)
         weight_0 = weights_dict['classifier.weight'][0]
         self.assertTrue(torch.all(weight_0 == 15.0))
-        
+
         weight_1 = weights_dict['classifier.weight'][1]
         self.assertTrue(torch.all(weight_1 == 25.0))
-    
+
     def test_only_train_b_flag(self):
         """Test that only_train_b flag filters to lora_B only"""
         self.args.only_train_b = True
-        
+
         loc_updates = [
             {
                 'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 1.0,
@@ -339,18 +339,18 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [10]
         selected_idxs = [0]
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Only lora_B should be included (lora_A should be excluded)
         self.assertNotIn('base_model.layer.0.attention.lora_A', updates_dict)
         self.assertIn('base_model.layer.0.attention.lora_B', updates_dict)
-        
+
         # Classifier should still be included
         self.assertIn('classifier.weight', updates_dict)
-    
+
     def test_missing_modules_in_updates(self):
         """Test handling when some modules are missing in updates"""
         loc_updates = [
@@ -365,19 +365,19 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [10, 20]
         selected_idxs = [0, 1]
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Layer 0 should only have update from client 0
         self.assertIn('base_model.layer.0.attention.lora_A', updates_dict)
         self.assertEqual(len(updates_dict['base_model.layer.0.attention.lora_A']), 1)
-        
+
         # Layer 1 should only have update from client 1
         self.assertIn('base_model.layer.1.attention.lora_A', updates_dict)
         self.assertEqual(len(updates_dict['base_model.layer.1.attention.lora_A']), 1)
-    
+
     def test_multiple_layers_different_ranks(self):
         """Test multiple layers with different ranks"""
         loc_updates = [
@@ -388,21 +388,21 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [10]
         selected_idxs = [0]
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Check layer 0: rank 4
         weight_layer0 = weights_dict['base_model.layer.0.attention.lora_A'][0]
         self.assertEqual(weight_layer0[3, 0].item(), 10.0)  # Row 3 should have weight
         self.assertEqual(weight_layer0[4, 0].item(), 0.0)   # Row 4 should be masked
-        
+
         # Check layer 1: rank 6
         weight_layer1 = weights_dict['base_model.layer.1.attention.lora_A'][0]
         self.assertEqual(weight_layer1[5, 0].item(), 10.0)  # Row 5 should have weight
         self.assertEqual(weight_layer1[6, 0].item(), 0.0)   # Row 6 should be masked
-    
+
     def test_non_lora_modules_excluded(self):
         """Test that non-LoRA, non-classifier modules are excluded"""
         loc_updates = [
@@ -413,27 +413,27 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         ]
         num_samples = [10]
         selected_idxs = [0]
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Embedding should be excluded
         self.assertNotIn('base_model.embedding.weight', updates_dict)
-        
+
         # LoRA should be included
         self.assertIn('base_model.layer.0.attention.lora_A', updates_dict)
-    
+
     def test_empty_updates(self):
         """Test handling of empty updates"""
         loc_updates = []
         num_samples = []
         selected_idxs = []
-        
+
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-        
+
         # Should return empty dictionaries
         self.assertEqual(len(updates_dict), 0)
         self.assertEqual(len(weights_dict), 0)
