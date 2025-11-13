@@ -1,30 +1,24 @@
 import copy
 import numpy as np
-import time, math
+import time
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from utils.data_pre_process import load_partition, DatasetSplit
 from utils.model_utils import model_setup
-from utils.log_utils import set_log_path
 from test import test, test_vit, test_ledgar
 
 from ..solver.local_solver import LocalUpdate
-from ..solver.global_aggregator import average, average_lora, average_lora_depthfl, weighted_average_lora_depthfl
-import gc
+from ..solver.global_aggregator import average_lora_depthfl, weighted_average_lora_depthfl, weighted_average_lora_depthfl_heterogenous_ranks_aggregation
 from fractions import Fraction
 import re
-import matplotlib.pyplot as plt
 import numpy as np
-from collections import Counter
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase, PaddingStrategy
 from typing import Optional, Union
 from dataclasses import dataclass
 from utils.fim_calculator import FIMCalculator
-import torch.distributed as dist
 import threading
-import random
 
 gpu_lock = threading.Lock()
 
@@ -361,7 +355,7 @@ def ffm_fedavg_depthffm_fim(args):
         norm, train_loss = log_metrics(args, writer, t, local_losses, delta_norms)
 
         # global model update
-        global_model = update_global_model(args, global_model, local_updates, num_samples)
+        global_model = update_global_model(args, global_model, local_updates, num_samples, selected_idxs)
 
         # test global model on server side   
         best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1 = test_global_model(args, dataset_test, writer, net_glob, global_model, best_test_acc, best_test_f1, best_test_micro_f1, best_test_macro_f1, metric_keys, t, norm, train_loss)
@@ -471,6 +465,8 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
 
     local_solver = LocalUpdate(args=args)
     local_models, local_losses, local_updates, delta_norms, num_samples = [], [], [], [], []
+    
+    #changed = False
     for num_index, i in enumerate(selected_idxs):
         if args.peft == 'lora':
 
@@ -480,6 +476,10 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
             #    if 'lora_A' in k:
             #        print(f'{k}, {net_model[k].detach() - global_model[k].detach()}')
 
+
+            # if not changed:
+            #     args.rank_list[i]  = [12,2,3,4,5,6,7,8,9,10,11,12]
+            #     changed = True
 
 
             local_model, local_loss, no_weight_lora =  local_solver.lora_tuning(model=copy.deepcopy(net_glob),
@@ -506,12 +506,14 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
         num_samples.append(len(data_loader_list[i]))
     return local_losses,local_updates,delta_norms,num_samples
 
-def update_global_model(args, global_model, local_updates, num_samples):
+def update_global_model(args, global_model, local_updates, num_samples, selected_idxs):
     # TODO Liam: add aggregation function for heterogenous rank
     if hasattr(args, 'aggregation'):
         if args.aggregation ==  'weighted_average':
             print('use weighted average for aggregation')
             global_model = weighted_average_lora_depthfl(args, global_model, local_updates, num_samples)
+        elif args.aggregation ==  'weighted_average_heterogenous_ranks':
+            global_model = weighted_average_lora_depthfl_heterogenous_ranks_aggregation(args, global_model, local_updates, num_samples, selected_idxs)
     else:
         global_model = average_lora_depthfl(args, global_model, local_updates)
 
