@@ -1,3 +1,5 @@
+import re
+from algorithms.solver.util import get_rank
 import torch
 import random
 import numpy as np
@@ -66,6 +68,68 @@ def average_lora_depthfl(args, global_model, loc_updates):
             global_model[k] = global_model[k].detach().cpu() +  sum(model_update_avg_dict[k]) / len(model_update_avg_dict[k])
     return global_model
 
+def weighted_average_lora_depthfl_heterogenous_ranks_aggregation(args, global_model, loc_updates, num_samples, selected_idxs):
+    print('weighted average aggregation for heterogenous ranks')
+
+    module_name_to_updates, module_name_to_weights = get_module_name_to_updates_and_weights(args, global_model, loc_updates, num_samples, selected_idxs)
+    return get_updated_global_model_heterogenous_ranks(global_model, module_name_to_updates, module_name_to_weights)
+
+def get_module_name_to_updates_and_weights(args, global_model, loc_updates, num_samples, selected_idxs):
+    lora_str = _get_lora_str(args)
+    module_name_to_updates = {}
+    module_name_to_weights = {}
+    for module_name in global_model.keys():
+        is_lora = lora_str in module_name
+        is_classifier = 'classifier' in module_name
+        if not is_lora and not is_classifier:
+            continue
+        
+        for client_i, loc_update in enumerate(loc_updates):
+            if module_name not in loc_update:
+                continue
+            
+            # init
+            if module_name not in module_name_to_updates:    
+                module_name_to_updates[module_name] = []
+                module_name_to_weights[module_name] = []
+
+            weight = torch.ones_like(loc_update[module_name]) * num_samples[client_i]
+
+            # mask        
+            if is_lora:    
+                rank = get_rank(args, selected_idxs[client_i], module_name)
+                    
+                if 'lora_A' in module_name:
+                    weight[rank:, :] = 0
+                elif 'lora_B' in module_name:
+                    weight[:, rank:] = 0
+            
+            module_name_to_updates[module_name].append(loc_update[module_name])
+            module_name_to_weights[module_name].append(weight)
+    return module_name_to_updates, module_name_to_weights
+
+def get_updated_global_model_heterogenous_ranks(global_model, module_name_to_updates, module_name_to_weights):
+    for module_name in global_model.keys():
+        if module_name not in module_name_to_updates:
+            continue   
+        global_model[module_name] = global_model[module_name].detach().cpu() + \
+            get_avg_update(module_name_to_updates[module_name], module_name_to_weights[module_name])
+            
+    return global_model
+
+def get_avg_update(updates, weights):
+    weight_sum = sum(weights)
+    weights = [weight / weight_sum for weight in weights]
+    weighted_updates = [update * weight for update, weight in zip(updates, weights)]
+    return sum(weighted_updates)
+
+def _get_lora_str(args):
+    lora_str = 'lora'
+    if args.only_train_b:
+        lora_str = 'lora_B'
+        print('Only train Lora_B')
+    return lora_str
+
 def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
     '''
     weighted hetero average
@@ -74,10 +138,7 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
     model_weights_cnt = {}
     model_weights_list = {}
 
-    lora_str = 'lora'
-    if args.only_train_b:
-        lora_str = 'lora_B'
-        print('Only train Lora_B')
+    lora_str = _get_lora_str(args)
 
     for k in global_model.keys():
         if lora_str in k or 'classifier' in k: # classifier is not included

@@ -1,3 +1,4 @@
+from algorithms.solver.util import get_rank
 import torch
 from torch import nn
 import copy
@@ -80,10 +81,7 @@ class LocalUpdate(object):
         print(f'client {client_real_id} block_ids_list = {args.block_ids_list[client_real_id]}, rank_list = {args.rank_list[client_real_id]}')
         for name, param in model.named_parameters():
             if 'lora' in name and param.requires_grad:
-                layer_id = int(re.findall(r"\d+", name)[0])
-                layer_index = args.block_ids_list[client_real_id].index(layer_id)
-                
-                rank = args.rank_list[client_real_id][layer_index]
+                rank = get_rank(args, client_real_id, name)
                 #print(f'layer id {layer_id}, rank = {rank}')
                 if 'lora_A' in name:
                     #print(f'lora_A name {name}')
