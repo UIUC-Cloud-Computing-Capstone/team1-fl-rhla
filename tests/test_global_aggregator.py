@@ -429,14 +429,140 @@ class TestGetModuleNameToUpdatesAndWeights(unittest.TestCase):
         loc_updates = []
         num_samples = []
         selected_idxs = []
-
+        
         updates_dict, weights_dict = get_module_name_to_updates_and_weights(
             self.args, self.global_model, loc_updates, num_samples, selected_idxs
         )
-
+        
         # Should return empty dictionaries
         self.assertEqual(len(updates_dict), 0)
         self.assertEqual(len(weights_dict), 0)
+    
+    def test_rank_equals_tensor_size(self):
+        """Test edge case where rank equals tensor size (no masking)"""
+        # Set rank to full size (12)
+        self.args.rank_list = [[12, 12], [12, 12]]
+        
+        loc_updates = [
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 1.0,
+            },
+        ]
+        num_samples = [10]
+        selected_idxs = [0]
+        
+        updates_dict, weights_dict = get_module_name_to_updates_and_weights(
+            self.args, self.global_model, loc_updates, num_samples, selected_idxs
+        )
+        
+        # All rows should have weight (no masking)
+        weight = weights_dict['base_model.layer.0.attention.lora_A'][0]
+        self.assertTrue(torch.all(weight == 10.0))
+    
+    def test_rank_zero(self):
+        """Test edge case where rank is 0 (all masked)"""
+        # Set rank to 0
+        self.args.rank_list = [[0, 0], [0, 0]]
+        
+        loc_updates = [
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 1.0,
+            },
+        ]
+        num_samples = [10]
+        selected_idxs = [0]
+        
+        updates_dict, weights_dict = get_module_name_to_updates_and_weights(
+            self.args, self.global_model, loc_updates, num_samples, selected_idxs
+        )
+        
+        # All rows should be masked (weight = 0)
+        weight = weights_dict['base_model.layer.0.attention.lora_A'][0]
+        self.assertTrue(torch.all(weight == 0.0))
+    
+    def test_weight_shape_matches_update_shape(self):
+        """Test that weight shapes match update shapes"""
+        loc_updates = [
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 1.0,
+                'base_model.layer.0.attention.lora_B': torch.ones(384, 12) * 1.0,
+                'classifier.weight': torch.ones(100, 384) * 1.0,
+            },
+        ]
+        num_samples = [10]
+        selected_idxs = [0]
+        
+        updates_dict, weights_dict = get_module_name_to_updates_and_weights(
+            self.args, self.global_model, loc_updates, num_samples, selected_idxs
+        )
+        
+        # Check that weight shapes match update shapes
+        for module_name in updates_dict:
+            for update, weight in zip(updates_dict[module_name], weights_dict[module_name]):
+                self.assertEqual(update.shape, weight.shape, 
+                               f"Shape mismatch for {module_name}: update {update.shape} vs weight {weight.shape}")
+    
+    def test_updates_and_weights_order_match(self):
+        """Test that updates and weights are in the same order"""
+        loc_updates = [
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 1.0,
+            },
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 2.0,
+            },
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 3.0,
+            },
+        ]
+        num_samples = [10, 20, 30]
+        selected_idxs = [0, 1, 0]  # Note: client 0 appears twice
+        
+        updates_dict, weights_dict = get_module_name_to_updates_and_weights(
+            self.args, self.global_model, loc_updates, num_samples, selected_idxs
+        )
+        
+        # Check that order matches and weights correspond to correct num_samples
+        updates = updates_dict['base_model.layer.0.attention.lora_A']
+        weights = weights_dict['base_model.layer.0.attention.lora_A']
+        
+        self.assertEqual(len(updates), 3)
+        self.assertEqual(len(weights), 3)
+        
+        # Check that weights match num_samples[client_i] where client_i is the index in loc_updates
+        # Note: weights come from num_samples[client_i], not from selected_idxs
+        self.assertEqual(weights[0][0, 0].item(), 10.0)  # First update, client_i=0, num_samples[0]=10
+        self.assertEqual(weights[1][0, 0].item(), 20.0)  # Second update, client_i=1, num_samples[1]=20
+        self.assertEqual(weights[2][0, 0].item(), 30.0)  # Third update, client_i=2, num_samples[2]=30
+        
+        # Verify that updates are in correct order
+        self.assertTrue(torch.allclose(updates[0], torch.ones(12, 384) * 1.0))
+        self.assertTrue(torch.allclose(updates[1], torch.ones(12, 384) * 2.0))
+        self.assertTrue(torch.allclose(updates[2], torch.ones(12, 384) * 3.0))
+    
+    def test_different_num_samples_values(self):
+        """Test with different num_samples values"""
+        loc_updates = [
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 1.0,
+            },
+            {
+                'base_model.layer.0.attention.lora_A': torch.ones(12, 384) * 2.0,
+            },
+        ]
+        num_samples = [5, 100]  # Very different sample counts
+        selected_idxs = [0, 1]
+        
+        updates_dict, weights_dict = get_module_name_to_updates_and_weights(
+            self.args, self.global_model, loc_updates, num_samples, selected_idxs
+        )
+        
+        # Check that weights reflect num_samples
+        weight_0 = weights_dict['base_model.layer.0.attention.lora_A'][0]
+        weight_1 = weights_dict['base_model.layer.0.attention.lora_A'][1]
+        
+        self.assertEqual(weight_0[0, 0].item(), 5.0)
+        self.assertEqual(weight_1[0, 0].item(), 100.0)
 
 
 if __name__ == '__main__':
