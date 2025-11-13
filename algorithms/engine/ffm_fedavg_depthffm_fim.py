@@ -518,24 +518,24 @@ def update_global_model(args, global_model, local_updates, num_samples):
     # Rank check, the assigned max lora rank needs to be smaller than the model full rank
     model_full_rank = 0;
     for k in global_model.keys():
-        if 'lora_B' in k:
+        if 'hada_w1_a' in k:
             model_full_rank = global_model[k].shape[0]
             break
     if args.lora_max_rank >= model_full_rank:
         raise ValueError(f"lora_max_rank: {args.lora_max_rank} needs to be smaller than the model full rank {model_full_rank}")
 
     ### run svd
-    for k in global_model.keys():
-        if args.apply_svd_aggregation and 'lora_B' in k:
-            B = global_model[k].detach().cpu()
-            lora_name = k.replace('lora_B', 'lora_A')
-            A = global_model[lora_name].detach().cpu()
-            U, S, VT = torch.linalg.svd(B@A, full_matrices=True) 
+    #for k in global_model.keys():
+    #    if args.apply_svd_aggregation and 'lora_B' in k:
+    #        B = global_model[k].detach().cpu()
+    #        lora_name = k.replace('lora_B', 'lora_A')
+    #        A = global_model[lora_name].detach().cpu()
+    #        U, S, VT = torch.linalg.svd(B@A, full_matrices=True) 
 
-            global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
-            global_model[lora_name] = VT[0:args.lora_max_rank,:]
-            print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
-            #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
+    #        global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
+    #        global_model[lora_name] = VT[0:args.lora_max_rank,:]
+    #        print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
+    #        #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
 
                 
             # null to rank 24
@@ -568,7 +568,7 @@ def get_model_update(args, global_model, local_model, no_weight_lora):
     model_update = {}
     if args.peft == 'lora':
         for k in global_model.keys():
-            if 'lora' in k: # no classifier
+            if 'hada' in k: # no classifier
                 if int(re.findall(r"\d+", k)[0]) not in no_weight_lora:
                     model_update[k] = local_model[k].detach().cpu() - global_model[k].detach().cpu() 
             elif args.train_classifier and 'classifier' in k:

@@ -16,9 +16,10 @@ model = AutoModelForImageClassification.from_pretrained(
 #)
 
 # KronA/LoKr config
-config = LoHaConfig(
-    r=27,                 # Kronecker ranks (try 4–16)
-    alpha=32,            # scaling (PEFT docs may also show `lora_alpha`; in recent versions use `alpha`)
+config = LoKrConfig(
+    r=8,
+    alpha=32,
+    decompose_both =False,
     target_modules=["query", "value"],
     init_weights=True,   # initialize adapter weights
 )
@@ -29,14 +30,25 @@ for name, _ in net_glob.named_parameters():
     print(name)
 global_model = net_glob.state_dict()
 
+# loha
 #torch.Size([384, 27])
 #torch.Size([27, 384])
 #torch.Size([384, 27])
 #torch.Size([27, 384])
-print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w1_a.default'].shape)
-print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w1_b.default'].shape)
-print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_a.default'].shape)
-print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_b.default'].shape)
+#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w1_a.default'].shape)
+#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w1_b.default'].shape)
+#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_a.default'].shape)
+#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_b.default'].shape)
+
+# loka
+#torch.Size([16, 16])
+#torch.Size([24, 8])
+#torch.Size([8, 24])
+print(global_model['base_model.model.vit.encoder.layer.11.attention.attention.query.lokr_w1.default'].shape)
+print(global_model['base_model.model.vit.encoder.layer.11.attention.attention.query.lokr_w2_a.default'].shape)
+print(global_model['base_model.model.vit.encoder.layer.11.attention.attention.query.lokr_w2_b.default'].shape)
+
+
 
 print('########### trainable param ###########')
 trainable_names = [n for n, p in net_glob.named_parameters() if p.requires_grad]

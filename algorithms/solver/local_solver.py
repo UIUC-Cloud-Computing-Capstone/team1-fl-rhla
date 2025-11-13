@@ -51,15 +51,15 @@ class LocalUpdate(object):
 
         # only train the lora module.
         for name, param in model.named_parameters():
-            if ('lora' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
+            if ('hada' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
                 param.requires_grad = True
             else:
                 param.requires_grad = False
         
-        if args.only_train_b:
-            for name, param in model.named_parameters():
-                if 'lora_A' in name:
-                    param.requires_grad = False
+        #if args.only_train_b:
+        #    for name, param in model.named_parameters():
+        #        if 'hada_w' in name:
+        #            param.requires_grad = False
 
         # add register to truncate the rank
         def lora_A_hook(cut_rank: int):
@@ -79,18 +79,18 @@ class LocalUpdate(object):
 
         print(f'client {client_real_id} block_ids_list = {args.block_ids_list[client_real_id]}, rank_list = {args.rank_list[client_real_id]}')
         for name, param in model.named_parameters():
-            if 'lora' in name and param.requires_grad:
+            if 'hada' in name and param.requires_grad:
                 layer_id = int(re.findall(r"\d+", name)[0])
                 layer_index = args.block_ids_list[client_real_id].index(layer_id)
                 
                 rank = args.rank_list[client_real_id][layer_index]
                 #print(f'layer id {layer_id}, rank = {rank}')
-                if 'lora_A' in name:
+                if '_a.' in name:
                     #print(f'lora_A name {name}')
-                    param.register_hook(lora_A_hook(rank) )
-                elif 'lora_B' in name:
-                    #print(f'lora_B name {name}')
                     param.register_hook(lora_B_hook(rank) )
+                elif '_b.' in name:
+                    #print(f'lora_B name {name}')
+                    param.register_hook(lora_A_hook(rank) )
 
         #print('############## trainable param ############')
         #print(f'args.block_ids_list[client_real_id] = {args.block_ids_list[client_real_id]}')

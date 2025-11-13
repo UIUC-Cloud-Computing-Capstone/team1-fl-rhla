@@ -74,10 +74,10 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
     model_weights_cnt = {}
     model_weights_list = {}
 
-    lora_str = 'lora'
-    if args.only_train_b:
-        lora_str = 'lora_B'
-        print('Only train Lora_B')
+    lora_str = 'hada_w'
+    #if args.only_train_b:
+    #    lora_str = '_b.'
+    #    print('Only train Lora_B')
 
     for k in global_model.keys():
         if lora_str in k or 'classifier' in k: # classifier is not included
@@ -94,6 +94,9 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
                         model_weights_cnt[k] += num_samples[client_i]
                         model_weights_list[k] = []
                         model_weights_list[k].append(num_samples[client_i])
+                        #print(k)
+                        #print(loc_update[k])
+                        #print(loc_update[k].shape)
 
     for k in global_model.keys():
         if k in model_update_avg_dict:

@@ -9,7 +9,7 @@ from model.resnet import ResNet9FashionMNIST, ResNet18, ReducedResNet18, \
 from transformers import AutoModelForCausalLM, BloomForSequenceClassification, AutoTokenizer, default_data_collator, get_linear_schedule_with_warmup
 # from peft import get_peft_model, PromptTuningInit, PromptTuningConfig, TaskType
 # from peft import PeftModel, PeftConfig
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, LoHaConfig
 
 import torch
 import torch.nn as nn
@@ -86,12 +86,10 @@ def model_setup(args):
             ignore_mismatched_sizes=True,  # provide this in case you're planning to fine-tune an already fine-tuned checkpoint
         )
 
-        config = LoraConfig(
+        config = LoHaConfig(
             r=args.lora_max_rank,
-            lora_alpha=args.lora_max_rank,
+            alpha=args.lora_alpha,
             target_modules=["query", "value"],
-            lora_dropout=0.1,
-            bias="none",
             modules_to_save=["classifier"],
         )
         net_glob = get_peft_model(model, config)
