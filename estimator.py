@@ -84,7 +84,8 @@ class RankEstimator:
         # Typically 1-2 layers' gradients exist at peak during backprop
         # But this is harder to estimate, so conservative approach is safer
         # gradient_memory_bytes = base_model_parameter_memory_bytes * 0.2  # 20% if only 1-2 layers
-        gradient_memory_bytes = base_model_parameter_memory_size_in_bytes * 0.2
+        total_num_of_layers = 12
+        gradient_memory_bytes = base_model_parameter_memory_size_in_bytes * args.percentage_of_layers_in_memory
 
         base_model_activations_and_safety_margin_memory_size_in_bytes = self._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args)
         #base_model_optimizer_states_memory_size_in_bytes = self._get_base_model_optimizer_states_memory_size_in_bytes(args, base_model_parameter_memory_size_in_bytes)
@@ -123,12 +124,11 @@ class RankEstimator:
         # Parameter memory size is r * total_dimension_size.
 
         num_modules_per_layer = 2
-        num_layers = 12
         H = self._get_hidden_dimension(args, model)
         def get_total_dimension_size(args, model):
             C = 2
             bytes_per_parameter = self._get_byte_per_parameter(args.precision)
-            return C * num_modules_per_layer * H * num_layers * bytes_per_parameter
+            return C * num_modules_per_layer * H * args.num_of_layers_to_allocate_LoRA * bytes_per_parameter
 
         total_dimension_size = get_total_dimension_size(args, model)
 
@@ -142,12 +142,12 @@ class RankEstimator:
         # Let total_sequence_length_with_margin = sequence_length_per_batch * num_modules_per_layer * num_layers * dtype_bytes * (1 + workspace_margin).
         # peak_activations_bytes = (hidden_dimension + r) * total_sequence_length_with_margin.
 
-        workspace_margin = 0.2
+        workspace_margin = args.overhead_and_safety_margin_factor
         def get_total_sequence_length_with_margin(args):
-            sequence_length_per_batch = args.batch_size * self._get_sequence_length()
+            sequence_length_per_batch = args.batch_size * self._get_sequence_length(args)
             
             dtype_bytes = self._get_byte_per_parameter(args.precision)
-            #workspace_margin = 0.2
+            num_layers = args.num_of_layers_to_allocate_LoRA
             return sequence_length_per_batch * num_modules_per_layer * num_layers * dtype_bytes * (1 + workspace_margin)
 
         total_sequence_length_with_margin = get_total_sequence_length_with_margin(args)
@@ -160,8 +160,8 @@ class RankEstimator:
         # optimizer states memory size = multiplier * total_dimension_size * r.
 
         # (4) gradient memory size
-        gradient_percentage = 0.2
-        #gradient_memory_size = total_dimension_size * gradient_percentage
+        gradient_percentage = args.percentage_of_layers_in_memory
+        #gradient_memory_size = r * total_dimension_size * gradient_percentage
 
         # (5) total memory size
         # total memory size = (1) + (2) + (3) + (4)
@@ -185,7 +185,7 @@ class RankEstimator:
         if memory_summary_dict is not None:
             memory_summary_dict['lora_portion_activations_size_in_MB_with_workspace_margin'] = lora_portion_activations_size_in_MB
         lora_portion_activations_size_in_MB /= (1 + workspace_margin) # 20% workspace margin
-        gradient_percentage = 0.2
+        #gradient_percentage = 0.2
         gradient_memory_size_in_MB = lora_portion_parameter_size_in_MB * gradient_percentage
         if memory_summary_dict is not None:
             memory_summary_dict['lora_portion_gradient_size_in_MB'] = gradient_memory_size_in_MB
@@ -246,13 +246,13 @@ class RankEstimator:
         # we use facebook/deit-small-patch16-224
         
         batch_size = args.batch_size
-        sequence_length = self._get_sequence_length()  # 197 for deit-small
+        sequence_length = self._get_sequence_length(args)  # 197 for deit-small
         hidden_dimension = 384
-        num_layers = 12
+        num_layers = args.percentage_of_layers_in_memory * 12
         num_heads = 6
         intermediate_size = hidden_dimension * 4  # 1536
         dtype_bytes = self._get_byte_per_parameter(args.precision)
-        workspace_margin = 0.2
+        workspace_margin = args.overhead_and_safety_margin_factor
     
         # Per-layer activation memory breakdown:
         # 1. Input to layer (for residual): B × S × D
@@ -287,14 +287,17 @@ class RankEstimator:
         #print(f"peak_activations_MB: {self._bytes_to_mb(peak_activations_bytes)}")
         return peak_activations_bytes * (1 + workspace_margin)
 
-    def _get_sequence_length(self):
+    def _get_sequence_length(self, args):
         #if model_name == 'facebook/deit-small-patch16-224':
-        H = 224
-        P = 16
-        W = 224
+        # args.image_height = 244
+        # #H = 224
+        # args.patch_size = 16
+        # # P = 16
+        # # W = 224
+        # args.image_width = 224
         CLS_TOKEN = 1
         # number of patches ((H / P) × (W / P)) + CLS token
-        return H / P * W / P + CLS_TOKEN
+        return args.image_height / args.patch_size * args.image_width / args.patch_size + CLS_TOKEN
         
     def _get_base_model_optimizer_states_memory_size_in_bytes(self, args, base_model_memory_size_in_bytes):
         '''
@@ -307,9 +310,9 @@ class RankEstimator:
             return base_model_memory_size_in_bytes * 2
     
     def _get_safety_margin_memory_size_in_bytes(self, args, model, base_model_memory_size, activations_memory_size, optimizer_states_memory_size):
-        if args.alpha is None:
-            args.alpha = 0.2
-        safety_margin_memory_size = (base_model_memory_size + activations_memory_size + optimizer_states_memory_size) * args.alpha
+        # if args.alpha is None:
+        #     args.alpha = 0.2
+        safety_margin_memory_size = (base_model_memory_size + activations_memory_size + optimizer_states_memory_size) * args.overhead_and_safety_margin_factor
         return safety_margin_memory_size
 
     def _get_rank_based_on_network_speed(self, args, model,network_speed_in_Mbps, desired_communication_time_in_seconds):
@@ -321,7 +324,7 @@ class RankEstimator:
         num_modules_per_layer = 2
         H = self._get_hidden_dimension(args, model)
         C = 2 # A and B matrices
-        num_layers = 12
+        num_layers = args.num_of_layers_to_allocate_LoRA
         bytes_per_parameter = self._get_byte_per_parameter(args.precision)
         total_dimension_size = C * num_modules_per_layer * H * num_layers * bytes_per_parameter
         rank = int(parameter_size_in_bytes / total_dimension_size)

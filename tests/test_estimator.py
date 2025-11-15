@@ -70,33 +70,41 @@ class TestRankEstimator(unittest.TestCase):
 
     def test_get_rank_for_all_client_groups_ours(self):
         args = argparse.Namespace()
+        args.rank_estimator_method = 'Ours'
+
+        # resource heterogeneity
+        # all clients belong to 3 heterogeneous groups. Each group has different resource limitation.
         args.gpu_memory_size_for_each_group_in_GB = [24, 24, 8]
         args.avg_upload_network_speed_for_each_group_in_Mbps = [1, 7, 7]
         args.avg_download_network_speed_for_each_group_in_Mbps = [10, 50, 50]
-        args.rank_estimator_method = 'Ours'
-        args.precision = 'fp32'
-        args.batch_size = 32
         args.desired_uploading_time_for_each_group_in_seconds = [60, 60, 60]
         args.desired_downloading_time_for_each_group_in_seconds = [60, 60, 60]
+        args.heterogeneous_group = [1/3, 1/3, 1/3] # 1/3 of clients belong to each group.
+
+        # model
+        args.model = 'facebook/deit-small-patch16-224'
+
+        # training hyperparameters
+        args.precision = 'fp32'
         args.optimizer = 'adamw'
-        args.heterogeneous_group = [1/3, 1/3, 1/3]
-        model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
+        args.num_of_layers_to_allocate_LoRA = 12
+        args.lora_target_modules = ["query", "value"]
+
+        # input data sizes
+        args.image_height = 244
+        args.image_width = 224
+        args.patch_size = 16 # each image is split into 16 × 16 pixel patches.
+        args.batch_size = 32
+        
+        # estimation parameters
+        args.percentage_of_layers_in_memory = 2 / 3 # not all layers are in memory at the same time during forward pass and backward pass.
+        args.overhead_and_safety_margin_factor = 0.2 # assume 20% of activations and gradients
+
+        model = AutoModelForImageClassification.from_pretrained(args.model)
         # torchinfo works with HuggingFace models - shows model summary
         
-        result = self.estimator.get_rank_for_all_client_groups(args, model)
-        print(result)
-
-        r=384
-        config = LoraConfig(
-            r=r,
-            lora_alpha=r,
-            target_modules=["query", "value"],
-            lora_dropout=0.1,
-            bias="none",
-            #modules_to_save=["classifier"],
-        )
-        model = get_peft_model(model, config)
-        #summary(model, input_size=(1, 3, 224, 224), col_names=["input_size", "output_size", "num_params", "trainable"], depth=11)
+        rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, model)
+        print(rank_budgets_for_all_heterogeneous_groups)
 
         
 
