@@ -534,7 +534,7 @@ def update_global_model(args, global_model, local_updates, num_samples):
 
             global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
             global_model[lora_name] = VT[0:args.lora_max_rank,:]
-            print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
+            #print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
             #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
 
                 
