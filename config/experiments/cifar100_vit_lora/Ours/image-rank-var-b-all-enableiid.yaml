@@ -44,7 +44,7 @@ lora_layer: 12
 heterogeneous_group0_lora: 6
 heterogeneous_group1_lora: 9
 heterogeneous_group2_lora: 12
-layer_prob: [1/9, 1/9, 1/9, 2/27, 2/27, 1/27, 1/27, 1/27, 2/27, 1/9, 1/9, 1/9]
+layer_prob: [1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12]
 
 ##### rank variation
 enable_rank_var: true
@@ -63,7 +63,7 @@ train_a: false
 train_b: true
 
 ##### apply SVD for aggregation
-apply_svd_aggregation: true
+apply_svd_aggregation: false
 
 ###### Whether to train classifier (default: false)
 train_classifier: false

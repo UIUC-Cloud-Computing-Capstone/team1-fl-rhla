@@ -87,6 +87,10 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
                         model_weights_cnt[k] += num_samples[client_i]
                         model_weights_list[k] = []
                         model_weights_list[k].append(num_samples[client_i])
+                        # Print the update content to check the rank variation and update param
+                        #print(k)
+                        #print(loc_update[k])
+                        #print(loc_update[k].shape)
 
     for k in global_model.keys():
         if k in model_update_avg_dict:

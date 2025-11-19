@@ -331,7 +331,7 @@ def ffm_fedavg_depthffm_fim(args):
             update_block_ids_list_predefined(args, dataset_fim, net_glob, t)
             saved_block_ids_list = args.block_ids_list
             saved_rank_list = args.rank_list
-        elif t >= fim_prior_epoch and t % args.fim_every_iter == 0:
+        elif t >= fim_prior_epoch and (t % args.fim_every_iter) == 0:
             update_block_ids_list(args, dataset_fim, net_glob, t)
             saved_block_ids_list = args.block_ids_list
             saved_rank_list = args.rank_list
@@ -339,15 +339,15 @@ def ffm_fedavg_depthffm_fim(args):
             args.block_ids_list = saved_block_ids_list
             args.saved_rank_list = saved_rank_list
 
-        if hasattr(args, 'warm_start'):
+        if hasattr(args, 'warm_start') and args.warm_start:
             print('#####warm start round#####')
             # warm start for our method
-            if t<20:
+            if t<fim_prior_epoch:
                 args.train_a = True
                 args.train_b = True
             else:
 
-                if hasattr(args,'alternating'):
+                if hasattr(args,'alternating') and args.alternating:
                     if (t%2)==0:
                         args.train_a = False
                         args.train_b = True
@@ -357,6 +357,12 @@ def ffm_fedavg_depthffm_fim(args):
                 else:
                     args.train_a = False
                     args.train_b = True
+
+        if args.train_a:
+            print('AAAAA train matrix A')
+        
+        if args.train_b:
+            print('BBBBB train matrix B')
 
         # debug list and rank:
         #args.block_ids_list[14] = [0,1]
@@ -526,7 +532,22 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
     return local_losses,local_updates,delta_norms,num_samples
 
 def update_global_model(args, global_model, local_updates, num_samples):
+    """
     # TODO Liam: add aggregation function for heterogenous rank
+    print('######################### initial #######################')
+    for k in global_model.keys():
+        if 'lora_B' in k and ('layer.2.' in k):
+            lora_name = k.replace('lora_B', 'lora_A')
+            print(k)
+            print(global_model[k])
+            print(global_model[k].shape)
+
+            print(lora_name)
+            print(global_model[lora_name])
+            print(global_model[lora_name].shape)
+    """
+
+
     if hasattr(args, 'aggregation'):
         if args.aggregation ==  'weighted_average':
             print('use weighted average for aggregation')
@@ -542,6 +563,20 @@ def update_global_model(args, global_model, local_updates, num_samples):
             break
     if args.lora_max_rank > model_full_rank:
         raise ValueError(f"lora_max_rank: {args.lora_max_rank} needs to be smaller than the model full rank {model_full_rank}")
+    """
+    print('######################### weight updated #######################')
+    for k in global_model.keys():
+        if 'lora_B' in k and ('layer.2.' in k):
+            lora_name = k.replace('lora_B', 'lora_A')
+            print(k)
+            print(global_model[k])
+            print(global_model[k].shape)
+
+            print(lora_name)
+            print(global_model[lora_name])
+            print(global_model[lora_name].shape)
+    """
+
 
     ### run svd
     for k in global_model.keys():
@@ -549,14 +584,30 @@ def update_global_model(args, global_model, local_updates, num_samples):
             B = global_model[k].detach().cpu()
             lora_name = k.replace('lora_B', 'lora_A')
             A = global_model[lora_name].detach().cpu()
-            U, S, VT = torch.linalg.svd(B@A, full_matrices=True) 
+            U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
 
-            global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
-            global_model[lora_name] = VT[0:args.lora_max_rank,:]
+            # suppress the deficient singular value
+            tol = 1e-6 * S.max()
+            S[S<tol]=0
+
+            global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:args.lora_max_rank]
+            global_model[lora_name] = torch.diag(torch.sqrt(S))@VT[0:args.lora_max_rank,:]
             #print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
             #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
+            # Print the update content to check the rank variation and update param
+            """
+            if 'layer.2.' in k:
+                print('######################### SVD applied #######################')
+                print(k)
+                print(global_model[k])
+                print(global_model[k].shape)
 
-                
+                print(f' U {U}, S {S}, VT {VT}')
+
+                print(lora_name)
+                print(global_model[lora_name])
+                print(global_model[lora_name].shape)
+            """
             # null to rank 24
             #if 'lora_A' in k:
             #    global_model[k][24:,:] = 0
@@ -823,7 +874,7 @@ def get_rank_list(args, layer_list, fim, id):
     sorted_layer_list = sorted(layer_list)
     selected_layer_fim = [fim[x] for x in sorted_layer_list]
     # reserve 1-rank for each selected block
-    common_rank = 10
+    common_rank = args.layer_min_rank
     rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora') - common_rank*len(layer_list)
     normalized_selected_layer_fim = [x/sum(selected_layer_fim) for x in selected_layer_fim]
     rank_list = [int(x*rank_budget) for x in normalized_selected_layer_fim]
