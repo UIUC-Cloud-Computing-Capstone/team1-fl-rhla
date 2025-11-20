@@ -329,6 +329,10 @@ def ffm_fedavg_depthffm_fim(args):
         # block ids for each clients, update every {fim_every_iter} round with pre-defined warm-start
         if t < fim_prior_epoch:
             update_block_ids_list_predefined(args, dataset_fim, net_glob, t)
+
+            # double the rank at the begining
+            for i in range(0,len(args.rank_list)):
+                args.rank_list[i] = [x*2 for x in args.rank_list[i]]
             saved_block_ids_list = args.block_ids_list
             saved_rank_list = args.rank_list
         elif t >= fim_prior_epoch and (t % args.fim_every_iter) == 0:
@@ -416,6 +420,7 @@ def test_global_model(args, dataset_test, writer, net_glob, global_model, best_t
                 metric_keys['Accuracy'] = 1
         args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
                 format(t, train_loss, norm, test_acc), main_process_only=True)
+
     elif 'bert' in args.model:
         if 'sst2' in args.dataset:
             test_acc, test_loss = test_sst2(copy.deepcopy(net_glob), dataset_test, args, t)
@@ -591,7 +596,7 @@ def update_global_model(args, global_model, local_updates, num_samples):
             S[S<tol]=0
 
             global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:args.lora_max_rank]
-            global_model[lora_name] = torch.diag(torch.sqrt(S))@VT[0:args.lora_max_rank,:]
+            global_model[lora_name] = (torch.diag(torch.sqrt(S))@VT)[0:args.lora_max_rank,:]
             #print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
             #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
             # Print the update content to check the rank variation and update param
@@ -878,12 +883,22 @@ def get_rank_list(args, layer_list, fim, id):
     rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora') - common_rank*len(layer_list)
     normalized_selected_layer_fim = [x/sum(selected_layer_fim) for x in selected_layer_fim]
     rank_list = [int(x*rank_budget) for x in normalized_selected_layer_fim]
-    left_over = rank_budget - sum(rank_list)
-    max_index = normalized_selected_layer_fim.index(max(normalized_selected_layer_fim))
-    rank_list[max_index] += left_over
 
     # add back the reserved rank for each block. Cap the rank assignment to the full rank setting.
-    final_rank_list = [min(args.lora_max_rank,x + common_rank) for x in rank_list]
+    truncated_rank_list = [min(args.lora_max_rank,x + common_rank) for x in rank_list]
+    
+    print(f'truncated rank list {truncated_rank_list}')
+    # cap at the lora max rank and distribute starting from the layer with the biggest fim score
+    total_rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora')
+    left_over = total_rank_budget - sum(truncated_rank_list)
+    seen = set()
+    while left_over>0:
+        max_index = normalized_selected_layer_fim.index(max(normalized_selected_layer_fim))
+        normalized_selected_layer_fim[max_index] = -1
+        truncated_rank_list[max_index] = min(truncated_rank_list[max_index]+left_over, args.lora_max_rank)
+        left_over = total_rank_budget - sum(truncated_rank_list)
+    
+    final_rank_list = truncated_rank_list;
     args.rank_list.append(final_rank_list)
 
     print(f'group {id}: rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list}, selected layer = {sorted_layer_list} ')
