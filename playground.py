@@ -51,6 +51,7 @@ for k in global_model.keys():
         global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:lora_max_rank]
         global_model[lora_name] = torch.diag(torch.sqrt(S))@VT[0:lora_max_rank,:]
 
+        
         after = global_model[k]@global_model[lora_name]
 
         print(k)

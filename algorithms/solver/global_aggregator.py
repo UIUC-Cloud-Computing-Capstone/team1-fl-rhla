@@ -44,6 +44,9 @@ def average_lora_depthfl(args, global_model, loc_updates):
 
     print('############## global aggregation ####################')
     lora_str = 'lora'
+    if args.LOKR:
+        lora_str = 'lokr'
+        
     for k in global_model.keys():
         if lora_str in k or 'classifier' in k:
             for loc_update in loc_updates:

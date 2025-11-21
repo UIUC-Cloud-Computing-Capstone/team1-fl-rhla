@@ -585,14 +585,15 @@ def update_global_model(args, global_model, local_updates, num_samples):
 
     ### run svd
     for k in global_model.keys():
-        if args.apply_svd_aggregation and 'lora_B' in k:
+        if hasattr(args,'apply_svd_aggregation') and args.apply_svd_aggregation and 'lora_B' in k:
             B = global_model[k].detach().cpu()
             lora_name = k.replace('lora_B', 'lora_A')
             A = global_model[lora_name].detach().cpu()
             U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
 
             # suppress the deficient singular value
-            tol = 1e-6 * S.max()
+            #print(f'smallest singulvar value = {min(S)}')
+            tol = 1e-6
             S[S<tol]=0
 
             global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:args.lora_max_rank]
@@ -600,7 +601,7 @@ def update_global_model(args, global_model, local_updates, num_samples):
             #print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
             #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
             # Print the update content to check the rank variation and update param
-            """
+            '''
             if 'layer.2.' in k:
                 print('######################### SVD applied #######################')
                 print(k)
@@ -612,7 +613,7 @@ def update_global_model(args, global_model, local_updates, num_samples):
                 print(lora_name)
                 print(global_model[lora_name])
                 print(global_model[lora_name].shape)
-            """
+            '''
             # null to rank 24
             #if 'lora_A' in k:
             #    global_model[k][24:,:] = 0
@@ -879,7 +880,9 @@ def get_rank_list(args, layer_list, fim, id):
     sorted_layer_list = sorted(layer_list)
     selected_layer_fim = [fim[x] for x in sorted_layer_list]
     # reserve 1-rank for each selected block
-    common_rank = args.layer_min_rank
+    common_rank = 0
+    if hasattr(args,'layer_min_rank'):
+        common_rank = args.layer_min_rank
     rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora') - common_rank*len(layer_list)
     normalized_selected_layer_fim = [x/sum(selected_layer_fim) for x in selected_layer_fim]
     rank_list = [int(x*rank_budget) for x in normalized_selected_layer_fim]

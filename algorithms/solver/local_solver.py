@@ -54,16 +54,23 @@ class LocalUpdate(object):
             param.requires_grad = False
 
         # only train the enabled lora module.
+        lora_str = 'lora'
+        if args.LOKR:
+            lora_str = 'lokr_w'
         for name, param in model.named_parameters():
-            if ('lora' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
+            if (lora_str in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
                 if args.train_b and 'lora_B' in name:
                     param.requires_grad = True
                 
                 if args.train_a and 'lora_A' in name:
                     param.requires_grad = True
+
+                # set all lokr param to trainable.
+                if args.LOKR:
+                    param.requires_grad = True
         
 
-        if args.enable_rank_var:
+        if args.enable_rank_var or args.LEGEND:
             # add register to truncate the rank if rank variation is enable
             def lora_A_hook(cut_rank: int):
                 def hook(grad):
