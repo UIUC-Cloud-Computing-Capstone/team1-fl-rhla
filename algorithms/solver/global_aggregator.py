@@ -46,7 +46,7 @@ def average_lora_depthfl(args, global_model, loc_updates):
     lora_str = 'lora'
     if args.LOKR:
         lora_str = 'lokr'
-        
+
     for k in global_model.keys():
         if lora_str in k or 'classifier' in k:
             for loc_update in loc_updates:
@@ -75,6 +75,8 @@ def weighted_average_lora_depthfl(args, global_model, loc_updates, num_samples):
     model_weights_list = {}
 
     lora_str = 'lora'
+    if args.LOKR:
+        lora_str = 'lokr'
     for k in global_model.keys():
         if lora_str in k or 'classifier' in k: # classifier is not included
             for client_i, loc_update in enumerate(loc_updates):
