@@ -70,7 +70,7 @@ class LocalUpdate(object):
                     param.requires_grad = True
         
 
-        if args.enable_rank_var or args.LEGEND:
+        if args.proposed_method or args.LEGEND:
             # add register to truncate the rank if rank variation is enable
             def lora_A_hook(cut_rank: int):
                 def hook(grad):

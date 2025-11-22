@@ -8,6 +8,8 @@ layer_min_rank: 0
 ##### apply SVD for aggregation
 apply_svd_aggregation: false
 weight_decay: 0.01
+proposed_method: false
+
 
 ###### Whether to train classifier (default: false)
 train_classifier: false

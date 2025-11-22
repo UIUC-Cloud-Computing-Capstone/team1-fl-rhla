@@ -17,7 +17,7 @@ local_lr: 0.001 # local learning rate default:0.005
 local_momentum: 0.5 # SGD Momentum default 0.5
 decay_weight: 0.95 # learning rate decay weight default 0.5
 global_momentum: 0.9 # global momentum
-# clip: 1 # clipping threshold
+proposed_method: true
 ########### base differential ends ###########
 
 lr_scheduler_type: linear
@@ -47,7 +47,7 @@ heterogeneous_group2_lora: 12
 layer_prob: [1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12]
 
 ##### rank variation
-enable_rank_var: false
+enable_rank_var: true
 var_rank_group0_lora: 144 #24 *6
 var_rank_group1_lora: 216
 var_rank_group2_lora: 288

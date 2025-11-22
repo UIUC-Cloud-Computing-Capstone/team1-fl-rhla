@@ -5,8 +5,8 @@ _base_ : ['../../base_ffm.yaml']
 #num_selected_users: 10 # number of selected users: 100, for shakespeare, it is 10, femnist 20
 #round: 500 # rounds of training
 
-num_users: 20 # number of users: K
-num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
+num_users: 100 # number of users: K
+num_selected_users: 10 # number of selected users: 100, for shakespeare, it is 10, femnist 20
 round: 200
 tau: 1 # 5
 # TODO Liam: for dev, change later
@@ -35,7 +35,7 @@ method: ffm_fedavg
 attack: None
 defend: None
 # Model
-model: bert-base-uncased 
+model: google/vit-base-patch16-224-in21k
 peft: lora
 
 model_heterogeneity: depthffm_fim
@@ -48,11 +48,13 @@ layer_prob: [1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1
 
 ##### rank variation
 enable_rank_var: true
-var_rank_group0_lora: 144 #24 *6
-var_rank_group1_lora: 216
-var_rank_group2_lora: 288
+var_rank_group0_lora: 96 #24 *6
+var_rank_group1_lora: 144
+var_rank_group2_lora: 192
 
-lora_max_rank: 384 # 384 is full rank already for vit
+layer_min_rank: 10
+
+lora_max_rank: 48 # 384 is full rank already for vit
 
 ##### Weighted aggregation
 # 'weighted_average' or normal avg when comment out
@@ -63,7 +65,7 @@ train_a: false
 train_b: true
 
 ##### apply SVD for aggregation
-apply_svd_aggregation: false
+apply_svd_aggregation: true
 
 ###### Whether to train classifier (default: false)
 train_classifier: false
@@ -73,8 +75,8 @@ warm_start: true
 alternating: true
 
 # Dataset configure
-data_type: text
-dataset: ledgar
+data_type: image
+dataset: cifar100
 iid: 1 # whether i.i.d or not
 
 #####################################
@@ -92,5 +94,5 @@ iid: 1 # whether i.i.d or not
 
 #####################################
 ########### fim params ##############
-fim_every_iter: 10
-fim_prior_epoch: 10
+fim_every_iter: 20
+fim_prior_epoch: 20
