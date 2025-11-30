@@ -1,5 +1,5 @@
 Component,Estimated (MB),Profiled (MB),Error (%)
 Parameters,110.92,111.12 ± 0.00,0.18
-Activations,721.79,559.36 ± 1.32,29.04
+Activations,721.79,594.85 ± 0.12,21.34
 Optimizer States,54.00,54.00 ± 0.00,0.00
-Total Peak,886.71,724.48 ± 1.32,22.39
+Total Peak,886.71,759.97 ± 0.12,16.68
