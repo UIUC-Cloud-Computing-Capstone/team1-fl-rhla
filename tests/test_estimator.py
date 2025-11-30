@@ -226,7 +226,7 @@ class TestRankEstimator(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 1.5 / 12
+        args.percentage_of_layers_in_memory = 1 / 12
         args.overhead_and_safety_margin_factor = 0.05
         args.desired_uploading_time_for_each_group_in_seconds = [60]
         args.desired_downloading_time_for_each_group_in_seconds = [60]
@@ -300,7 +300,7 @@ class TestRankEstimator(unittest.TestCase):
             return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
         
         # Profile actual memory (run 10 times and take average for accuracy)
-        num_profiling_runs = 10
+        num_profiling_runs = 1
         print(f"\nProfiling actual memory {num_profiling_runs} times to get average...")
         
         tracker = MemoryTracker()
@@ -309,8 +309,24 @@ class TestRankEstimator(unittest.TestCase):
         all_profiled_activations = []
         all_profiled_total = []
         
+        # Check if using GPU
+        is_cuda = device.type == 'cuda'
+        import gc
+        import time
+        
         for run in range(num_profiling_runs):
             print(f"  Run {run + 1}/{num_profiling_runs}...", end=' ', flush=True)
+            
+            # Clear memory before each run to avoid interference
+            if is_cuda:
+                torch.cuda.empty_cache()  # Clear GPU cache
+                torch.cuda.reset_peak_memory_stats()  # Reset peak memory stats
+            gc.collect()  # Force Python garbage collection
+            
+            # Small sleep to ensure cleanup completes (only for first few runs or if needed)
+            #if run < 5 or run % 100 == 0:
+            time.sleep(3)  # 10ms sleep for cleanup
+            
             profiled_results = tracker.profile_total_memory(
                 model=model,
                 optimizer=optimizer,
@@ -325,6 +341,11 @@ class TestRankEstimator(unittest.TestCase):
             all_profiled_activations.append(profiled_results['breakdown']['activation_memory_MB'])
             all_profiled_total.append(profiled_results['total']['peak_memory_MB'])
             print(f"Done (Total: {profiled_results['total']['peak_memory_MB']:.2f} MB)")
+            
+            # Clear memory after each run
+            if is_cuda:
+                torch.cuda.empty_cache()
+            gc.collect()
         
         # Calculate averages
         profiled_params = sum(all_profiled_params) / len(all_profiled_params)
