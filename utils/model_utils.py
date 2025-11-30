@@ -9,7 +9,7 @@ from model.resnet import ResNet9FashionMNIST, ResNet18, ReducedResNet18, \
 from transformers import AutoModelForCausalLM, BloomForSequenceClassification, AutoTokenizer, default_data_collator, get_linear_schedule_with_warmup
 # from peft import get_peft_model, PromptTuningInit, PromptTuningConfig, TaskType
 # from peft import PeftModel, PeftConfig
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, LoKrConfig
 
 import torch
 import torch.nn as nn
@@ -76,6 +76,14 @@ def model_setup(args):
             lora_dropout=0.1,
             bias="none"
         )
+
+        if args.LOKR:
+            config = LoKrConfig(
+                r=args.lora_max_rank,
+                alpha=args.lora_alpha,
+                target_modules=["query", "value"],
+            )
+
         net_glob = get_peft_model(model, config)
         net_glob.to(args.device)
     elif args.model == 'google/vit-base-patch16-224-in21k':
@@ -94,6 +102,15 @@ def model_setup(args):
             bias="none",
             modules_to_save=["classifier"],
         )
+
+        if args.LOKR:
+            config = LoKrConfig(
+                r=args.lora_max_rank,
+                alpha=args.lora_max_rank,
+                target_modules=["query", "value"],
+                modules_to_save=["classifier"],
+            )
+
         net_glob = get_peft_model(model, config)
         net_glob.to(args.device)
     else:

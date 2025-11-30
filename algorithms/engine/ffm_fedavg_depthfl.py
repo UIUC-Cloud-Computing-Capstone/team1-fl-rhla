@@ -125,6 +125,7 @@ def ffm_fedavg_depthfl(args):
                 args.block_ids_list.append(sorted(random.sample(range(args.lora_layer), getattr(args, 'heterogeneous_group'+str(id)+'_lora'))))
         elif isinstance(getattr(args, 'heterogeneous_group0_lora'), list):
             args.block_ids_list = []
+            '''
             if hasattr(args, 'probability_structure'):
                 id_list = set(args.user_groupid_list)
                 prob_distribution = []
@@ -138,12 +139,20 @@ def ffm_fedavg_depthfl(args):
                                             p=prob_distribution,
                                             replace=False)))
             else:
-                for id in args.user_groupid_list:
-                    args.block_ids_list.append(getattr(args, 'heterogeneous_group'+str(id)+'_lora'))
+            '''
+            for id in args.user_groupid_list:
+                args.block_ids_list.append(getattr(args, 'heterogeneous_group'+str(id)+'_lora'))
 
             # for exclusive and straggler tuning, all the rank are the same as the max lora rank
-            args.rank_list = [[args.lora_max_rank]*args.lora_layer]*args.num_users
-
+    args.rank_list = []
+    if args.LEGEND:
+        print('running LEGEND')
+        for id in args.user_groupid_list:
+            args.rank_list.append(getattr(args, 'rank_group'+str(id)+'_lora'))
+    else:
+        args.rank_list = []
+    print(f'args.block_ids_list {args.block_ids_list}, rank list {args.rank_list}')
+    
     best_test_acc = 0.0
     best_test_f1 = 0.0
     best_test_macro_f1 = 0.0
@@ -177,10 +186,15 @@ def ffm_fedavg_depthfl(args):
             if local_loss:
                 local_losses.append(local_loss)
             # compute model update
+            lora_str = 'lora'
+            if args.LOKR:
+                print('train lokr')
+                lora_str = 'lokr'
+
             model_update = {}
             if args.peft == 'lora':
                 for k in global_model.keys():
-                    if 'lora' in k: # no classifier
+                    if lora_str in k: # no classifier
                         if int(re.findall(r"\d+", k)[0]) not in no_weight_lora:
                             model_update[k] = local_model[k].detach().cpu() - global_model[k].detach().cpu() 
             else:

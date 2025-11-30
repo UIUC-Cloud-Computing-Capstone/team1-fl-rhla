@@ -52,18 +52,19 @@ iid: 1 # whether i.i.d or not
 
 ##### rank variation
 enable_rank_var: false
-var_rank_group0_lora: 144 #16 
-var_rank_group1_lora: 216
+var_rank_group0_lora: 288
+var_rank_group1_lora: 288
 var_rank_group2_lora: 288
 
-lora_max_rank: 32 # 128 is full rank already for bert
+lora_max_rank: 24 # 128 is full rank already for bert
 
 ##### Weighted aggregation
 # 'weighted_average' or normal avg when comment out
 aggregation: 'weighted_average'
 
 ##### fixed A for training
-only_train_b: false
+train_a: true
+train_b: true
 
 ##### apply SVD for aggregation
 apply_svd_aggregation: false

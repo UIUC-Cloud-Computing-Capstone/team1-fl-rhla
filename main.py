@@ -74,9 +74,9 @@ if __name__ == '__main__':
         
         if meta_args.accelerator.is_local_main_process:
             args.logger.info('############ Case '+ str(r) + ' ############', main_process_only=True)
-        torch.manual_seed(args.seed+r)
+        torch.manual_seed(args.seed*r)
         # torch.cuda.manual_seed(args.seed+args.repeat) # avoid
-        np.random.seed(args.seed+r)
+        np.random.seed(args.seed*r)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         

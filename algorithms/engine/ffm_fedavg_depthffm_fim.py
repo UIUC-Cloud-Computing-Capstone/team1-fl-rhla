@@ -1,5 +1,4 @@
 import copy
-from estimator import RankEstimator
 import numpy as np
 import time, math
 import torch
@@ -225,6 +224,7 @@ def ffm_fedavg_depthffm_fim(args):
             - fim_prior_epoch (int): Epochs to wait before starting FIM analysis
             - fim_every_iter (int): Interval for FIM analysis updates
             - heterogeneous_group (list): Proportions for client groups
+            - heterogeneous_group{i}_lora (int): Number of LoRA layers for group i
             - lora_layer (int): Total available LoRA layers
             - layer_prob (list): Predefined layer selection probabilities
             - local_lr (float): Local learning rate
@@ -300,15 +300,12 @@ def ffm_fedavg_depthffm_fim(args):
     args.logger.info(args.log_path, main_process_only=True)
     
     args.logger.info("{:<50}".format("-" * 15 + " model setup " + "-" * 50)[0:60], main_process_only=True)
-    args, net_glob, global_model, args.dim, base_model = model_setup(args)
+    args, net_glob, global_model, args.dim = model_setup(args)
     
     args.logger.info('model dim: '+str(args.dim), main_process_only=True)
 
     ###################################### model initialization ###########################
-    rank_estimator = RankEstimator()
-    rank_for_all_client_groups = rank_estimator.get_rank_for_all_client_groups(args, base_model)
-    
-    trainining_start_time = time.time()
+    t1 = time.time()
     args.logger.info("{:<50}".format("-" * 15 + " training... " + "-" * 50)[0:60], main_process_only=True)
     # initialize data loader for training and/or public dataset
     data_loader_list = get_data_loader_list(args, dataset_train, dict_users)
@@ -325,22 +322,51 @@ def ffm_fedavg_depthffm_fim(args):
     saved_block_ids_list = list()
     saved_rank_list = list()
     fim_prior_epoch = max(args.fim_prior_epoch,1)
-    first_time_reaching_target_acc = False
+
     for t in range(args.round):
         args.logger.info('Round: ' + str(t) + '/' + str(args.round), main_process_only=True)
         
         # block ids for each clients, update every {fim_every_iter} round with pre-defined warm-start
         if t < fim_prior_epoch:
             update_block_ids_list_predefined(args, dataset_fim, net_glob, t)
+
+            # double the rank at the begining
+            for i in range(0,len(args.rank_list)):
+                args.rank_list[i] = [x*2 for x in args.rank_list[i]]
             saved_block_ids_list = args.block_ids_list
             saved_rank_list = args.rank_list
-        elif t >= fim_prior_epoch and t % args.fim_every_iter == 0:
+        elif t >= fim_prior_epoch and (t % args.fim_every_iter) == 0:
             update_block_ids_list(args, dataset_fim, net_glob, t)
             saved_block_ids_list = args.block_ids_list
             saved_rank_list = args.rank_list
         else:
             args.block_ids_list = saved_block_ids_list
             args.saved_rank_list = saved_rank_list
+
+        if hasattr(args, 'warm_start') and args.warm_start:
+            print('#####warm start round#####')
+            # warm start for our method
+            if t<fim_prior_epoch:
+                args.train_a = True
+                args.train_b = True
+            else:
+
+                if hasattr(args,'alternating') and args.alternating:
+                    if (t%2)==0:
+                        args.train_a = False
+                        args.train_b = True
+                    else:
+                        args.train_a = True
+                        args.train_b = False
+                else:
+                    args.train_a = False
+                    args.train_b = True
+
+        if args.train_a:
+            print('AAAAA train matrix A')
+
+        if args.train_b:
+            print('BBBBB train matrix B')
 
         # debug list and rank:
         #args.block_ids_list[14] = [0,1]
@@ -354,7 +380,6 @@ def ffm_fedavg_depthffm_fim(args):
         print('selected client idxs: '+str(selected_idxs))
         
         ## local training
-        simulate_downloading_time()
         local_losses, local_updates, delta_norms, num_samples = train_selected_clients(args, net_glob, global_model, data_loader_list, t, selected_idxs)
 
         if len(local_updates) == 0:
@@ -365,44 +390,14 @@ def ffm_fedavg_depthffm_fim(args):
         norm, train_loss = log_metrics(args, writer, t, local_losses, delta_norms)
 
         # global model update
-        simulate_uploading_time(local_updates)
         global_model = update_global_model(args, global_model, local_updates, num_samples)
 
         # test global model on server side   
         best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1 = test_global_model(args, dataset_test, writer, net_glob, global_model, best_test_acc, best_test_f1, best_test_micro_f1, best_test_macro_f1, metric_keys, t, norm, train_loss)
 
-        first_time_reaching_target_acc = log_training_time(args, trainining_start_time, best_test_acc, first_time_reaching_target_acc)
         args.accelerator.wait_for_everyone()
 
     return (best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1), metric_keys
-
-def log_training_time(args, trainining_start_time, best_test_acc, first_time_reaching_target_acc):
-
-    if args.target_acc is None:
-        args.target_acc = 0.7
-        args.logger.info(f'Target acc is not set, using default value: {args.target_acc}', main_process_only=True)
-    
-    round_end_time = time.time()
-    curr_training_time = round_end_time - trainining_start_time
-    args.logger.info(f'Best test acc: {best_test_acc}, training time: {curr_training_time} seconds, equivalent to {curr_training_time / 60} minutes', main_process_only=True)
-    if not first_time_reaching_target_acc and best_test_acc >= args.target_acc:
-        first_time_reaching_target_acc = True
-        args.logger.info(f'Best test acc: {best_test_acc}, first time that best_test_acc >= {args.target_acc}, training time: {curr_training_time} seconds, equivalent to {curr_training_time / 60} minutes', main_process_only=True)
-    return first_time_reaching_target_acc
-
-def simulate_downloading_time():
-    # TODO Abdul
-    # 1. Check if FedHello's implementation is the most efficient way to communicate the parameters
-    # 2. If not, think about how to minimize the number of parameters to be communicated
-    # 3. Implement: sleep for some time to simulated the uploading time, based on the network speed and communicated parameter size
-    pass
-
-def simulate_uploading_time(local_updates):
-    # TODO Abdul
-    # 1. Check if FedHello's implementation is the most efficient way to communicate the parameters
-    # 2. If not, think about how to minimize the number of parameters to be communicated
-    # 3. Implement: sleep for some time to simulated the uploading time, based on the network speed and communicated parameter size
-    pass
 
 def log_metrics(args, writer, t, local_losses, delta_norms):
     norm = get_norm(delta_norms)
@@ -425,6 +420,7 @@ def test_global_model(args, dataset_test, writer, net_glob, global_model, best_t
                 metric_keys['Accuracy'] = 1
         args.logger.info('t {:3d}: train_loss = {:.3f}, norm = {:.3f}, test_acc = {:.3f}'.
                 format(t, train_loss, norm, test_acc), main_process_only=True)
+
     elif 'bert' in args.model:
         if 'sst2' in args.dataset:
             test_acc, test_loss = test_sst2(copy.deepcopy(net_glob), dataset_test, args, t)
@@ -541,6 +537,22 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
     return local_losses,local_updates,delta_norms,num_samples
 
 def update_global_model(args, global_model, local_updates, num_samples):
+    """
+    # TODO Liam: add aggregation function for heterogenous rank
+    print('######################### initial #######################')
+    for k in global_model.keys():
+        if 'lora_B' in k and ('layer.2.' in k):
+            lora_name = k.replace('lora_B', 'lora_A')
+            print(k)
+            print(global_model[k])
+            print(global_model[k].shape)
+
+            print(lora_name)
+            print(global_model[lora_name])
+            print(global_model[lora_name].shape)
+    """
+
+
     if hasattr(args, 'aggregation'):
         if args.aggregation ==  'weighted_average':
             print('use weighted average for aggregation')
@@ -554,23 +566,54 @@ def update_global_model(args, global_model, local_updates, num_samples):
         if 'lora_B' in k:
             model_full_rank = global_model[k].shape[0]
             break
-    if args.lora_max_rank >= model_full_rank:
+    if args.lora_max_rank > model_full_rank:
         raise ValueError(f"lora_max_rank: {args.lora_max_rank} needs to be smaller than the model full rank {model_full_rank}")
+    """
+    print('######################### weight updated #######################')
+    for k in global_model.keys():
+        if 'lora_B' in k and ('layer.2.' in k):
+            lora_name = k.replace('lora_B', 'lora_A')
+            print(k)
+            print(global_model[k])
+            print(global_model[k].shape)
+
+            print(lora_name)
+            print(global_model[lora_name])
+            print(global_model[lora_name].shape)
+    """
+
 
     ### run svd
     for k in global_model.keys():
-        if args.apply_svd_aggregation and 'lora_B' in k:
+        if hasattr(args,'apply_svd_aggregation') and args.apply_svd_aggregation and 'lora_B' in k:
             B = global_model[k].detach().cpu()
             lora_name = k.replace('lora_B', 'lora_A')
             A = global_model[lora_name].detach().cpu()
-            U, S, VT = torch.linalg.svd(B@A, full_matrices=True) 
+            U, S, VT = torch.linalg.svd(B@A, full_matrices=False)
 
-            global_model[k] = (U@torch.diag(S))[:,0:args.lora_max_rank]
-            global_model[lora_name] = VT[0:args.lora_max_rank,:]
-            print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
+            # suppress the deficient singular value
+            #print(f'smallest singulvar value = {min(S)}')
+            tol = 1e-6
+            S[S<tol]=0
+
+            global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:args.lora_max_rank]
+            global_model[lora_name] = (torch.diag(torch.sqrt(S))@VT)[0:args.lora_max_rank,:]
+            #print(f'Apply SVD update for {k}, the full rank of the model is {B.shape[0]}')
             #print(f'B.shape {B.shape}, A.shape {A.shape}, U shape {U.shape}, S {S.shape}, VT {VT.shape}, global_model[k] {global_model[k].shape}, global_model[new_name] {global_model[new_name].shape}')
+            # Print the update content to check the rank variation and update param
+            '''
+            if 'layer.2.' in k:
+                print('######################### SVD applied #######################')
+                print(k)
+                print(global_model[k])
+                print(global_model[k].shape)
 
-                
+                print(f' U {U}, S {S}, VT {VT}')
+
+                print(lora_name)
+                print(global_model[lora_name])
+                print(global_model[lora_name].shape)
+            '''
             # null to rank 24
             #if 'lora_A' in k:
             #    global_model[k][24:,:] = 0
@@ -758,6 +801,7 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
             - lora_layer (int): Total number of LoRA layers available
             - layer_prob (list): Predefined probabilities for each layer (used when FIM is not active)
             - user_groupid_list (list): Mapping of users to their heterogeneous groups
+            - heterogeneous_group{i}_lora (int): Number of LoRA layers for group i
         dataset_fim: Dataset used for FIM computation
         net_glob: Global model for FIM analysis
         t (int): Current training round/epoch
@@ -782,6 +826,9 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
         >>> args.fim_every_iter = 50
         >>> args.lora_layer = 12
         >>> args.user_groupid_list = [0, 0, 1, 1, 2, 2]
+        >>> args.heterogeneous_group0_lora = 6
+        >>> args.heterogeneous_group1_lora = 9
+        >>> args.heterogeneous_group2_lora = 12
         >>> update_block_ids_list(args, dataset_fim, net_glob, 100)
         >>> # args.block_ids_list will contain 6 lists, each with the assigned layer IDs
     
@@ -804,8 +851,10 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
     args.block_ids_list = []
     args.rank_list = []
     for id in args.user_groupid_list:
-        layer_count_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
-        layer_list = np.random.choice(range(args.lora_layer), p=observed_probability, size=layer_count_budget, replace=False)
+        layer_list = np.random.choice(range(args.lora_layer),
+                                        p=observed_probability,
+                                        size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
+                                        replace=False)
         args.block_ids_list.append(sorted(layer_list))
         if args.enable_rank_var:
             get_rank_list(args, layer_list, fim, id)
@@ -818,10 +867,9 @@ def update_block_ids_list_predefined(args, dataset_fim, net_glob, t):
             args.block_ids_list = []
             args.rank_list = []
             for id in args.user_groupid_list:
-                layer_count_budget = getattr(args, 'heterogeneous_group'+str(id)+'_lora')
                 layer_list = np.random.choice(range(args.lora_layer),
                                                 p=[float(Fraction(x)) for x in args.layer_prob],
-                                                size=layer_count_budget,
+                                                size=getattr(args, 'heterogeneous_group'+str(id)+'_lora'),
                                                 replace=False)
                 args.block_ids_list.append(sorted(layer_list))
                 get_rank_list(args, layer_list, [1]*args.lora_layer, id)
@@ -832,18 +880,31 @@ def get_rank_list(args, layer_list, fim, id):
     sorted_layer_list = sorted(layer_list)
     selected_layer_fim = [fim[x] for x in sorted_layer_list]
     # reserve 1-rank for each selected block
-    rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora') - len(layer_list)
+    common_rank = 0
+    if hasattr(args,'layer_min_rank'):
+        common_rank = args.layer_min_rank
+    rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora') - common_rank*len(layer_list)
     normalized_selected_layer_fim = [x/sum(selected_layer_fim) for x in selected_layer_fim]
     rank_list = [int(x*rank_budget) for x in normalized_selected_layer_fim]
-    left_over = rank_budget - sum(rank_list)
-    max_index = normalized_selected_layer_fim.index(max(normalized_selected_layer_fim))
-    rank_list[max_index] += left_over
 
     # add back the reserved rank for each block. Cap the rank assignment to the full rank setting.
-    final_rank_list = [min(args.lora_max_rank,x + 1) for x in rank_list]
+    truncated_rank_list = [min(args.lora_max_rank,x + common_rank) for x in rank_list]
+
+    print(f'truncated rank list {truncated_rank_list}')
+    # cap at the lora max rank and distribute starting from the layer with the biggest fim score
+    total_rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora')
+    left_over = total_rank_budget - sum(truncated_rank_list)
+    seen = set()
+    while left_over>0:
+        max_index = normalized_selected_layer_fim.index(max(normalized_selected_layer_fim))
+        normalized_selected_layer_fim[max_index] = -1
+        truncated_rank_list[max_index] = min(truncated_rank_list[max_index]+left_over, args.lora_max_rank)
+        left_over = total_rank_budget - sum(truncated_rank_list)
+
+    final_rank_list = truncated_rank_list;
     args.rank_list.append(final_rank_list)
 
-    print(f'group {id}: rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list} ')
+    print(f'group {id}: rank_budget = {rank_budget}, fim = {selected_layer_fim}, rank_list = {final_rank_list}, selected layer = {sorted_layer_list} ')
     #print(f'args.rank_list = {args.rank_list}')
 
 def get_observed_probability(cluster_labels):

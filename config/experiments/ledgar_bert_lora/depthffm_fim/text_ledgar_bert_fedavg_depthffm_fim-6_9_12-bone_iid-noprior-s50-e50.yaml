@@ -51,14 +51,15 @@ var_rank_group0_lora: 144 #16
 var_rank_group1_lora: 216
 var_rank_group2_lora: 288
 
-lora_max_rank: 32 # 384 is full rank already for vit
+lora_max_rank: 24 # 384 is full rank already for vit
 
 ##### Weighted aggregation
 # 'weighted_average' or normal avg when comment out
 aggregation: 'weighted_average'
 
 ##### fixed A for training
-only_train_b: false
+train_a: true
+train_b: true
 
 ##### apply SVD for aggregation
 apply_svd_aggregation: false

@@ -99,7 +99,7 @@ class FIMCalculator:
                 torch.autograd.backward(samples[idx], retain_graph=True)
                 for name, param in model.named_parameters():
                     if param.requires_grad and 'classifier' not in name:
-                        fim[name] += (param.grad) # no gradient square here. ||.||_F in the next step do the square
+                        fim[name] += (param.grad * param.grad)
                         fim[name].detach_()
                 seen_no += 1
                 idx += 1
@@ -139,7 +139,7 @@ class FIMCalculator:
             layer_name = int(re.search(r'\.layer\.(\d+)\.', param_name).group(1))
             # layer_name is the model index
             # combined lora_A lora_B gradient
-            fim_diag_by_layer[layer_name] += torch.norm(param_fim_diag, p='fro').item()
+            fim_diag_by_layer[layer_name] += torch.norm(param_fim_diag, p='fro').pow(2).item()
         return fim_diag_by_layer
 
     @staticmethod

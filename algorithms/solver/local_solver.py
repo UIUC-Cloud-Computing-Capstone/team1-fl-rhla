@@ -39,56 +39,68 @@ class LocalUpdate(object):
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
 
-        layer_count_budget = getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora')
-        no_weight_lora = self._get_no_weight_lora(args, client_real_id, layer_count_budget)
+        if isinstance(getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora'), list):
+            no_weight_lora = list(set(range(args.lora_layer)) - set(getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora')))
+        elif isinstance(getattr(args, 'heterogeneous_group'+str(hete_group_id)+'_lora'), int):
+            no_weight_lora = list(set(range(args.lora_layer)) - set(args.block_ids_list[client_real_id]))
 
         # early stop for exclusive training
         if len(no_weight_lora) == args.lora_layer:
             print(f'client {client_real_id} has not weight to train, return')
             return model.state_dict(), None, no_weight_lora
 
-        # only train the lora module.
+        # set everything to no-trainable
         for name, param in model.named_parameters():
-            if ('lora' in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])):
-                param.requires_grad = True
-            else:
-                param.requires_grad = False
-        
-        if args.only_train_b:
+            param.requires_grad = False
+
+        # only train the enabled lora module.
+        lora_str = 'lora'
+        if args.LOKR:
+            lora_str = 'lokr_w'
+        for name, param in model.named_parameters():
+            if (lora_str in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
+                if args.train_b and 'lora_B' in name:
+                    param.requires_grad = True
+
+                if args.train_a and 'lora_A' in name:
+                    param.requires_grad = True
+
+                # set all lokr param to trainable.
+                if args.LOKR:
+                    param.requires_grad = True
+
+
+        if args.proposed_method or args.LEGEND:
+            # add register to truncate the rank if rank variation is enable
+            def lora_A_hook(cut_rank: int):
+                def hook(grad):
+                    grad = grad.clone()  # ensure writable
+                    grad[cut_rank:, :] = 0
+                    return grad       # zero out rows from idx onward
+                return hook
+
+            def lora_B_hook(cut_rank: int):
+                def hook(grad):
+                    # grad is a tensor
+                    grad = grad.clone()
+                    grad[:,cut_rank:] = 0       # zero out cols from idx onward
+                    return grad
+                return hook
+
+            print(f'client {client_real_id} block_ids_list = {args.block_ids_list[client_real_id]}, rank_list = {args.rank_list[client_real_id]}, rank_budget = {sum(args.rank_list[client_real_id])}')
             for name, param in model.named_parameters():
-                if 'lora_A' in name:
-                    param.requires_grad = False
+                if 'lora' in name and param.requires_grad:
+                    layer_id = int(re.findall(r"\d+", name)[0])
+                    layer_index = args.block_ids_list[client_real_id].index(layer_id)
 
-        # add register to truncate the rank
-        def lora_A_hook(cut_rank: int):
-            def hook(grad):
-                grad = grad.clone()  # ensure writable
-                grad[cut_rank:, :] = 0
-                return grad       # zero out rows from idx onward
-            return hook
-
-        def lora_B_hook(cut_rank: int):
-            def hook(grad):
-                # grad is a tensor
-                grad = grad.clone()
-                grad[:,cut_rank:] = 0       # zero out cols from idx onward
-                return grad
-            return hook
-
-        print(f'client {client_real_id} block_ids_list = {args.block_ids_list[client_real_id]}, rank_list = {args.rank_list[client_real_id]}')
-        for name, param in model.named_parameters():
-            if 'lora' in name and param.requires_grad:
-                layer_id = int(re.findall(r"\d+", name)[0])
-                layer_index = args.block_ids_list[client_real_id].index(layer_id)
-                
-                rank = args.rank_list[client_real_id][layer_index]
-                #print(f'layer id {layer_id}, rank = {rank}')
-                if 'lora_A' in name:
-                    #print(f'lora_A name {name}')
-                    param.register_hook(lora_A_hook(rank) )
-                elif 'lora_B' in name:
-                    #print(f'lora_B name {name}')
-                    param.register_hook(lora_B_hook(rank) )
+                    rank = args.rank_list[client_real_id][layer_index]
+                    #print(f'layer id {layer_id}, rank = {rank}')
+                    if 'lora_A' in name:
+                        #print(f'lora_A name {name}')
+                        param.register_hook(lora_A_hook(rank) )
+                    elif 'lora_B' in name:
+                        #print(f'lora_B name {name}')
+                        param.register_hook(lora_B_hook(rank) )
 
         #print('############## trainable param ############')
         #print(f'args.block_ids_list[client_real_id] = {args.block_ids_list[client_real_id]}')
@@ -97,7 +109,10 @@ class LocalUpdate(object):
         #        print(name) 
 
         # Note: Have to set the weight_decay to zero otherwise 0 gradient part will still be updated.
-        optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.local_lr,weight_decay=0.0)
+        # weight declay is set to zero only for rank variation
+        weight_decay = args.weight_decay
+
+        optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.local_lr,weight_decay=weight_decay)
         # # Prepare everything with our `accelerator`.
         model, optimizer, train_dataloader = accelerator.prepare(model, optimizer, ldr_train)
         total_loss = []
@@ -131,13 +146,6 @@ class LocalUpdate(object):
 
         # optimizer.zero_grad()
         return accelerator.unwrap_model(model).state_dict(), np.mean(total_loss), no_weight_lora
-
-    def _get_no_weight_lora(self, args, client_real_id, layer_count_budget):
-        if isinstance(layer_count_budget, list):
-            no_weight_lora = list(set(range(args.lora_layer)) - set(layer_count_budget))
-        elif isinstance(layer_count_budget, int):
-            no_weight_lora = list(set(range(args.lora_layer)) - set(args.block_ids_list[client_real_id]))
-        return no_weight_lora
 
     def lora_tuning_extradata_ft(self, model, ldr_train, args, client_index=0):
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
