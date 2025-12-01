@@ -295,7 +295,7 @@ class RankEstimator:
 
     def _get_sequence_length(self, args):
         #if model_name == 'facebook/deit-small-patch16-224':
-        # args.image_height = 244
+        # args.image_height = 224
         # #H = 224
         # args.patch_size = 16
         # # P = 16
