@@ -79,8 +79,8 @@ class TestRankEstimator(unittest.TestCase):
         args.image_height = 224
         args.image_width = 224
         args.patch_size = 16
-        args.percentage_of_layers_in_memory = 11 / 12
-        args.overhead_and_safety_margin_factor = 0.2
+        args.percentage_of_layers_in_memory = 12 / 12
+        args.overhead_and_safety_margin_factor = 0.1
         result = self.estimator._get_base_model_activations_and_safety_margin_memory_size_in_bytes(args)
         result_in_MB = result / 1024 / 1024
         print(result_in_MB)
@@ -116,8 +116,8 @@ class TestRankEstimator(unittest.TestCase):
         args.batch_size = 32
         
         # estimation parameters
-        args.percentage_of_layers_in_memory = 11 / 12 # not all layers are in memory at the same time during forward pass and backward pass.
-        args.overhead_and_safety_margin_factor = 0.2 # assume 20% of activations and gradients
+        args.percentage_of_layers_in_memory = 12 / 12 # not all layers are in memory at the same time during forward pass and backward pass.
+        args.overhead_and_safety_margin_factor = 0.1 # assume 20% of activations and gradients
 
         model = AutoModelForImageClassification.from_pretrained(args.model)
         # torchinfo works with HuggingFace models - shows model summary
@@ -145,8 +145,8 @@ class TestRankEstimator(unittest.TestCase):
         args.image_height = 224
         args.image_width = 224
         args.patch_size = 16
-        args.percentage_of_layers_in_memory = 11 / 12
-        args.overhead_and_safety_margin_factor = 0.2
+        args.percentage_of_layers_in_memory = 12 / 12
+        args.overhead_and_safety_margin_factor = 0.1
         
         model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
         
@@ -228,8 +228,8 @@ class TestRankEstimator(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 11 / 12
-        args.overhead_and_safety_margin_factor = 0.2
+        args.percentage_of_layers_in_memory = 12 / 12
+        args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [60]
         args.desired_downloading_time_for_each_group_in_seconds = [60]
         args.heterogeneous_group = [1.0]
@@ -548,8 +548,8 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 11 / 12
-        args.overhead_and_safety_margin_factor = 0.2
+        args.percentage_of_layers_in_memory = 12 / 12
+        args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [60]
         args.desired_downloading_time_for_each_group_in_seconds = [60]
         args.heterogeneous_group = [1.0]  # Single group for simplicity
@@ -638,8 +638,8 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 11 / 12
-        args.overhead_and_safety_margin_factor = 0.2
+        args.percentage_of_layers_in_memory = 12 / 12
+        args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [60]
         args.desired_downloading_time_for_each_group_in_seconds = [60]
         args.heterogeneous_group = [1.0]  # Single group for simplicity
@@ -707,8 +707,8 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 11 / 12
-        args.overhead_and_safety_margin_factor = 0.2
+        args.percentage_of_layers_in_memory = 12 / 12
+        args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [60]
         args.desired_downloading_time_for_each_group_in_seconds = [60]
         args.heterogeneous_group = [1.0]  # Single group for simplicity
