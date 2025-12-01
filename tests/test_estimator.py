@@ -698,8 +698,37 @@ class TestRankEstimator(unittest.TestCase):
         df.to_csv(csv_path, index=False)
         print(f"\nTable saved to: {csv_path}")
         
-        # Generate LaTeX table
-        latex_table = df.to_latex(index=False, float_format="%.2f", escape=False)
+        # Generate LaTeX table with custom formatting
+        latex_table = "\\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page\n"
+        latex_table += "\n"
+        latex_table += "\\centering\n"
+        latex_table += "\n"
+        latex_table += "\\caption{Memory Breakdown Comparison Table}\n"
+        latex_table += "\n"
+        latex_table += "\\begin{tabular}{lrrr}\n"
+        latex_table += "\n"
+        latex_table += "\\toprule\n"
+        latex_table += "Component & Estimated (MB) & Profiled (MB) & Error (\\%) \\\\\n"
+        latex_table += "\n"
+        latex_table += "\\midrule\n"
+        
+        # Format each row to match the example format
+        component_names = ['Parameters', 'Activations', 'Optimizer States', 'Total Peak']
+        for i, component in enumerate(component_names):
+            estimated = comparison_data['Estimated (MB)'][i]
+            # Replace ± with $\pm$ and format the profiled value
+            profiled_str = comparison_data['Profiled (MB)'][i]
+            profiled_formatted = profiled_str.replace(' ± ', ' $\\pm$ ')
+            error = comparison_data['Error (%)'][i]
+            
+            # Format with proper spacing (matching the example)
+            latex_table += f"{component:<15} & {estimated:>8}  & {profiled_formatted:<20} & {error:>6} \\\\\n"
+        
+        latex_table += "\n"
+        latex_table += "\\bottomrule\n"
+        latex_table += "\\end{tabular}\n"
+        latex_table += "\\end{table}\n"
+        
         latex_path = os.path.join(output_dir, 'memory_breakdown_comparison.tex')
         with open(latex_path, 'w') as f:
             f.write(latex_table)

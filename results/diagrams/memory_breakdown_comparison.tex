@@ -1,10 +1,21 @@
-\begin{tabular}{llll}
-\toprule
-Component & Estimated (MB) & Profiled (MB) & Error (%) \\
-\midrule
-Parameters & 110.92 & 111.12 ± 0.00 & 0.18 \\
-Activations & 1827.45 & 1976.72 ± 17.08 & 7.55 \\
-Optimizer States & 54.00 & 54.00 ± 0.00 & 0.00 \\
-Total Peak & 1992.37 & 2141.84 ± 17.08 & 6.98 \\
-\bottomrule
-\end{tabular}
+\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page
+
+    \centering
+    
+    \caption{Memory Breakdown Comparison Table}
+    
+    \begin{tabular}{lrrr}
+    
+    \toprule
+    Component & Estimated (MB) & Profiled (MB) & Error (\%) \\
+    
+    \midrule
+    Parameters      &   110.92  & 111.12 $\pm$ 0.00    &   0.18 \\
+    Activations     &  1827.45  & 1976.72 $\pm$ 17.08  &   7.55 \\
+    Optimizer States &    54.00  & 54.00 $\pm$ 0.00     &   0.00 \\
+    Total Peak      &  1992.37  & 2141.84 $\pm$ 17.08  &   6.98 \\
+    
+    \bottomrule
+    \end{tabular}
+    \end{table}
+    
