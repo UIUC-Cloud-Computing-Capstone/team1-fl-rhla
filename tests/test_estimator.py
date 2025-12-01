@@ -534,7 +534,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         fixed_download_speed_Mbps = 50.0
         
         # Vary memory sizes (realistic range: 4GB to 16GB)
-        memory_sizes_GB = [1, 1.25, 1.5, 1.6, 1.7, 1.75, 1.8, 1.9, 2, 8]
+        memory_sizes_GB = [1.5, 1.8, 1.9, 2, 4, 8]
         
         # Model and training configuration
         args = argparse.Namespace()
@@ -692,7 +692,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
     def test_rank_3d_diagram(self):
         """Generate a 3D diagram showing rank size vs memory and network speed"""
         # Define ranges for memory and network speeds
-        memory_sizes_GB = [1, 1.25, 1.5, 1.6, 1.7, 1.75, 1.8, 1.9, 2, 8]
+        memory_sizes_GB = [1.5, 1.8, 1.9, 2, 4, 8]
         network_speeds_Mbps = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0]
         
         # Model and training configuration
