@@ -52,7 +52,7 @@ var_rank_group0_lora: 192 #24 *6
 var_rank_group1_lora: 288
 var_rank_group2_lora: 384
 
-layer_min_rank: 10
+layer_min_rank: 13
 
 lora_max_rank: 64 # 384 is full rank already for vit
 
