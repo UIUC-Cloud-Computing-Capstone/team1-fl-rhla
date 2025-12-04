@@ -1,0 +1,97 @@
+_base_ : ['../../base_ffm.yaml']
+
+############## base differential #############
+#num_users: 100 # number of users: K
+#num_selected_users: 10 # number of selected users: 100, for shakespeare, it is 10, femnist 20
+#round: 500 # rounds of training
+
+num_users: 20 # number of users: K
+num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
+round: 200
+tau: 1 # 5
+# TODO Liam: for dev, change later
+#batch_size: 128 # local batch size
+batch_size: 32 # local batch size
+optimizer: adamw
+local_lr: 0.001 # local learning rate default:0.005
+local_momentum: 0.5 # SGD Momentum default 0.5
+decay_weight: 0.95 # learning rate decay weight default 0.5
+global_momentum: 0.9 # global momentum
+proposed_method: true
+########### base differential ends ###########
+
+lr_scheduler_type: linear
+lr_step_size: 1
+optimizer_weight_decay: 0.0
+
+# gradient_accumulation_steps: 1
+# checkpointing_steps: 1
+# per_device_train_batch_size: 8
+weight_decay: 0.0
+# num_warmup_steps: 0
+# use_trained: False
+
+method: ffm_fedavg
+attack: None
+defend: None
+# Model
+model: bert-base-uncased 
+peft: lora
+
+model_heterogeneity: depthffm_fim
+heterogeneous_group: [1/3, 1/3, 1/3]
+lora_layer: 12
+heterogeneous_group0_lora: 6
+heterogeneous_group1_lora: 9
+heterogeneous_group2_lora: 12
+layer_prob: [1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/12]
+
+##### rank variation
+enable_rank_var: true
+var_rank_group0_lora: 144 #24 *6
+var_rank_group1_lora: 216
+var_rank_group2_lora: 288
+
+layer_min_rank: 10
+
+lora_max_rank: 48 # 384 is full rank already for vit
+
+##### Weighted aggregation
+# 'weighted_average' or normal avg when comment out
+aggregation: 'weighted_average'
+
+##### fixed A for training
+train_a: false
+train_b: true
+
+##### apply SVD for aggregation
+apply_svd_aggregation: true
+
+###### Whether to train classifier (default: false)
+train_classifier: false
+
+###### train both A and B at the beginning
+warm_start: true
+alternating: false
+
+# Dataset configure
+data_type: text
+dataset: ledgar
+iid: 0 # whether i.i.d or not
+
+#####################################
+########## non iid type #############
+#####################################
+noniid_type: pathological # pathological, dirichlet(#Samples)
+########## pathological ########
+pat_num_cls: 20 # 3 for cifar10
+########## dirichlet ###########
+# dir_cls_alpha: 0.3 # 1.0 0.3
+################################
+##### Parition Distribution ####
+################################
+partition_mode: dir # uni, dir
+#####################################
+########### fim params ##############
+fim_every_iter: 20
+fim_prior_epoch: 20
