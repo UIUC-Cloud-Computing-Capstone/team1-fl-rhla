@@ -678,7 +678,120 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         self._save_diagram('rank_vs_network_speed_diagram.png')
 
     def test_rank_vs_memory_and_network_speed_combined(self):
-        pass
+        """Generate a combined diagram with both lines in the same figure, sharing the Y-axis"""
+        # Fixed network speeds for memory diagram
+        fixed_upload_speed_Mbps = 7
+        fixed_download_speed_Mbps = 50.0
+        
+        # Fixed memory size for network speed diagram
+        fixed_memory_GB = 8.0
+        
+        # Vary memory sizes (realistic range: 4GB to 16GB)
+        memory_sizes_GB = [1.5, 1.8, 1.9, 2, 4, 8]
+        
+        # Vary network speeds (realistic range: 0.5 Mbps to 10 Mbps)
+        network_speeds_Mbps = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0]
+        
+        # Model and training configuration
+        args = self._init_args()
+        
+        # Load model once
+        model = AutoModelForImageClassification.from_pretrained(args.model)
+        
+        # Collect rank values for memory variation
+        rank_values_memory = []
+        for memory_size_GB in memory_sizes_GB:
+            args.gpu_memory_size_for_each_group_in_GB = [memory_size_GB]
+            args.avg_upload_network_speed_for_each_group_in_Mbps = [fixed_upload_speed_Mbps]
+            args.avg_download_network_speed_for_each_group_in_Mbps = [fixed_download_speed_Mbps]
+            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, model)
+            rank_values_memory.append(rank_budgets[0])
+        
+        # Collect rank values for network speed variation
+        rank_values_network = []
+        args.gpu_memory_size_for_each_group_in_GB = [fixed_memory_GB]
+        for network_speed_Mbps in network_speeds_Mbps:
+            args.avg_upload_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
+            args.avg_download_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
+            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, model)
+            rank_values_network.append(rank_budgets[0])
+        
+        # Create a single figure with dual X-axes
+        fig, ax = plt.subplots(figsize=(14, 8))
+        
+        # Use index positions for memory (to handle uneven spacing)
+        x_positions_memory = list(range(len(memory_sizes_GB)))
+        
+        # Plot memory line on bottom X-axis using index positions
+        line1 = ax.plot(x_positions_memory, rank_values_memory, marker='o', linewidth=2, markersize=8, 
+                       color='blue', label=f'Rank vs Memory (Fixed Network: {fixed_upload_speed_Mbps}/{fixed_download_speed_Mbps} Mbps)')
+        
+        # Set bottom X-axis for memory sizes
+        ax.set_xlabel('GPU Memory Size (GB)', fontsize=16, color='blue')
+        ax.set_xticks(x_positions_memory)
+        ax.set_xticklabels([f'{mem:.2f}' if mem < 1 else f'{mem:.1f}' if mem < 2 else f'{int(mem)}' 
+                            for mem in memory_sizes_GB], rotation=45, ha='right', fontsize=14, color='blue')
+        ax.tick_params(axis='x', labelsize=14, colors='blue')
+        
+        # Create top X-axis for network speeds
+        ax2 = ax.twiny()  # Create a second axes that shares the same y-axis
+        
+        # Map network speeds to the same physical X range as memory indices
+        # We'll map network speeds linearly to the memory index range
+        memory_x_min = 0
+        memory_x_max = len(memory_sizes_GB) - 1
+        network_min = min(network_speeds_Mbps)
+        network_max = max(network_speeds_Mbps)
+        
+        # Transform network speeds to memory index space for plotting
+        def network_to_x(network_val):
+            """Transform network speed value to X position matching memory index range"""
+            if network_max == network_min:
+                return memory_x_min
+            normalized = (network_val - network_min) / (network_max - network_min)
+            return memory_x_min + normalized * (memory_x_max - memory_x_min)
+        
+        network_x_positions = [network_to_x(speed) for speed in network_speeds_Mbps]
+        
+        # Plot network speed line on top X-axis
+        line2 = ax2.plot(network_x_positions, rank_values_network, marker='s', linewidth=2, markersize=8, 
+                        color='green', label=f'Rank vs Network Speed (Fixed Memory: {fixed_memory_GB} GB)')
+        
+        # Set top X-axis for network speeds
+        ax2.set_xlabel('Network Speed (Mbps)', fontsize=16, color='green')
+        ax2.set_xlim(ax.get_xlim())  # Match the X limits of the bottom axis
+        ax2.set_xticks(network_x_positions)
+        ax2.set_xticklabels([f'{speed:.1f}' for speed in network_speeds_Mbps], rotation=45, ha='left', fontsize=14, color='green')
+        ax2.tick_params(axis='x', labelsize=14, colors='green')
+        
+        # Set Y-axis label (shared)
+        ax.set_ylabel('Rank Size', fontsize=16)
+        ax.grid(True, alpha=0.3)
+        
+        # Combine legends from both axes
+        lines1, labels1 = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax.legend(lines1 + lines2, labels1 + labels2, loc='best', fontsize=12)
+        ax.tick_params(axis='y', labelsize=14)
+        
+        # Set title
+        ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=18, fontweight='bold', pad=20)
+        
+        # Add value labels on points for memory plot
+        for i, (pos, rank) in enumerate(zip(x_positions_memory, rank_values_memory)):
+            ax.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
+                       xytext=(0,10), ha='center', fontsize=11, color='blue')
+        
+        # Add value labels on points for network speed plot (every other point to avoid clutter)
+        for i, (pos, rank) in enumerate(zip(network_x_positions, rank_values_network)):
+            if i % 2 == 0:
+                ax2.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
+                           xytext=(0,-15), ha='center', fontsize=11, color='green')
+        
+        plt.tight_layout()
+        
+        # Save the diagram
+        self._save_diagram('rank_vs_memory_and_network_speed_combined.png')
 
     def test_rank_3d_diagram(self):
         """Generate a 3D diagram showing rank size vs memory and network speed"""
