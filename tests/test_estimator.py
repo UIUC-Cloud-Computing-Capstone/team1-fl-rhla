@@ -575,6 +575,21 @@ class TestRankEstimatorVisualization(unittest.TestCase):
             rank_values.append(rank_budgets[0])  # Get rank for the single group
         
         # Create the diagram with improved x-axis handling for uneven spacing
+        self._create_rank_vs_memory_diagram(fixed_upload_speed_Mbps, fixed_download_speed_Mbps, memory_sizes_GB, rank_values)
+        
+        # Save the diagram
+        self._save_diagram('rank_vs_memory_diagram.png')
+
+    def _save_diagram(self, diagram_name):
+        output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, diagram_name)
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"\nDiagram saved to: {output_path}")
+        
+        plt.close()
+
+    def _create_rank_vs_memory_diagram(self, fixed_upload_speed_Mbps, fixed_download_speed_Mbps, memory_sizes_GB, rank_values):
         fig, ax = plt.subplots(figsize=(12, 6))
         
         # Create custom x-axis positions for better visualization
@@ -612,15 +627,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
                         ha='center', fontsize=16, color='gray', alpha=0.7)
         
         plt.tight_layout()
-        
-        # Save the diagram
-        output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, 'rank_vs_memory_diagram.png')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"\nDiagram saved to: {output_path}")
-        
-        plt.close()
 
     def test_rank_vs_network_speed_diagram(self):
         """Generate a diagram showing rank size vs network speeds with fixed memory"""
@@ -639,7 +645,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         # Collect rank values for each network speed
         rank_values_upload = []
-        rank_values_download = []
         
         for network_speed_Mbps in network_speeds_Mbps:
             # Test with varying upload speed (fixed download)
@@ -670,13 +675,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         plt.tight_layout()
         
         # Save the diagram
-        output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, 'rank_vs_network_speed_diagram.png')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
-        print(f"\nDiagram saved to: {output_path}")
-        
-        plt.close()
+        self._save_diagram('rank_vs_network_speed_diagram.png')
 
     def test_rank_vs_memory_and_network_speed_combined(self):
         pass
