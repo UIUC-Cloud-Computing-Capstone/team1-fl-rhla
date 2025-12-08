@@ -870,7 +870,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         ax.set_xlabel('GPU Memory Size (GB)', fontsize=12, labelpad=10)
         ax.set_ylabel('Network Speed (Mbps)', fontsize=12, labelpad=10)
         ax.set_zlabel('Rank Size', fontsize=12, labelpad=10)
-        ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=14, fontweight='bold', pad=20)
+        #ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=14, fontweight='bold', pad=20)
         
         # Reverse x-axis
         ax.invert_xaxis()
