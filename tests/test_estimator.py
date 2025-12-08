@@ -877,8 +877,8 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         # Add colorbar
         fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20, label='Rank Size')
         
-        # Set viewing angle for better visualization
-        ax.view_init(elev=30, azim=45)
+        # Set viewing angle for better visualization - adjust to make slope face reader
+        ax.view_init(elev=25, azim=280)
         
         plt.tight_layout()
         
