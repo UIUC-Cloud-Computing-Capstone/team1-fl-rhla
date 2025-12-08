@@ -811,7 +811,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         # Add value labels on points for memory plot
         for i, (pos, rank) in enumerate(zip(x_positions_memory, rank_values_memory)):
             ax.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
-                       xytext=(0,10), ha='center', fontsize=24, color='blue')
+                       xytext=(0,13), ha='center', fontsize=24, color='blue')
         
         # Add value labels on points for network speed plot (every other point to avoid clutter)
         for i, (pos, rank) in enumerate(zip(network_x_positions, rank_values_network)):
