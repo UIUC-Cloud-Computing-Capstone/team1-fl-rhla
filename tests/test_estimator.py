@@ -872,11 +872,18 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         ax.set_zlabel('Rank Size', fontsize=16, labelpad=10)
         #ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=14, fontweight='bold', pad=20)
         
+        # Make tick labels larger
+        ax.tick_params(axis='x', labelsize=14)
+        ax.tick_params(axis='y', labelsize=14)
+        ax.tick_params(axis='z', labelsize=14)
+        
         # Reverse x-axis
         ax.invert_xaxis()
         
-        # Add colorbar
-        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20, label='Rank Size')
+        # Add colorbar with larger label
+        cbar = fig.colorbar(surf, ax=ax, shrink=0.5, aspect=20, label='Rank Size')
+        cbar.set_label('Rank Size', fontsize=16)
+        cbar.ax.tick_params(labelsize=14)
         
         # Set viewing angle for better visualization - adjust to make slope face reader
         ax.view_init(elev=25, azim=280)
