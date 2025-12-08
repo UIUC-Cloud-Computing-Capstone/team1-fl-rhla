@@ -787,7 +787,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         for i, (pos, rank) in enumerate(zip(network_x_positions, rank_values_network)):
             if i % 2 == 0:
                 ax2.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
-                           xytext=(0,-15), ha='center', fontsize=24, color='green')
+                           xytext=(0,30), ha='center', fontsize=24, color='green')
         
         plt.tight_layout()
         
