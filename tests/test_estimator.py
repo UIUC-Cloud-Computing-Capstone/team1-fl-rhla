@@ -762,12 +762,21 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         network_max = max(network_speeds_Mbps)
         
         # Transform network speeds to transformed memory value space for plotting
+        # Shift mapping left so 0.5 is closer to the left edge
         def network_to_x(network_val):
             """Transform network speed value to X position matching transformed memory range"""
             if network_max == network_min:
                 return memory_x_min_transformed
+            # Use a compressed mapping: map from network_min to network_max but shift left
+            # by using a smaller effective range to compress the left side
+            range_size = memory_x_max_transformed - memory_x_min_transformed
+            # Compress the mapping by using only part of the range, shifting everything left
+            # This brings 0.5 closer to the left edge
+            compressed_range = range_size * 0.85  # Use 85% of the range
+            left_offset = range_size * 0.15  # Shift left by 15% of the range
+            
             normalized = (network_val - network_min) / (network_max - network_min)
-            return memory_x_min_transformed + normalized * (memory_x_max_transformed - memory_x_min_transformed)
+            return memory_x_min_transformed - left_offset + normalized * compressed_range
         
         network_x_positions = [network_to_x(speed) for speed in network_speeds_Mbps]
         
