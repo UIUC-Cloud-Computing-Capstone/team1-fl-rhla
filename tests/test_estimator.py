@@ -743,8 +743,9 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         ax.set_xlabel('GPU Memory Size (GB)', fontsize=26, color='blue', labelpad=15)
         ax.set_xticks(x_positions_memory)
         # Format labels: show 2 decimals for < 1, 1 decimal for < 3, integer for >= 3
+        # Use center alignment so labels are positioned directly below their data points
         ax.set_xticklabels([f'{mem:.2f}' if mem < 1 else f'{mem:.1f}' if mem < 3 else f'{int(mem)}' 
-                            for mem in memory_sizes_GB], rotation=30, ha='right', fontsize=24, color='blue')
+                            for mem in memory_sizes_GB], rotation=30, ha='center', fontsize=24, color='blue')
         ax.tick_params(axis='x', labelsize=24, colors='blue', pad=12)
         
         # Add more padding to x-axis limits for better label readability
