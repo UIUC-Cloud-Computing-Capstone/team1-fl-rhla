@@ -867,9 +867,9 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         ax.contour(X, Y, Z, zdir='z', offset=ax.get_zlim()[0], cmap='viridis', alpha=0.3)
         
         # Set labels
-        ax.set_xlabel('GPU Memory Size (GB)', fontsize=12, labelpad=10)
-        ax.set_ylabel('Network Speed (Mbps)', fontsize=12, labelpad=10)
-        ax.set_zlabel('Rank Size', fontsize=12, labelpad=10)
+        ax.set_xlabel('GPU Memory Size (GB)', fontsize=16, labelpad=10)
+        ax.set_ylabel('Network Speed (Mbps)', fontsize=16, labelpad=10)
+        ax.set_zlabel('Rank Size', fontsize=16, labelpad=10)
         #ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=14, fontweight='bold', pad=20)
         
         # Reverse x-axis
