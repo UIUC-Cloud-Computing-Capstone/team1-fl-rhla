@@ -727,11 +727,11 @@ class TestRankEstimatorVisualization(unittest.TestCase):
                        color='blue', label=f'Rank vs Memory (Fixed Network: {fixed_upload_speed_Mbps}/{fixed_download_speed_Mbps} Mbps)')
         
         # Set bottom X-axis for memory sizes
-        ax.set_xlabel('GPU Memory Size (GB)', fontsize=16, color='blue')
+        ax.set_xlabel('GPU Memory Size (GB)', fontsize=24, color='blue')
         ax.set_xticks(x_positions_memory)
         ax.set_xticklabels([f'{mem:.2f}' if mem < 1 else f'{mem:.1f}' if mem < 2 else f'{int(mem)}' 
-                            for mem in memory_sizes_GB], rotation=45, ha='right', fontsize=14, color='blue')
-        ax.tick_params(axis='x', labelsize=14, colors='blue')
+                            for mem in memory_sizes_GB], rotation=45, ha='right', fontsize=24, color='blue')
+        ax.tick_params(axis='x', labelsize=24, colors='blue')
         
         # Create top X-axis for network speeds
         ax2 = ax.twiny()  # Create a second axes that shares the same y-axis
@@ -758,35 +758,35 @@ class TestRankEstimatorVisualization(unittest.TestCase):
                         color='green', label=f'Rank vs Network Speed (Fixed Memory: {fixed_memory_GB} GB)')
         
         # Set top X-axis for network speeds
-        ax2.set_xlabel('Network Speed (Mbps)', fontsize=16, color='green')
+        ax2.set_xlabel('Network Speed (Mbps)', fontsize=24, color='green')
         ax2.set_xlim(ax.get_xlim())  # Match the X limits of the bottom axis
         ax2.set_xticks(network_x_positions)
-        ax2.set_xticklabels([f'{speed:.1f}' for speed in network_speeds_Mbps], rotation=45, ha='left', fontsize=14, color='green')
-        ax2.tick_params(axis='x', labelsize=14, colors='green')
+        ax2.set_xticklabels([f'{speed:.1f}' for speed in network_speeds_Mbps], rotation=45, ha='left', fontsize=24, color='green')
+        ax2.tick_params(axis='x', labelsize=24, colors='green')
         
         # Set Y-axis label (shared)
-        ax.set_ylabel('Rank Size', fontsize=16)
+        ax.set_ylabel('Rank Size', fontsize=24)
         ax.grid(True, alpha=0.3)
         
         # Combine legends from both axes
         lines1, labels1 = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
-        ax.legend(lines1 + lines2, labels1 + labels2, loc='best', fontsize=12)
-        ax.tick_params(axis='y', labelsize=14)
+        ax.legend(lines1 + lines2, labels1 + labels2, loc='best', fontsize=24)
+        ax.tick_params(axis='y', labelsize=24)
         
         # Set title
-        ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=18, fontweight='bold', pad=20)
+        #ax.set_title('Rank Size vs GPU Memory and Network Speed', fontsize=22, fontweight='bold', pad=20)
         
         # Add value labels on points for memory plot
         for i, (pos, rank) in enumerate(zip(x_positions_memory, rank_values_memory)):
             ax.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
-                       xytext=(0,10), ha='center', fontsize=11, color='blue')
+                       xytext=(0,10), ha='center', fontsize=24, color='blue')
         
         # Add value labels on points for network speed plot (every other point to avoid clutter)
         for i, (pos, rank) in enumerate(zip(network_x_positions, rank_values_network)):
             if i % 2 == 0:
                 ax2.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
-                           xytext=(0,-15), ha='center', fontsize=11, color='green')
+                           xytext=(0,-15), ha='center', fontsize=24, color='green')
         
         plt.tight_layout()
         
