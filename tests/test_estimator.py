@@ -717,7 +717,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
             rank_values_network.append(rank_budgets[0])
         
         # Create a single figure with dual X-axes - even larger size for better readability
-        fig, ax = plt.subplots(figsize=(18, 10))
+        fig, ax = plt.subplots(figsize=(16, 9))
         
         # Use a piecewise transformation to spread out small values significantly
         # This makes small differences much more readable while preserving the uneven nature
