@@ -13,14 +13,8 @@ Then activate the environment using the provided file:
 Default:
 
 ```bash
-conda env create --name env.fl --file=environment.yml
+conda env create --name env.fl --file=environment-final.yml
 conda activate env.fl
-```
-
-Mac:
-```bash
-conda env create --name env.fl --file=environment-macos.yml
-conda activate env.fl && export KMP_DUPLICATE_LIB_OK=TRUE
 ```
 
 ### 🚀 Running the Code
@@ -75,7 +69,21 @@ This is a fork from the official code for the paper accepted to IEEE Transaction
 
 ## 📄 Citation
 
-If you find this work useful for your research, please cite our paper: TODO
+If you find this work useful for your research, please cite papers
+```
+@article{xie2026hralora,
+  title={Heterogeneous-Resource-Aware Federated Learning with Intelligent LoRA Allocation and Aggregation},
+  author={Xie, Youye and Lian, Yao and Chen, Kevin and Latif, Abdul and Zhao, Lingzhi and Farivar, Reza},
+  journal={},
+  year={2026}
+}
+@article{zhang2025fed,
+  title={Fed-HeLLo: Efficient Federated Foundation Model Fine-Tuning with Heterogeneous LoRA Allocation},
+  author={Zhang, Zikai and Liu, Ping and Xu, Jiahao and Hu, Rui},
+  journal={arXiv preprint arXiv:2506.12213},
+  year={2025}
+}
+```
 
 ---
 
