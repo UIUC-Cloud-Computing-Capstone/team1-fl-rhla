@@ -31,6 +31,13 @@ cp accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_config
 
 Next, launch the training script for the CIFAR-100 dataset:
 
+To experiment the Rank Estimator, run the command:
+```bash
+python -m unittest tests.test_estimator.TestRankEstimator.test_get_rank_for_all_client_groups_ours
+```
+
+To utilize the rank budget to fine-tune the model, run the command:
+
 ```bash
 bash run-cifar100.sh
 ```
