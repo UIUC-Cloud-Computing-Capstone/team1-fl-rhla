@@ -400,7 +400,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         # Make tick labels larger
         ax.tick_params(axis='x', labelsize=font_size)
         ax.tick_params(axis='y', labelsize=font_size)
-        ax.tick_params(axis='z', labelsize=font_size, pad=15)  # Add padding to z-axis ticks to avoid overlap
+        ax.tick_params(axis='z', labelsize=font_size, pad=20)  # Add padding to z-axis ticks to avoid overlap
         
         # Reverse x-axis
         ax.invert_xaxis()
