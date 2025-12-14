@@ -35,8 +35,8 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.batch_size = 32
         args.percentage_of_layers_in_memory = 12 / 12
         args.overhead_and_safety_margin_factor = 0.1
-        args.desired_uploading_time_for_each_group_in_seconds = [60]
-        args.desired_downloading_time_for_each_group_in_seconds = [60]
+        args.desired_uploading_time_for_each_group_in_seconds = [15]
+        args.desired_downloading_time_for_each_group_in_seconds = [15]
         args.heterogeneous_group = [1.0]  # Single group for simplicity
         args.train_classifier = False # do not train classifier in the base model. Only train LoRA matrices.
         return args

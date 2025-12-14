@@ -142,8 +142,8 @@ class TestRankEstimator(unittest.TestCase):
         args.batch_size = 32
         args.percentage_of_layers_in_memory = 12 / 12
         args.overhead_and_safety_margin_factor = 0.1
-        args.desired_uploading_time_for_each_group_in_seconds = [60]
-        args.desired_downloading_time_for_each_group_in_seconds = [60]
+        args.desired_uploading_time_for_each_group_in_seconds = [15]
+        args.desired_downloading_time_for_each_group_in_seconds = [15]
         args.heterogeneous_group = [1.0]
         args.gpu_memory_size_for_each_group_in_GB = [8.0]
         args.avg_upload_network_speed_for_each_group_in_Mbps = [7.0]
