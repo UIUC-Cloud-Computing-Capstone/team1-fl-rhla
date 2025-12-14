@@ -376,8 +376,9 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         base_offset = z_range * 0.03  # Base offset of 3% of range
         
         for i, z in enumerate(min_x_for_each_z):
-            if i % 2 == 1:
-                ax.scatter(min_x_for_each_z[z], min_y_for_each_z[z], z, c='red', s=100, alpha=1, marker='o')
+            
+            ax.scatter(min_x_for_each_z[z], min_y_for_each_z[z], z, c='red', s=100, alpha=1, marker='o')
+            if i % 3 == 0:
                 # Use a combination of base offset and percentage of z value
                 label_z = z + base_offset + z * 0.05  # + 5% of z value
                 ax.text(min_x_for_each_z[z], min_y_for_each_z[z], label_z, f'{int(z)}', 
