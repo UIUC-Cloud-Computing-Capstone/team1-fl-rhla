@@ -339,6 +339,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         X, Y = np.meshgrid(memory_sizes_GB, network_speeds_Mbps)
         Z = np.zeros_like(X)
         
+        points = []
         # Calculate rank for each combination of memory and network speed
         print("Calculating rank values for 3D plot...")
         for i, memory_size_GB in enumerate(memory_sizes_GB):
@@ -357,6 +358,31 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         # Create surface plot
         surf = ax.plot_surface(X, Y, Z, cmap='viridis', alpha=0.8, edgecolor='none', linewidth=0.1)
+        
+        # Plot scatter points on the surface
+        # for every z, only show point at max x and max y
+        points = zip(X.flatten(), Y.flatten(), Z.flatten())
+        min_x_for_each_z = {}
+        min_y_for_each_z = {}
+        for x, y, z in points:
+            if z not in min_x_for_each_z:
+                min_x_for_each_z[z] = x
+            if z not in min_y_for_each_z:
+                min_y_for_each_z[z] = y
+        # Calculate z-range for label offset
+        z_range = Z.max() - Z.min()
+        # Use a larger offset to ensure labels appear above the surface
+        # Use both a percentage of z-range and a percentage of z value for better visibility
+        base_offset = z_range * 0.03  # Base offset of 3% of range
+        
+        for i, z in enumerate(min_x_for_each_z):
+            if i % 2 == 1:
+                ax.scatter(min_x_for_each_z[z], min_y_for_each_z[z], z, c='red', s=100, alpha=1, marker='o')
+                # Use a combination of base offset and percentage of z value
+                label_z = z + base_offset + z * 0.05  # + 5% of z value
+                ax.text(min_x_for_each_z[z], min_y_for_each_z[z], label_z, f'{int(z)}', 
+                       fontsize=16, color='black', zorder=100,  # High zorder to ensure it's on top
+                       bbox=dict(boxstyle='round,pad=0.4', facecolor='white', alpha=0.9, edgecolor='none'))
         
         # Add contour lines on the surface
         ax.contour(X, Y, Z, zdir='z', offset=ax.get_zlim()[0], cmap='viridis', alpha=0.3)
