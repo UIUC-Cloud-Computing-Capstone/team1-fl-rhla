@@ -388,7 +388,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         ax.contour(X, Y, Z, zdir='z', offset=ax.get_zlim()[0], cmap='viridis', alpha=0.3)
         
 
-        font_size = 32
+        font_size = 26
         label_pad = 32
         # Set labels
         ax.set_xlabel('GPU Memory Size (GB)', fontsize=font_size, labelpad=label_pad)
