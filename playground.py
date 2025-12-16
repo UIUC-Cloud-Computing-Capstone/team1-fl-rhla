@@ -8,7 +8,7 @@ model = AutoModelForImageClassification.from_pretrained(
     ignore_mismatched_sizes=True,  # provide this in case you're planning to fine-tune an already fine-tuned checkpoint
 )
 
-lora_max_rank =12
+lora_max_rank =24
 config = LoraConfig(
     r=lora_max_rank,
     lora_alpha=lora_max_rank,
@@ -18,62 +18,64 @@ config = LoraConfig(
 )
 
 # KronA/LoKr config
-#config = LoHaConfig(
-#    r=27,                 # Kronecker ranks (try 4–16)
-#    alpha=32,            # scaling (PEFT docs may also show `lora_alpha`; in recent versions use `alpha`)
-#    target_modules=["query", "value"],
-#    init_weights=True,   # initialize adapter weights
-#)
+config = LoKrConfig(
+   r=27,                 # Kronecker ranks (try 4–16)
+   alpha=32,            # scaling (PEFT docs may also show `lora_alpha`; in recent versions use `alpha`)
+   target_modules=["query", "value"],
+   init_weights=True,   # initialize adapter weights
+)
 
 net_glob = get_peft_model(model, config)
 
-#for name, _ in net_glob.named_parameters():
+for name, param in net_glob.named_parameters():
 #    print(name)
+    if 'lokr' in name:
+        print(param)
 global_model = net_glob.state_dict()
 
 
-for k in global_model.keys():
-    if 'lora_B' in k and 'layer.1.' in k:
-        B = global_model[k].detach().cpu()
-        lora_name = k.replace('lora_B', 'lora_A')
-        A = global_model[lora_name].detach().cpu()
-        U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
-        print(f' U {U}, S {S}, VT {VT}')
+# for k in global_model.keys():
+#     if 'lora_B' in k and 'layer.1.' in k:
+#         B = global_model[k].detach().cpu()
+#         lora_name = k.replace('lora_B', 'lora_A')
+#         A = global_model[lora_name].detach().cpu()
+#         U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
+#         print(f' U {U}, S {S}, VT {VT}')
 
 
-        before = B@A
-        print(k)
-        print(B)
-        print(lora_name)
-        print(A)
-        print(f'before {before}')
+#         before = B@A
+#         print(k)
+#         print(B)
+#         print(lora_name)
+#         print(A)
+#         print(f'before {before}')
 
-        global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:lora_max_rank]
-        global_model[lora_name] = torch.diag(torch.sqrt(S))@VT[0:lora_max_rank,:]
+#         global_model[k] = (U@torch.diag(torch.sqrt(S)))[:,0:lora_max_rank]
+#         global_model[lora_name] = torch.diag(torch.sqrt(S))@VT[0:lora_max_rank,:]
 
         
-        after = global_model[k]@global_model[lora_name]
+#         after = global_model[k]@global_model[lora_name]
 
-        print(k)
-        print(global_model[k])
-        print(lora_name)
-        print(global_model[lora_name])
+#         print(k)
+#         print(global_model[k])
+#         print(lora_name)
+#         print(global_model[lora_name])
 
-        print(f'after {after}')
-        print(f' diff is {torch.norm(before-after)}')
+#         print(f'after {after}')
+#         print(f' diff is {torch.norm(before-after)}')
 
 #torch.Size([384, 27])
 #torch.Size([27, 384])
 #torch.Size([384, 27])
 #torch.Size([27, 384])
-#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w1_a.default'].shape)
-#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w1_b.default'].shape)
-#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_a.default'].shape)
-#print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_b.default'].shape)
+print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.lokr_w1.default'].shape)
+print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.lokr_w2.default'].shape)
+# print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_a.default'].shape)
+# print(global_model['base_model.model.vit.encoder.layer.0.attention.attention.query.hada_w2_b.default'].shape)
 
-#print('########### trainable param ###########')
-#trainable_names = [n for n, p in net_glob.named_parameters() if p.requires_grad]
-#for n in trainable_names:
+# print('########### trainable param ###########')
+# trainable_names = [n for n, p in net_glob.named_parameters() if p.requires_grad]
+# for n in trainable_names:
 #    print(n)
     # only lora and trainable 
 

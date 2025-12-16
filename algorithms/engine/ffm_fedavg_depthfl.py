@@ -11,7 +11,7 @@ from utils.log_utils import set_log_path
 from test import test, test_vit, test_ledgar
 
 from ..solver.local_solver import LocalUpdate
-from ..solver.global_aggregator import average, average_lora, average_lora_depthfl, weighted_average_lora_depthfl
+from ..solver.global_aggregator import average, average_lora, average_lora_depthfl, weighted_average_lora_depthfl, svd_average, product_average
 import gc
 from fractions import Fraction
 import re
@@ -149,6 +149,14 @@ def ffm_fedavg_depthfl(args):
         print('running LEGEND')
         for id in args.user_groupid_list:
             args.rank_list.append(getattr(args, 'rank_group'+str(id)+'_lora'))
+    elif args.HetLoRA:
+        print('running HetLoRA')
+        for id in args.user_groupid_list:
+            args.rank_list.append(getattr(args, 'rank_group'+str(id)+'_lora'))
+    elif args.FlexLoRA:
+        print('running FlexLoRA')
+        for id in args.user_groupid_list:
+            args.rank_list.append(getattr(args, 'rank_group'+str(id)+'_lora')) 
     else:
         args.rank_list = []
     print(f'args.block_ids_list {args.block_ids_list}, rank list {args.rank_list}')
@@ -231,6 +239,10 @@ def ffm_fedavg_depthfl(args):
         if hasattr(args, 'aggregation'):
             if args.aggregation ==  'weighted_average':
                 global_model = weighted_average_lora_depthfl(args, global_model, local_updates, num_samples)
+            elif args.aggregation == 'svd_average':
+                global_model = svd_average(args, global_model, local_updates, num_samples)
+            elif args.aggregation == 'product_average':
+                global_model = product_average(args, global_model, local_updates, num_samples)
         else:
             global_model = average_lora_depthfl(args, global_model, local_updates)
 

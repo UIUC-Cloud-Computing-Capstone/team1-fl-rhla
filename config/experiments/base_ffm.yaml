@@ -3,7 +3,9 @@
 ###########################################
 
 LEGEND: false
+HetLoRA: false
 LOKR: false
+FlexLoRA: false
 layer_min_rank: 0
 ##### apply SVD for aggregation
 apply_svd_aggregation: false

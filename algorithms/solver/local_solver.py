@@ -70,7 +70,7 @@ class LocalUpdate(object):
                     param.requires_grad = True
         
 
-        if args.proposed_method or args.LEGEND:
+        if args.proposed_method or args.LEGEND or args.HetLoRA or args.FlexLoRA:
             # add register to truncate the rank if rank variation is enable
             def lora_A_hook(cut_rank: int):
                 def hook(grad):
@@ -98,10 +98,60 @@ class LocalUpdate(object):
                     if 'lora_A' in name:
                         #print(f'lora_A name {name}')
                         param.register_hook(lora_A_hook(rank) )
+
+                        if args.HetLoRA:
+                            # truncate the param for HetLoRA
+                            param.data[rank:, :].zero_()
+
+
                     elif 'lora_B' in name:
                         #print(f'lora_B name {name}')
                         param.register_hook(lora_B_hook(rank) )
 
+                        if args.HetLoRA:
+                            # truncate the param for HetLoRA
+                            param.data[:,rank:].zero_() 
+
+        if args.FlexLoRA:
+            params = dict(model.named_parameters())
+            print('Rank reduction for flexlora')
+            with torch.no_grad():
+                for name, param in model.named_parameters():
+                    if ("lora_B" not in name) or (not param.requires_grad):
+                        continue
+
+                    layer_id = int(re.findall(r"\d+", name)[0])
+                    layer_index = args.block_ids_list[client_real_id].index(layer_id)
+                    rank = args.rank_list[client_real_id][layer_index]
+
+                    lora_A_name = name.replace("lora_B", "lora_A")
+
+                    # pull weights
+                    B = params[name].detach().cpu()
+                    A = params[lora_A_name].detach().cpu()
+
+                    U, S, VT = torch.linalg.svd(B @ A, full_matrices=False)
+
+                    # keep top-'rank' singular values (optionally also threshold)
+                    tol = 1e-6
+                    S_trunc = S.clone()
+                    S_trunc[S_trunc < tol] = 0
+                    S_trunc[rank:] = 0
+
+                    sqrtS = torch.sqrt(S_trunc)
+                    print(sqrtS)
+                    k = args.lora_max_rank  # fixed LoRA rank in module
+                    # If you want *effective* rank=rank, use k = rank instead.
+
+                    new_B = (U @ torch.diag(sqrtS))[:, :k]
+                    new_A = (torch.diag(sqrtS) @ VT)[:k, :]
+
+                    # copy back to original device/dtype
+                    new_B = new_B.to(device=params[name].device, dtype=params[name].dtype)
+                    new_A = new_A.to(device=params[lora_A_name].device, dtype=params[lora_A_name].dtype)
+
+                    params[name].copy_(new_B)
+                    params[lora_A_name].copy_(new_A)
         #print('############## trainable param ############')
         #print(f'args.block_ids_list[client_real_id] = {args.block_ids_list[client_real_id]}')
         #for name, param in model.named_parameters():

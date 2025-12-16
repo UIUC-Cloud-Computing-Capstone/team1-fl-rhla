@@ -1,0 +1,90 @@
+_base_ : ['../../base_ffm.yaml']
+
+
+num_users: 20 # number of users: K
+num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
+round: 200
+tau: 1 # 5
+# TODO Liam: for dev, change later
+#batch_size: 128 # local batch size
+batch_size: 32 # local batch size
+optimizer: adamw
+local_lr: 0.001 # local learning rate default:0.005
+local_momentum: 0.5 # SGD Momentum default 0.5
+decay_weight: 0.95 # learning rate decay weight default 0.5
+global_momentum: 0.9 # global momentum
+# clip: 1 # clipping threshold
+########### base differential ends ###########
+
+lr_scheduler_type: linear
+lr_step_size: 1
+optimizer_weight_decay: 0.0
+
+# gradient_accumulation_steps: 1
+# checkpointing_steps: 1
+# per_device_train_batch_size: 8
+# weight_decay: 0.0
+# num_warmup_steps: 0
+# use_trained: False
+
+method: ffm_fedavg
+attack: None
+defend: None
+# Model
+model: google/vit-base-patch16-224-in21k
+peft: lora
+
+model_heterogeneity: depthfl
+heterogeneous_group: [1/3, 1/3, 1/3]
+lora_layer: 12
+heterogeneous_group0_lora: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] # [0, 2, 4, 6, 8, 10]  [0, 1, 2, 4, 5, 6, 8, 9, 10], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+heterogeneous_group1_lora: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+heterogeneous_group2_lora: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+##### rank variation
+enable_rank_var: false
+var_rank_group0_lora: 144 #16 
+var_rank_group1_lora: 216 # 18
+var_rank_group2_lora: 288 # 24
+
+# HetLoRA:
+FlexLoRA: true
+rank_group0_lora: [12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12] 
+rank_group1_lora: [18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18] 
+rank_group2_lora: [24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24]
+
+weight_decay: 0.0
+
+lora_max_rank: 24 # 384 is full rank already for vit
+
+##### Weighted aggregation
+# 'weighted_average' or normal avg when comment out
+aggregation: 'product_average'
+
+##### fixed A for training
+train_a: true
+train_b: true
+
+##### apply SVD for aggregation
+apply_svd_aggregation: false
+
+###### Whether to train classifier (default: false)
+train_classifier: false
+
+# Dataset configure
+data_type: image
+dataset: cifar100
+iid: 0 # whether i.i.d or not
+
+#####################################
+########## non iid type #############
+#####################################
+noniid_type: pathological # pathological, dirichlet(#Samples)
+########## pathological ########
+pat_num_cls: 10 # 3 for cifar10
+########## dirichlet ###########
+# dir_cls_alpha: 0.3 # 1.0 0.3
+################################
+##### Parition Distribution ####
+################################
+partition_mode: dir # uni, dir
