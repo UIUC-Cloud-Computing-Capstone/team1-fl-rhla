@@ -24,6 +24,86 @@ from ._registry import generate_default_cfgs, register_model, register_model_dep
 
 __all__ = ['VisionTransformerDistilled']  # model_registry will add each entrypoint fn to this
 
+def resolve_pretrained_cfg(
+        variant: str,
+        pretrained_cfg: Optional[Union[str, Dict[str, Any]]] = None,
+        pretrained_cfg_overlay: Optional[Dict[str, Any]] = None,
+) -> PretrainedCfg:
+    """Resolve pretrained configuration from various sources."""
+    model_with_tag = variant
+    pretrained_tag = None
+    if pretrained_cfg:
+        if isinstance(pretrained_cfg, dict):
+            # pretrained_cfg dict passed as arg, validate by converting to PretrainedCfg
+            pretrained_cfg = PretrainedCfg(**pretrained_cfg)
+        elif isinstance(pretrained_cfg, str):
+            pretrained_tag = pretrained_cfg
+            pretrained_cfg = None
+
+    # fallback to looking up pretrained cfg in model registry by variant identifier
+    if not pretrained_cfg:
+        if pretrained_tag:
+            model_with_tag = '.'.join([variant, pretrained_tag])
+        pretrained_cfg = get_pretrained_cfg(model_with_tag)
+
+    if not pretrained_cfg:
+        _logger.warning(
+            f"No pretrained configuration specified for {model_with_tag} model. Using a default."
+            f" Please add a config to the model pretrained_cfg registry or pass explicitly.")
+        pretrained_cfg = PretrainedCfg()  # instance with defaults
+
+    pretrained_cfg_overlay = pretrained_cfg_overlay or {}
+    if not pretrained_cfg.architecture:
+        pretrained_cfg_overlay.setdefault('architecture', variant)
+    pretrained_cfg = dataclasses.replace(pretrained_cfg, **pretrained_cfg_overlay)
+
+    return pretrained_cfg
+
+def _update_default_model_kwargs(pretrained_cfg, kwargs, kwargs_filter) -> None:
+    """ Update the default_cfg and kwargs before passing to model
+
+    Args:
+        pretrained_cfg: input pretrained cfg (updated in-place)
+        kwargs: keyword args passed to model build fn (updated in-place)
+        kwargs_filter: keyword arg keys that must be removed before model __init__
+    """
+    # Set model __init__ args that can be determined by default_cfg (if not already passed as kwargs)
+    default_kwarg_names = ('num_classes', 'global_pool', 'in_chans')
+    if pretrained_cfg.get('fixed_input_size', False):
+        # if fixed_input_size exists and is True, model takes an img_size arg that fixes its input size
+        default_kwarg_names += ('img_size',)
+
+    for n in default_kwarg_names:
+        # for legacy reasons, model __init__args uses img_size + in_chans as separate args while
+        # pretrained_cfg has one input_size=(C, H ,W) entry
+        if n == 'img_size':
+            input_size = pretrained_cfg.get('input_size', None)
+            if input_size is not None:
+                assert len(input_size) == 3
+                kwargs.setdefault(n, input_size[-2:])
+        elif n == 'in_chans':
+            input_size = pretrained_cfg.get('input_size', None)
+            if input_size is not None:
+                assert len(input_size) == 3
+                kwargs.setdefault(n, input_size[0])
+        elif n == 'num_classes':
+            default_val = pretrained_cfg.get(n, None)
+            # if default is < 0, don't pass through to model
+            if default_val is not None and default_val >= 0:
+                kwargs.setdefault(n, pretrained_cfg[n])
+        else:
+            default_val = pretrained_cfg.get(n, None)
+            if default_val is not None:
+                kwargs.setdefault(n, pretrained_cfg[n])
+
+    # Filter keyword args for task specific model variants (some 'features only' models, etc.)
+    _filter_kwargs(kwargs, names=kwargs_filter)
+
+def _filter_kwargs(kwargs: Dict[str, Any], names: List[str]) -> None:
+    if not kwargs or not names:
+        return
+    for n in names:
+        kwargs.pop(n, None)
 
 def build_model_with_cfg(
         model_cls: Union[Type[ModelT], Callable[..., ModelT]],
@@ -92,57 +172,57 @@ def build_model_with_cfg(
     model.pretrained_cfg = pretrained_cfg
     model.default_cfg = model.pretrained_cfg  # alias for backwards compat
 
-    if pruned:
-        model = adapt_model_from_file(model, variant)
+    # if pruned:
+    #     model = adapt_model_from_file(model, variant)
 
     # For classification models, check class attr, then kwargs, then default to 1k, otherwise 0 for feats
     num_classes_pretrained = 0 if features else getattr(model, 'num_classes', kwargs.get('num_classes', 1000))
-    if pretrained:
-        load_pretrained(
-            model,
-            pretrained_cfg=pretrained_cfg,
-            num_classes=num_classes_pretrained,
-            in_chans=kwargs.get('in_chans', 3),
-            filter_fn=pretrained_filter_fn,
-            strict=pretrained_strict,
-            cache_dir=cache_dir,
-        )
+    # if pretrained:
+    #     load_pretrained(
+    #         model,
+    #         pretrained_cfg=pretrained_cfg,
+    #         num_classes=num_classes_pretrained,
+    #         in_chans=kwargs.get('in_chans', 3),
+    #         filter_fn=pretrained_filter_fn,
+    #         strict=pretrained_strict,
+    #         cache_dir=cache_dir,
+    #     )
 
     # Wrap the model in a feature extraction module if enabled
-    if features:
-        use_getter = False
-        if 'feature_cls' in feature_cfg:
-            feature_cls = feature_cfg.pop('feature_cls')
-            if isinstance(feature_cls, str):
-                feature_cls = feature_cls.lower()
+    # if features:
+    #     use_getter = False
+    #     if 'feature_cls' in feature_cfg:
+    #         feature_cls = feature_cfg.pop('feature_cls')
+    #         if isinstance(feature_cls, str):
+    #             feature_cls = feature_cls.lower()
 
-                # flatten_sequential only valid for some feature extractors
-                if feature_cls not in ('dict', 'list', 'hook'):
-                    feature_cfg.pop('flatten_sequential', None)
+    #             # flatten_sequential only valid for some feature extractors
+    #             if feature_cls not in ('dict', 'list', 'hook'):
+    #                 feature_cfg.pop('flatten_sequential', None)
 
-                if 'hook' in feature_cls:
-                    feature_cls = FeatureHookNet
-                elif feature_cls == 'list':
-                    feature_cls = FeatureListNet
-                elif feature_cls == 'dict':
-                    feature_cls = FeatureDictNet
-                elif feature_cls == 'fx':
-                    feature_cls = FeatureGraphNet
-                elif feature_cls == 'getter':
-                    use_getter = True
-                    feature_cls = FeatureGetterNet
-                else:
-                    assert False, f'Unknown feature class {feature_cls}'
-        else:
-            feature_cls = FeatureListNet
+    #             if 'hook' in feature_cls:
+    #                 feature_cls = FeatureHookNet
+    #             elif feature_cls == 'list':
+    #                 feature_cls = FeatureListNet
+    #             elif feature_cls == 'dict':
+    #                 feature_cls = FeatureDictNet
+    #             elif feature_cls == 'fx':
+    #                 feature_cls = FeatureGraphNet
+    #             elif feature_cls == 'getter':
+    #                 use_getter = True
+    #                 feature_cls = FeatureGetterNet
+    #             else:
+    #                 assert False, f'Unknown feature class {feature_cls}'
+    #     else:
+    #         feature_cls = FeatureListNet
 
-        output_fmt = getattr(model, 'output_fmt', None)
-        if output_fmt is not None and not use_getter:  # don't set default for intermediate feat getter
-            feature_cfg.setdefault('output_fmt', output_fmt)
+    #     output_fmt = getattr(model, 'output_fmt', None)
+    #     if output_fmt is not None and not use_getter:  # don't set default for intermediate feat getter
+    #         feature_cfg.setdefault('output_fmt', output_fmt)
 
-        model = feature_cls(model, **feature_cfg)
-        model.pretrained_cfg = pretrained_cfg_for_features(pretrained_cfg)  # add back pretrained cfg
-        model.default_cfg = model.pretrained_cfg  # alias for rename backwards compat (default_cfg -> pretrained_cfg)
+    #     model = feature_cls(model, **feature_cfg)
+    #     model.pretrained_cfg = pretrained_cfg_for_features(pretrained_cfg)  # add back pretrained cfg
+    #     model.default_cfg = model.pretrained_cfg  # alias for rename backwards compat (default_cfg -> pretrained_cfg)
 
     return model
 
