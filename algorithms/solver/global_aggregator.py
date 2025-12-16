@@ -112,6 +112,7 @@ def svd_average(args, global_model, loc_updates, num_samples):
     '''
     hetero average
     '''
+    # print(loc_updates)
     update_weights = []
     for updates in loc_updates:
         svd_weights = []
@@ -158,61 +159,91 @@ def product_average(args, global_model, loc_updates, num_samples):
     '''
     hetero average
     '''
-    update_weights = []
-    svd_dict = []
-    for updates in loc_updates:
-        svd_weights = []
-        keys = list(updates.keys())
-        # print('$$$$$$$$$$$$')
-        # print(keys)
-        # keys from layer 0 -> 11
-        client_svd = {}
-        for i in range(0, len(keys), 2):
-            keyA = keys[i]
-            keyB = keys[i+1]
-            tensorA = updates[keyA]
-            tensorB = updates[keyB]
-            tensorSVD = torch.matmul(tensorB, tensorA)
-            client_svd[keyA] = tensorSVD
-            client_svd[keyB] = tensorSVD
-        svd_dict.append(client_svd) # list of dictionary same size as loc_updates
-
+    print('#### aggregate')
     model_update_avg_dict = {}
+
+    print('############## global aggregation ####################')
+    lora_str = 'lora'
+    if args.LOKR:
+        lora_str = 'lokr'
+
     for k in global_model.keys():
-        if 'lora' in k or 'classifier' in k:
-            for svd in svd_dict:
-                if k in svd:
+        if lora_str in k or 'classifier' in k:
+            for loc_update in loc_updates:
+                if k in loc_update:
                     if k in model_update_avg_dict:
-                        model_update_avg_dict[k].append(svd[k])
+                        model_update_avg_dict[k].append(global_model[k].detach().cpu()+ loc_update[k])
                     else:
                         model_update_avg_dict[k] = []
-                        model_update_avg_dict[k].append(svd[k])
+                        model_update_avg_dict[k].append(global_model[k].detach().cpu() + loc_update[k])
+                        # Print the update content to check the rank variation and update param
+                        #print(k)
+                        #print(loc_update[k])
+                        #print(loc_update[k].shape)
 
-    # average of the product
-    for key, value in model_update_avg_dict.items():
-        model_update_avg_dict[key] = torch.mean(torch.stack(value), dim=0)
-
-    # svd split
     for k in global_model.keys():
         if k in model_update_avg_dict:
-            if 'lora_B' in k:
-                B = model_update_avg_dict[k].detach().cpu()
-                lora_name = k.replace('lora_B', 'lora_A')
-                A = model_update_avg_dict[lora_name].detach().cpu()
-                U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
-
-                # suppress the deficient singular value
-                #print(f'smallest singulvar value = {min(S)}')
-                tol = 1e-6
-                S[S<tol]=0
-
-                diff_B = (U@torch.diag(torch.sqrt(S)))[:,0:args.lora_max_rank]
-                diff_A = (torch.diag(torch.sqrt(S))@VT)[0:args.lora_max_rank,:]
-
-
-                global_model[k] = global_model[k].detach().cpu() +  diff_B
-                global_model[lora_name] = global_model[lora_name].detach().cpu() +  diff_A
+            value = model_update_avg_dict[k]
+            global_model[k] = torch.mean(torch.stack(value), dim=0)
     return global_model
+    # update_weights = []
+    # svd_dict = []
+    # for updates in loc_updates:
+    #     svd_weights = []
+    #     keys = list(updates.keys())
+    #     # print('$$$$$$$$$$$$')
+    #     # print(keys)
+    #     # keys from layer 0 -> 11
+    #     client_svd = {}
+    #     for i in range(0, len(keys), 2):
+    #         keyA = keys[i]
+    #         keyB = keys[i+1]
+    #         tensorA = global_model[keyA].detach().cpu() + updates[keyA]
+    #         tensorB = global_model[keyB].detach().cpu() + updates[keyB]
+    #         # if 'layer.11.' in keyA:
+    #         #     print(f'{keyA} = {tensorA}')
+    #         #     print(f'{keyB} = {tensorB}')
+    #         tensorSVD = torch.matmul(tensorB, tensorA)
+    #         client_svd[keyA] = tensorSVD
+    #         client_svd[keyB] = tensorSVD
+    #     svd_dict.append(client_svd) # list of dictionary consisting of B@A, same size as loc_updates
+
+    # model_update_avg_dict = {}
+    # for k in global_model.keys():
+    #     if 'lora' in k or 'classifier' in k:
+    #         for svd in svd_dict:
+    #             if k in svd:
+    #                 if k in model_update_avg_dict:
+    #                     model_update_avg_dict[k].append(svd[k])
+    #                 else:
+    #                     model_update_avg_dict[k] = []
+    #                     model_update_avg_dict[k].append(svd[k])
+
+    # # average of the product
+    # for key, value in model_update_avg_dict.items():
+    #     model_update_avg_dict[key] = torch.mean(torch.stack(value), dim=0)
+
+    # # svd split
+    # for k in global_model.keys():
+    #     if k in model_update_avg_dict:
+    #         if 'lora_B' in k:
+    #             B = model_update_avg_dict[k].detach().cpu()
+    #             lora_name = k.replace('lora_B', 'lora_A')
+    #             A = model_update_avg_dict[lora_name].detach().cpu()
+    #             U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
+
+    #             # suppress the deficient singular value
+    #             #print(f'smallest singulvar value = {min(S)}')
+    #             tol = 1e-6
+    #             S[S<tol]=0
+
+    #             new_B = (U@torch.diag(torch.sqrt(S)))[:,0:args.lora_max_rank]
+    #             new_A = (torch.diag(torch.sqrt(S))@VT)[0:args.lora_max_rank,:]
+
+
+    #             global_model[k] = new_B
+    #             global_model[lora_name] = new_A
+    # return global_model
 
 
     if args.privc == 'dp_randk' or args.privc == 'dp_topk' or args.privc == 'randk' or args.privc == 'topk':

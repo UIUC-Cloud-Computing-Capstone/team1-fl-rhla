@@ -112,6 +112,14 @@ def model_setup(args):
             )
 
         net_glob = get_peft_model(model, config)
+
+        if args.FlexLoRA:
+            with torch.no_grad():
+                for name, param in net_glob.named_parameters():
+                    if "lora_B" in name:
+                        # recommended: small std so you don't blow up training
+                        nn.init.kaiming_uniform_(param, a=0, mode="fan_in", nonlinearity="linear")
+
         net_glob.to(args.device)
     else:
         exit('Error: unrecognized model')
