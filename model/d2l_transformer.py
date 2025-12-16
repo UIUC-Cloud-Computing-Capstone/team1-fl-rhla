@@ -30,7 +30,7 @@ class TransformerEncoderBlock(nn.Module):  #@save
     def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout,
                  use_bias=False):
         super().__init__()
-        self.attention = d2l.MultiHeadAttention(num_hiddens, num_heads,
+        self.attention = MultiHeadAttention(num_hiddens, num_heads,
                                                 dropout, use_bias)
         self.addnorm1 = AddNorm(num_hiddens, dropout)
         self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
@@ -66,7 +66,7 @@ class TransformerEncoder(d2l.Encoder):  #@save
         return X
 
 
-class MultiHeadAttention(d2l.Module):  #@save
+class MultiHeadAttention(nn.Module):  #@save
     """Multi-head attention."""
     def __init__(self, num_hiddens, num_heads, dropout, bias=False, **kwargs):
         super().__init__()
@@ -76,6 +76,27 @@ class MultiHeadAttention(d2l.Module):  #@save
         self.W_k = nn.LazyLinear(num_hiddens, bias=bias)
         self.W_v = nn.LazyLinear(num_hiddens, bias=bias)
         self.W_o = nn.LazyLinear(num_hiddens, bias=bias)
+
+    
+    def transpose_qkv(self, X):
+        """Transposition for parallel computation of multiple attention heads."""
+        # Shape of input X: (batch_size, no. of queries or key-value pairs,
+        # num_hiddens). Shape of output X: (batch_size, no. of queries or
+        # key-value pairs, num_heads, num_hiddens / num_heads)
+        X = X.reshape(X.shape[0], X.shape[1], self.num_heads, -1)
+        # Shape of output X: (batch_size, num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        X = X.permute(0, 2, 1, 3)
+        # Shape of output: (batch_size * num_heads, no. of queries or key-value
+        # pairs, num_hiddens / num_heads)
+        return X.reshape(-1, X.shape[2], X.shape[3])
+
+    
+    def transpose_output(self, X):
+        """Reverse the operation of transpose_qkv."""
+        X = X.reshape(-1, self.num_heads, X.shape[1], X.shape[2])
+        X = X.permute(0, 2, 1, 3)
+        return X.reshape(X.shape[0], X.shape[1], -1)
 
     def forward(self, queries, keys, values, valid_lens):
         # Shape of queries, keys, or values:
@@ -106,10 +127,10 @@ class TransformerDecoderBlock(nn.Module):
     def __init__(self, num_hiddens, ffn_num_hiddens, num_heads, dropout, i):
         super().__init__()
         self.i = i
-        self.attention1 = d2l.MultiHeadAttention(num_hiddens, num_heads,
+        self.attention1 = MultiHeadAttention(num_hiddens, num_heads,
                                                  dropout)
         self.addnorm1 = AddNorm(num_hiddens, dropout)
-        self.attention2 = d2l.MultiHeadAttention(num_hiddens, num_heads,
+        self.attention2 = MultiHeadAttention(num_hiddens, num_heads,
                                                  dropout)
         self.addnorm2 = AddNorm(num_hiddens, dropout)
         self.ffn = PositionWiseFFN(ffn_num_hiddens, num_hiddens)
@@ -179,7 +200,14 @@ class TransformerDecoder(d2l.AttentionDecoder):
         return self._attention_weights
 
 # training
-data = d2l.MTFraEng(batch_size=32)
+# Create a wrapper class for the translation dataset
+class MTFraEng:
+    def __init__(self, batch_size=32, num_steps=10):
+        self.data_iter, self.src_vocab, self.tgt_vocab = d2l.load_data_nmt(
+            batch_size, num_steps)
+        self.batch_size = batch_size
+
+data = MTFraEng(batch_size=32)
 num_hiddens, num_blks, dropout = 384, 12, 0.2
 ffn_num_hiddens, num_heads = 64, 4
 encoder = TransformerEncoder(
@@ -188,8 +216,50 @@ encoder = TransformerEncoder(
 decoder = TransformerDecoder(
     len(data.tgt_vocab), num_hiddens, ffn_num_hiddens, num_heads,
     num_blks, dropout)
-model = d2l.Seq2Seq(encoder, decoder, tgt_pad=data.tgt_vocab['<pad>'],
-                    lr=0.001)
-# model = encoder
-trainer = d2l.Trainer(max_epochs=30, gradient_clip_val=1, num_gpus=1)
-trainer.fit(model, data)
+# Use EncoderDecoder instead of Seq2Seq
+model = d2l.EncoderDecoder(encoder, decoder)
+# Set the target padding token
+model.tgt_pad = data.tgt_vocab['<pad>']
+
+# Simple training loop (replacing Trainer)
+def train_seq2seq(net, data_iter, lr, num_epochs, tgt_vocab, device):
+    """Train a model for sequence to sequence."""
+    def xavier_init_weights(m):
+        if type(m) == nn.Linear:
+            nn.init.xavier_uniform_(m.weight)
+        if type(m) == nn.GRU:
+            for param in m._flat_weights_names:
+                if "_weight" in param:
+                    nn.init.xavier_uniform_(m._parameters[param])
+    net.apply(xavier_init_weights)
+    net.to(device)
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    loss = nn.CrossEntropyLoss(ignore_index=tgt_vocab['<pad>'])
+    net.train()
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss',
+                            xlim=[10, num_epochs])
+    for epoch in range(num_epochs):
+        timer = d2l.Timer()
+        metric = d2l.Accumulator(2)  # Sum of training loss, no. of tokens
+        for batch in data_iter:
+            optimizer.zero_grad()
+            X, X_valid_len, Y, Y_valid_len = [x.to(device) for x in batch]
+            bos = torch.tensor([tgt_vocab['<bos>']] * Y.shape[0],
+                              device=device).reshape(-1, 1)
+            dec_input = torch.cat([bos, Y[:, :-1]], 1)  # Teacher forcing
+            Y_hat, _ = net(X, dec_input, X_valid_len)
+            l = loss(Y_hat.reshape(-1, len(tgt_vocab)), Y.reshape(-1))
+            l.sum().backward()  # Make the loss scalar for `backward`
+            d2l.grad_clipping(net, 1)
+            num_tokens = Y_valid_len.sum()
+            optimizer.step()
+            with torch.no_grad():
+                metric.add(l.sum(), num_tokens)
+        if (epoch + 1) % 10 == 0:
+            animator.add(epoch + 1, (metric[0] / metric[1],))
+    print(f'loss {metric[0] / metric[1]:.3f}, {metric[1] / timer.stop():.1f} '
+          f'tokens/sec on {str(device)}')
+
+device = d2l.try_gpu()
+train_seq2seq(model, data.data_iter, lr=0.001, num_epochs=1, 
+              tgt_vocab=data.tgt_vocab, device=device)
