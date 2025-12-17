@@ -366,7 +366,8 @@ class TestRankEstimator(unittest.TestCase):
         output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
         
         # Generate LaTeX table with custom formatting
-        latex_table = "\\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page\n"
+        latex_table = "% batch size: " + str(args.batch_size) + "\n"
+        latex_table += "\\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page\n"
         latex_table += "\n"
         latex_table += "\\centering\n"
         latex_table += "\n"
@@ -422,7 +423,7 @@ class TestRankEstimator(unittest.TestCase):
         args.image_height = 224
         args.image_width = 224
         args.patch_size = 16
-        args.batch_size = 32
+        args.batch_size = 32 * 17
         args.percentage_of_layers_in_memory = 12 / 12
         args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [15]
@@ -493,7 +494,41 @@ class TestRankEstimator(unittest.TestCase):
         # Load base model
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
-        self.profile(args, base_model, 'memory_breakdown_comparison_lora_q_2.tex', self.estimator)
+        memory_summary_dict = {}
+        estimated_rank = 178
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_q_2.tex', estimated_rank, memory_summary_dict)
+
+    def test_memory_breakdown_comparison_table_lora_v_1(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.target_modules = []
+        args.lora_target_modules = ["0.attention.attention.value"]
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+
+        memory_summary_dict = {}
+        #estimated_rank = self.estimate(args, base_model, estimator, memory_summary_dict)
+        estimated_rank = 178
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_v_1.tex', estimated_rank, memory_summary_dict)
+    
+    def test_memory_breakdown_comparison_table_lora_v_2(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.lora_target_modules = ["0.attention.attention.value", "1.attention.attention.value"]
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+
+        memory_summary_dict = {}
+        estimated_rank = 178
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_v_2.tex', estimated_rank, memory_summary_dict)
     
     def test_memory_breakdown_comparison_table_lora_q_0_and_11(self):
         """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
@@ -548,11 +583,20 @@ class TestRankEstimator(unittest.TestCase):
         self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex', self.estimator)
 
 
-    def test_bsh(self):
+    def test_formula(self):
         
+
+        # activation for q/k/v: BSH + 1.5 * BSr
         r = 178
-        val1 = self._bytes_to_mb(32 * 197 * 384 * 4)
-        val2 = self._bytes_to_mb(32 * 197 * r * 4)
+        args = self._init_args()
+        B = args.batch_size
+        precision_bytes = 4
+        S = 197
+        H = 384
+        val1 = self._bytes_to_mb(B * S * H * precision_bytes)
+        m = 1.5
+        val2 = self._bytes_to_mb(B * S * r * precision_bytes * m)
+        print('batch size: ', B)
         print(val1) # 9.23
         print(val2)
         print(val1 + val2)
