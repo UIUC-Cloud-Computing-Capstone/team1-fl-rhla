@@ -124,11 +124,10 @@ class TestRankEstimator(unittest.TestCase):
         rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, model)
         print(rank_budgets_for_all_heterogeneous_groups)
 
-    def profile(self, args, base_model, output_file_path):
-        # Get estimated rank and memory breakdown
+    def estimate(self, args, base_model, estimator, memory_summary_dict):
         print("Getting estimated rank and memory breakdown...")
         memory_summary_dict = {}
-        estimated_rank = self.estimator._get_rank_for_one_client_group(
+        estimated_rank = estimator._get_rank_for_one_client_group(
             args, base_model, 
             args.gpu_memory_size_for_each_group_in_GB[0],
             args.avg_upload_network_speed_for_each_group_in_Mbps[0],
@@ -161,6 +160,17 @@ class TestRankEstimator(unittest.TestCase):
         print(f"  Activations: {estimated_total_activations:.2f} MB")
         print(f"  Optimizer: {estimated_total_optimizer:.2f} MB")
         print(f"  Total: {estimated_total:.2f} MB")
+
+        return estimated_rank
+
+    def profile(self, args, base_model, output_file_path, estimator):
+        # Get parameter and optimizer memory (static values)
+        tracker = MemoryTracker()
+
+        # Get estimated rank and memory breakdown
+        print("Getting estimated rank and memory breakdown...")
+        memory_summary_dict = {}
+        estimated_rank = self.estimate(args, base_model, estimator, memory_summary_dict)
         
         # Create model with estimated rank and profile actual memory
         print(f"\nCreating model with rank {estimated_rank} and profiling actual memory...")
@@ -218,9 +228,6 @@ class TestRankEstimator(unittest.TestCase):
             activities = [ProfilerActivity.CPU]
             if is_cuda:
                 activities.append(ProfilerActivity.CUDA)
-            
-            # Get parameter and optimizer memory (static values)
-            tracker = MemoryTracker()
             
             # Get parameter memory using MemoryTracker method
             param_memory_dict = tracker.get_parameter_memory(model, args.precision)
@@ -436,7 +443,7 @@ class TestRankEstimator(unittest.TestCase):
         # Load base model
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
-        self.profile(args, base_model, 'memory_breakdown_comparison_lora_qv.tex')
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_qv.tex', self.estimator)
 
     def test_memory_breakdown_comparison_table_lora_q(self):
         """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
@@ -449,29 +456,7 @@ class TestRankEstimator(unittest.TestCase):
         # Load base model
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
-        self.profile(args, base_model, 'memory_breakdown_comparison_lora_q.tex')
-
-    def test_memory_breakdown_comparison_table_lora_empty(self):
-        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
-
-        
-        # Configuration
-        args = self._init_args()
-        args.lora_target_modules = []
-        
-        # Load base model
-        base_model = AutoModelForImageClassification.from_pretrained(args.model)
-        config = LoraConfig(
-            r=1,
-            lora_alpha=1,
-            target_modules=args.lora_target_modules,
-            lora_dropout=0.1,
-            bias="none",
-        )
-        #model = get_peft_model(AutoModelForImageClassification.from_pretrained(args.model), config)
-        #model.print_trainable_parameters() # throw an error
-
-        
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_q.tex', self.estimator)
     
     def test_memory_breakdown_comparison_table_lora_attn_output_dense(self):
         """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
@@ -484,7 +469,7 @@ class TestRankEstimator(unittest.TestCase):
         # Load base model
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
-        self.profile(args, base_model, 'memory_breakdown_comparison_lora_attn_output_dense.tex')
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_attn_output_dense.tex', self.estimator)
 
     def test_memory_breakdown_comparison_table_lora_mlp_int_dense(self):
         """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
@@ -497,7 +482,7 @@ class TestRankEstimator(unittest.TestCase):
         # Load base model
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
-        self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex')
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex', self.estimator)
 
     def test_memory_breakdown_comparison_table_lora_mlp_output_dense(self):
         """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
@@ -510,7 +495,7 @@ class TestRankEstimator(unittest.TestCase):
         # Load base model
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
-        self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex')
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex', self.estimator)
 if __name__ == '__main__':
     unittest.main()
 
