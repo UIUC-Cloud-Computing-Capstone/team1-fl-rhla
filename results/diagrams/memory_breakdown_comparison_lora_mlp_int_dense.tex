@@ -1,0 +1,20 @@
+\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page
+
+\centering
+
+\caption{Memory Breakdown Comparison Table}
+
+\begin{tabular}{lrrr}
+
+\toprule
+Component & Estimated (MB) & Profiled (MB) & Error (\%) \\
+
+\midrule
+Parameters      &   323.12  & 85.17 $\pm$ 0.00     & 279.38 \\
+Activations     &  7377.72  & 1943.69 $\pm$ 9.40   & 279.57 \\
+Optimizer States &   478.41  & 2.11 $\pm$ 0.00      & 22580.18 \\
+Total Peak      &  8179.25  & 2030.98 $\pm$ 9.40   & 302.73 \\
+
+\bottomrule
+\end{tabular}
+\end{table}

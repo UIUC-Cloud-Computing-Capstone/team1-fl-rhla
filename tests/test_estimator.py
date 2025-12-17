@@ -418,6 +418,13 @@ class TestRankEstimator(unittest.TestCase):
         args.avg_download_network_speed_for_each_group_in_Mbps = [50.0]
         return args
 
+    def test_get_all_named_modules(self):
+        args = self._init_args()
+        model = AutoModelForImageClassification.from_pretrained(args.model)
+        print("All module names in the model:")
+        for name, module in model.named_modules():
+            print(name)
+
     def test_memory_breakdown_comparison_table_lora_qv(self):
         """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
 
@@ -430,6 +437,80 @@ class TestRankEstimator(unittest.TestCase):
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
         self.profile(args, base_model, 'memory_breakdown_comparison_lora_qv.tex')
+
+    def test_memory_breakdown_comparison_table_lora_q(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.lora_target_modules = ["query"]
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_q.tex')
+
+    def test_memory_breakdown_comparison_table_lora_empty(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.lora_target_modules = []
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+        config = LoraConfig(
+            r=1,
+            lora_alpha=1,
+            target_modules=args.lora_target_modules,
+            lora_dropout=0.1,
+            bias="none",
+        )
+        #model = get_peft_model(AutoModelForImageClassification.from_pretrained(args.model), config)
+        #model.print_trainable_parameters() # throw an error
+
+        
+    
+    def test_memory_breakdown_comparison_table_lora_attn_output_dense(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.lora_target_modules = ["attention.output.dense"]
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_attn_output_dense.tex')
+
+    def test_memory_breakdown_comparison_table_lora_mlp_int_dense(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.lora_target_modules = ["intermediate.dense"]
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex')
+
+    def test_memory_breakdown_comparison_table_lora_mlp_output_dense(self):
+        """Generate a comparison table using PyTorch profiler dire  ctly (like ResNet example)"""
+
+        
+        # Configuration
+        args = self._init_args()
+        args.lora_target_modules = r".*layer\.\d+\.output\.dense$"
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+
+        self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex')
 if __name__ == '__main__':
     unittest.main()
 
