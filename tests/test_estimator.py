@@ -543,6 +543,14 @@ class TestRankEstimator(unittest.TestCase):
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
 
         self.profile(args, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex', self.estimator)
+
+
+    def test_bsh(self):
+        
+        print(self._bytes_to_mb(32 * 197 * 384 * 4)) # 9.23
+
+    def _bytes_to_mb(self, bytes_value):
+        return round(bytes_value / 1024 / 1024, 2)
 if __name__ == '__main__':
     unittest.main()
 
