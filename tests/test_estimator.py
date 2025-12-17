@@ -126,7 +126,6 @@ class TestRankEstimator(unittest.TestCase):
 
     def estimate(self, args, base_model, estimator, memory_summary_dict):
         print("Getting estimated rank and memory breakdown...")
-        memory_summary_dict = {}
         estimated_rank = estimator._get_rank_for_one_client_group(
             args, base_model, 
             args.gpu_memory_size_for_each_group_in_GB[0],
@@ -321,6 +320,11 @@ class TestRankEstimator(unittest.TestCase):
                 return float('inf') if estimated > 0 else 0.0
             return abs(estimated - profiled) / profiled * 100
         
+        estimated_total_params = memory_summary_dict['total_parameters_in_MB']
+        estimated_total_activations = memory_summary_dict['total_activations_gradients_and_with_safety_margin_in_MB']
+        estimated_total_optimizer = memory_summary_dict['total_optimizer_states_in_MB']
+        estimated_total = memory_summary_dict['total_memory_in_MB']
+
         param_error = calculate_error(estimated_total_params, profiled_params)
         activation_error = calculate_error(estimated_total_activations, profiled_activations)
         optimizer_error = calculate_error(estimated_total_optimizer, profiled_optimizer)
