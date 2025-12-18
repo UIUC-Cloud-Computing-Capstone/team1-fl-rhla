@@ -1,3 +1,5 @@
+from transformers import AutoModelForImageClassification, AutoConfig
+
 FEDHELLO = 'FedHello'
 OURS = 'Ours'
 
@@ -50,22 +52,22 @@ class RankEstimator:
 
     def _get_rank_for_one_client_group(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
         if args.rank_estimator_method == FEDHELLO:
-            return self._get_rank_based_on_gpu_memory(args, base_model, total_gpu_memory_size_in_GB, memory_summary_dict)
+            return self._get_rank_based_on_gpu_memory(args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict)
         elif args.rank_estimator_method == OURS:
             return self._get_rank_based_on_all(args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict)
         else:
             raise ValueError(f'Invalid rank estimator method: {args.rank_estimator_method}')
 
     def _get_rank_based_on_all(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
-        rank_based_on_gpu_memory = self._get_rank_based_on_gpu_memory(args, base_model,  total_gpu_memory_size_in_GB, memory_summary_dict)
+        rank_based_on_gpu_memory = self._get_rank_based_on_gpu_memory(args, config, base_model,  total_gpu_memory_size_in_GB, memory_summary_dict)
         rank_based_on_upload_network_speed = self._get_rank_based_on_network_speed(args, config, base_model, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
         rank_based_on_download_network_speed = self._get_rank_based_on_network_speed(args, config, base_model, download_network_speed_in_Mbps, desired_downloading_time_in_seconds)
-        return self._get_final_rank(config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed)
+        return self._get_final_rank(args, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed)
 
-    def _get_final_rank(self, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed):
+    def _get_final_rank(self, args, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed):
         return min(rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed) * config.num_hidden_layers * args.lora_target_modules_per_layer
     
-    def _get_rank_based_on_gpu_memory(self, args, base_model, total_gpu_memory_size_in_GB, memory_summary_dict):
+    def _get_rank_based_on_gpu_memory(self, args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict):
 
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
         base_model_portion = self._get_base_model_portion(args, config, base_model, memory_summary_dict)
@@ -73,7 +75,7 @@ class RankEstimator:
 
         return self._get_rank_based_on_lora_portion(args, config, base_model, lora_portion, memory_summary_dict)
 
-    def _get_base_model_portion(self, args, model, config, memory_summary_dict):
+    def _get_base_model_portion(self, args, config, model, memory_summary_dict):
         base_model_para_in_MB = self._get_base_model_para_in_MB(args, model)
         base_model_fwd_in_bytes = self._get_base_model_fwd_in_bytes(args, config)
         result = base_model_para_in_MB + base_model_fwd_in_bytes
@@ -100,10 +102,9 @@ class RankEstimator:
             return 0
 
         B = args.batch_size
-        mlp_ratio = args.mlp_ratio if args.mlp_ratio else 4
         H = config.hidden_size
-        sequence_length = self._get_sequence_length(args)
-        args.lora_target_modules
+        mlp_ratio = config.intermediate_size / H   
+        sequence_length = self._get_sequence_length(args, config)
         bytes_per_parameter = self._get_byte_per_parameter(args.precision)
 
     
@@ -119,9 +120,11 @@ class RankEstimator:
                 return H * r * C * bytes_per_parameter
             elif 'output.dense' in module_name:
                 return mlp_ratio * H * r * C * bytes_per_parameter
+            
+            raise ValueError('invalid module name: ' + module_name)
 
         def get_optimizer_state_count(optim_type):
-            if optim_type == 'Adam' or optim_type == 'Adamw':
+            if optim_type == 'adam' or optim_type == 'adamw':
                 return 2
             elif optim_type == 'SGD':
                 return 1
@@ -148,28 +151,39 @@ class RankEstimator:
         
         
         D = H * C * bytes_per_parameter
-        mD = mlp_ratio * D
-        opt = get_optimizer_state_count(args.optimizer) * D
-        grad = D
-        beta1, beta2 = get_fwd_betas(module_name)
-        b2BSb =  beta2 * B * sequence_length * bytes_per_parameter
-        # wrong: D + mD
-        #total_dim = D + mD + opt + grad + grad + b2BSb
+       
         total_dim = 0
-        total_layers = 12
-        # currently it does not support regex
+        total_layers = config.num_hidden_layers
+        # currently it does not support regex TODO
         # need to support layer.0.query, query
-        
 
-        for module in args.lora_target_modules:
-            if is_normal_mod(module_name):
-                total_dim += D + opt + grad
+        b1BSHb_sum = 0
+        module_count = 0
+        for name, module in model.named_modules():
+            # TODO test
+            matched_lora_target_module = None
+            for lora_target_module in args.lora_target_modules:
+                if lora_target_module in name:
+                    matched_lora_target_module = lora_target_module
+                    break
+            
+            if matched_lora_target_module is None:
+                continue
+
+            module_count += 1
+
+            beta1, beta2 = get_fwd_betas(matched_lora_target_module)
+            b2BSb =  beta2 * B * sequence_length * bytes_per_parameter
+            if is_normal_mod(matched_lora_target_module):
+                total_dim += (get_optimizer_state_count(args.optimizer) + 2) * D + b2BSb
             else:
-                total_dim += mD + opt + grad
+                total_dim += (get_optimizer_state_count(args.optimizer) + 2) * D * mlp_ratio + b2BSb
+            b1BSHb_sum += beta1 * B * sequence_length * H * bytes_per_parameter
+
         
         
         b1BSHb = beta1 * B * sequence_length * H * bytes_per_parameter
-        return (lora_portion - b1BSHb) / (total_dim)
+        return (lora_portion - b1BSHb * module_count) / (total_dim)
     
     def _get_total_gpu_memory_size_in_bytes(self, args, total_gpu_memory_size_in_GB):
         return total_gpu_memory_size_in_GB * 1024 * 1024 * 1024
@@ -215,7 +229,7 @@ class RankEstimator:
 
 
         batch_size = args.batch_size
-        sequence_length = self._get_sequence_length(args)
+        sequence_length = self._get_sequence_length(args, config)
         hidden_dimension = config.hidden_size
         num_layers = config.num_hidden_layers
         num_heads = config.num_attention_heads
@@ -231,7 +245,7 @@ class RankEstimator:
         CLS_TOKEN = args.CLS_TOKEN
         print(config.image_size)
         
-        return config.image_size / config.patch_size * config.image_size / args.patch_size + CLS_TOKEN
+        return config.image_size / config.patch_size * config.image_size / config.patch_size + CLS_TOKEN
         
     def _get_base_model_optimizer_states_memory_size_in_bytes(self, args, base_model_memory_size_in_bytes):
         '''
