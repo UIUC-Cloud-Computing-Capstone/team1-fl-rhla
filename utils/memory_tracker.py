@@ -268,7 +268,7 @@ class MemoryTracker:
         profiled_info = {}
         profiled_info['avg_profiled_params'] = sum(all_profiled_params) / len(all_profiled_params)
         profiled_info['avg_profiled_optimizer'] = sum(all_profiled_optimizer) / len(all_profiled_optimizer)
-        profiled_info['avg_profiled_activations'] = sum(all_profiled_fwds) / len(all_profiled_fwds)
+        profiled_info['avg_profiled_fwd'] = sum(all_profiled_fwds) / len(all_profiled_fwds)
         profiled_info['avg_profiled_grads'] = sum(all_profiled_grads) / len(all_profiled_grads)
         profiled_info['avg_profiled_total'] = sum(all_profiled_total) / len(all_profiled_total)
         profiled_info['profiled_params_std'] = statistics.stdev(all_profiled_params) if len(all_profiled_params) > 1 else 0.0
@@ -287,7 +287,7 @@ class MemoryTracker:
 
         profiled_params = profiled_info['avg_profiled_params']
         profiled_optimizer = profiled_info['avg_profiled_optimizer']
-        profiled_activations = profiled_info['avg_profiled_activations']
+        profiled_activations = profiled_info['avg_profiled_fwd']
         profiled_grads = profiled_info['avg_profiled_grads']
         profiled_total = profiled_info['avg_profiled_total']     
         profiled_params_std = profiled_info['profiled_params_std']
