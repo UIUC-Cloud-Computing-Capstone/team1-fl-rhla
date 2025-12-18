@@ -13,6 +13,7 @@ import torch
 import pandas as pd
 import gc
 import time
+import statistics
 #import timm
 
 # Add parent directory to path to import the module
@@ -193,6 +194,10 @@ class TestRankEstimator(unittest.TestCase):
 
         print("Getting memory breakdown...")
         model, optimizer, batch, device = self.init_model(args, estimated_rank)
+        # Check if using GPU
+        is_cuda = device.type == 'cuda'
+        if not is_cuda:
+            raise ValueError('CPU memory profiling is not supported yet.')
         
         def loss_fn(outputs, labels):
             return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
@@ -203,13 +208,6 @@ class TestRankEstimator(unittest.TestCase):
         print(f"\nProfiling actual memory {num_profiling_runs} times to get average...")
         
         all_profiled_params, all_profiled_optimizer, all_profiled_activations, all_profiled_total = [], [], [], []
-        
-        # Check if using GPU
-        is_cuda = device.type == 'cuda'
-        if not is_cuda:
-            raise ValueError('CPU memory profiling is not supported yet.')
-
-        
         for run in range(num_warmup_runs + num_profiling_runs):
             if run < num_warmup_runs:
                 print('warm up')
@@ -266,31 +264,23 @@ class TestRankEstimator(unittest.TestCase):
             activation_memory_MB = max(0, peak_memory_MB - param_memory_MB - optimizer_memory_MB)
             
             # Structure results in the same format as before
-            profiled_results = {
-                'parameters': {
-                    'total_memory_MB': param_memory_MB
-                },
-                'optimizer_states': {
-                    'optimizer_memory_MB': optimizer_memory_MB
-                },
-                'breakdown': {
-                    'activation_memory_MB': activation_memory_MB
-                },
-                'total': {
-                    'peak_memory_MB': peak_memory_MB
-                }
-            }
+            # profiled_results = {
+            #     'param_memory_MB': param_memory_MB,
+            #     'optimizer_memory_MB': optimizer_memory_MB,
+            #     'fwd_memory_MB': activation_memory_MB,
+            #     'peak_memory_MB': peak_memory_MB
+            # }
             
             # Collect values from this run
             # skip first run, to warm up
             if run < num_warmup_runs:
-                print(f"Warm-up {run + 1} Done (Total: {profiled_results['total']['peak_memory_MB']:.2f} MB)")
+                print(f"Warm-up {run + 1} Done (Total: {peak_memory_MB:.2f} MB)")
             else:
-                all_profiled_params.append(profiled_results['parameters']['total_memory_MB'])
-                all_profiled_optimizer.append(profiled_results['optimizer_states']['optimizer_memory_MB'])
-                all_profiled_activations.append(profiled_results['breakdown']['activation_memory_MB'])
-                all_profiled_total.append(profiled_results['total']['peak_memory_MB'])
-                print(f"Done (Total: {profiled_results['total']['peak_memory_MB']:.2f} MB)")
+                all_profiled_params.append(param_memory_MB)
+                all_profiled_optimizer.append(optimizer_memory_MB)
+                all_profiled_activations.append(activation_memory_MB)
+                all_profiled_total.append(peak_memory_MB)
+                print(f"Done (Total: {peak_memory_MB:.2f} MB)")
                 
             
             # Clear memory after each run
@@ -298,24 +288,36 @@ class TestRankEstimator(unittest.TestCase):
                 torch.cuda.empty_cache()
             gc.collect()
         
-        # Calculate averages
-        profiled_params = sum(all_profiled_params) / len(all_profiled_params)
-        profiled_optimizer = sum(all_profiled_optimizer) / len(all_profiled_optimizer)
-        profiled_activations = sum(all_profiled_activations) / len(all_profiled_activations)
-        profiled_total = sum(all_profiled_total) / len(all_profiled_total)
-        
-        # Calculate standard deviations for reporting
-        import statistics
-        profiled_params_std = statistics.stdev(all_profiled_params) if len(all_profiled_params) > 1 else 0.0
-        profiled_optimizer_std = statistics.stdev(all_profiled_optimizer) if len(all_profiled_optimizer) > 1 else 0.0
-        profiled_activations_std = statistics.stdev(all_profiled_activations) if len(all_profiled_activations) > 1 else 0.0
-        profiled_total_std = statistics.stdev(all_profiled_total) if len(all_profiled_total) > 1 else 0.0
+
+        # statistics
+        profiled_info = {}
+        profiled_info['avg_profiled_params'] = sum(all_profiled_params) / len(all_profiled_params)
+        profiled_info['avg_profiled_optimizer'] = sum(all_profiled_optimizer) / len(all_profiled_optimizer)
+        profiled_info['avg_profiled_activations'] = sum(all_profiled_activations) / len(all_profiled_activations)
+        profiled_info['avg_profiled_total'] = sum(all_profiled_total) / len(all_profiled_total)
+        profiled_info['profiled_params_std'] = statistics.stdev(all_profiled_params) if len(all_profiled_params) > 1 else 0.0
+        profiled_info['profiled_optimizer_std'] = statistics.stdev(all_profiled_optimizer) if len(all_profiled_optimizer) > 1 else 0.0
+        profiled_info['profiled_activations_std'] = statistics.stdev(all_profiled_activations) if len(all_profiled_activations) > 1 else 0.0
+        profiled_info['profiled_total_std'] = statistics.stdev(all_profiled_total) if len(all_profiled_total) > 1 else 0.0
         
         # comparison
+        self.create_comparison(args, memory_summary_dict, profiled_info, output_file_path, estimated_rank)
+        
+
+    def create_comparison(self, args, memory_summary_dict, profiled_info, output_file_path, estimated_rank):
         estimated_total_params = memory_summary_dict.get('total_parameters_in_MB', 0)
         estimated_total_activations = memory_summary_dict.get('total_activations_gradients_and_with_safety_margin_in_MB', 0)
         estimated_total_optimizer = memory_summary_dict.get('total_optimizer_states_in_MB', 0)
         estimated_total = memory_summary_dict.get('total_memory_in_MB', 0)
+
+        profiled_params = profiled_info['avg_profiled_params']
+        profiled_optimizer = profiled_info['avg_profiled_optimizer']
+        profiled_activations = profiled_info['avg_profiled_activations']
+        profiled_total = profiled_info['avg_profiled_total']     
+        profiled_params_std = profiled_info['profiled_params_std']
+        profiled_optimizer_std = profiled_info['profiled_optimizer_std']
+        profiled_activations_std = profiled_info['profiled_activations_std']
+        profiled_total_std = profiled_info['profiled_total_std']
 
         # Calculate errors
         def calculate_error(estimated, profiled):
