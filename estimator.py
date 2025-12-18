@@ -50,31 +50,31 @@ class RankEstimator:
         print(f"Activations, Gradients and Safety Margin: {total_activations_gradients_and_with_safety_margin_in_MB} MB ({total_activations_gradients_and_with_safety_margin_in_MB / total_memory_in_MB * 100:.2f}%)")
         print(f"Total Memory: {total_memory_in_MB} MB ({total_memory_in_MB / total_memory_in_MB * 100:.2f}%)")
 
-    def _get_rank_for_one_client_group(self, args, model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
+    def _get_rank_for_one_client_group(self, args, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
         if args.rank_estimator_method == FEDHELLO:
-            return self._get_rank_based_on_gpu_memory(args, model, total_gpu_memory_size_in_GB, memory_summary_dict)
+            return self._get_rank_based_on_gpu_memory(args, base_model, total_gpu_memory_size_in_GB, memory_summary_dict)
         elif args.rank_estimator_method == OURS:
-            return self._get_rank_based_on_all(args, model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict)
+            return self._get_rank_based_on_all(args, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict)
         else:
             raise ValueError(f'Invalid rank estimator method: {args.rank_estimator_method}')
 
-    def _get_rank_based_on_all(self, args, model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
-        rank_based_on_gpu_memory = self._get_rank_based_on_gpu_memory(args, model,  total_gpu_memory_size_in_GB, memory_summary_dict)
-        rank_based_on_upload_network_speed = self._get_rank_based_on_network_speed(args, model, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
-        rank_based_on_download_network_speed = self._get_rank_based_on_network_speed(args, model, download_network_speed_in_Mbps, desired_downloading_time_in_seconds)
+    def _get_rank_based_on_all(self, args, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
+        rank_based_on_gpu_memory = self._get_rank_based_on_gpu_memory(args, base_model,  total_gpu_memory_size_in_GB, memory_summary_dict)
+        rank_based_on_upload_network_speed = self._get_rank_based_on_network_speed(args, base_model, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
+        rank_based_on_download_network_speed = self._get_rank_based_on_network_speed(args, base_model, download_network_speed_in_Mbps, desired_downloading_time_in_seconds)
         return self._get_final_rank(rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed)
 
     def _get_final_rank(self, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed):
         # TODO Liam
         return min(rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed)
     
-    def _get_rank_based_on_gpu_memory(self, args, model, total_gpu_memory_size_in_GB, memory_summary_dict):
+    def _get_rank_based_on_gpu_memory(self, args, base_model, total_gpu_memory_size_in_GB, memory_summary_dict):
 
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
-        base_model_portion = self._get_base_model_portion(args, model, memory_summary_dict)
+        base_model_portion = self._get_base_model_portion(args, base_model, memory_summary_dict)
         lora_portion = total_gpu_memory_size_in_bytes - base_model_portion
 
-        return self._get_rank_based_on_lora_portion(args, model, lora_portion, memory_summary_dict)
+        return self._get_rank_based_on_lora_portion(args, base_model, lora_portion, memory_summary_dict)
 
     def _get_base_model_portion(self, args, model, memory_summary_dict):
         
@@ -301,12 +301,13 @@ class RankEstimator:
         return total_gpu_memory_size_in_GB * 1024 * 1024 * 1024
 
     # TODO Liam refactor
-    def _get_base_model_parameter_memory_size_in_bytes(self, args, model):
+    def _get_base_model_parameter_memory_size_in_bytes(self, args, base_model):
         '''
-        model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
+        base_model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
         '''
         
-        parameter_size = 22_000_000 # TODO Liam: read from actual model
+        parameter_size = 22_000_000 # TODO Liam: test
+        parameter_size = sum(p.numel() for p in base_model.parameters())
         
         byte_per_parameter = self._get_byte_per_parameter(args.precision)
 
