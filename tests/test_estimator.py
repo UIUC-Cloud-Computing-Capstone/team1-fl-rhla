@@ -186,33 +186,36 @@ class TestRankEstimator(unittest.TestCase):
             'labels': torch.randint(0, 1000, (args.batch_size,)).to(device)
         }
         return model, optimizer, batch, device
+
+    def loss_fn(self, outputs, labels):
+        return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
     
     def profile(self, args, base_model, output_file_path, estimated_rank, memory_summary_dict):
         
         tracker = MemoryTracker()
 
-
-        print("Getting memory breakdown...")
         model, optimizer, batch, device = self.init_model(args, estimated_rank)
-        # Check if using GPU
+        
         is_cuda = device.type == 'cuda'
         if not is_cuda:
             raise ValueError('CPU memory profiling is not supported yet.')
         
-        def loss_fn(outputs, labels):
-            return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
+        args.num_profiling_warmup_runs = 1
+        args.num_profiling_actual_runs = 1
         
-        # Profile actual memory (run 10 times and take average for accuracy)
-        num_warmup_runs = 1
-        num_profiling_runs = 1
-        print(f"\nProfiling actual memory {num_profiling_runs} times to get average...")
+        all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total = self.get_profiled_data_for_all_runs(args, tracker, is_cuda, model, optimizer, batch)
+        profiled_info = self.create_statistics(all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total)
+        self.create_comparison(args, memory_summary_dict, profiled_info, output_file_path, estimated_rank)
         
+
+    def get_profiled_data_for_all_runs(self, args, tracker, is_cuda, model, optimizer, batch):
+        print(f"\nProfiling actual memory {args.num_profiling_actual_runs} times...")
         all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total = [], [], [], [], []
-        for run in range(num_warmup_runs + num_profiling_runs):
-            if run < num_warmup_runs:
+        for run in range(args.num_profiling_warmup_runs + args.num_profiling_actual_runs):
+            if run < args.num_profiling_warmup_runs:
                 print('warm up')
             else:
-                print(f"  Run {run}/{num_profiling_runs - 1}...", end=' ', flush=True)
+                print(f"  Run {run - args.num_profiling_warmup_runs + 1}/{args.num_profiling_actual_runs}...", end=' ', flush=True)
             
             # Clear memory before each run to avoid interference
             if is_cuda:
@@ -245,7 +248,7 @@ class TestRankEstimator(unittest.TestCase):
             ) as prof:
                 # Forward pass
                 outputs = model(**batch)
-                loss = loss_fn(outputs, batch['labels'])
+                loss = self.loss_fn(outputs, batch['labels'])
                 # Backward pass
                 loss.backward()
                 # Optimizer step (to include optimizer state allocations)
@@ -261,7 +264,7 @@ class TestRankEstimator(unittest.TestCase):
             fwd_memory_MB = max(0, peak_memory_MB - param_memory_MB - optimizer_memory_MB - grad_memory_MB)
             
             # skip first run, to warm up
-            if run < num_warmup_runs:
+            if run < args.num_profiling_warmup_runs:
                 print(f"Warm-up {run + 1} Done (Total: {peak_memory_MB:.2f} MB)")
             else:
                 all_profiled_params.append(param_memory_MB)
@@ -277,10 +280,8 @@ class TestRankEstimator(unittest.TestCase):
                 torch.cuda.empty_cache()
             gc.collect()
         
+        return all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total
 
-        profiled_info = self.create_statistics(all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total)
-        self.create_comparison(args, memory_summary_dict, profiled_info, output_file_path, estimated_rank)
-        
 
     def create_statistics(self, all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total):
         profiled_info = {}
@@ -289,11 +290,11 @@ class TestRankEstimator(unittest.TestCase):
         profiled_info['avg_profiled_activations'] = sum(all_profiled_fwds) / len(all_profiled_fwds)
         profiled_info['avg_profiled_grads'] = sum(all_profiled_grads) / len(all_profiled_grads)
         profiled_info['avg_profiled_total'] = sum(all_profiled_total) / len(all_profiled_total)
-        # profiled_info['profiled_params_std'] = statistics.stdev(all_profiled_params) if len(all_profiled_params) > 1 else 0.0
-        # profiled_info['profiled_optimizer_std'] = statistics.stdev(all_profiled_optimizer) if len(all_profiled_optimizer) > 1 else 0.0
-        # profiled_info['profiled_activations_std'] = statistics.stdev(all_profiled_fwds) if len(all_profiled_fwds) > 1 else 0.0
-        # profiled_info['profiled_grads_std'] = statistics.stdev(all_profiled_grads) if len(all_profiled_grads) > 1 else 0.0
-        # profiled_info['profiled_total_std'] = statistics.stdev(all_profiled_total) if len(all_profiled_total) > 1 else 0.0
+        profiled_info['profiled_params_std'] = statistics.stdev(all_profiled_params) if len(all_profiled_params) > 1 else 0.0
+        profiled_info['profiled_optimizer_std'] = statistics.stdev(all_profiled_optimizer) if len(all_profiled_optimizer) > 1 else 0.0
+        profiled_info['profiled_activations_std'] = statistics.stdev(all_profiled_fwds) if len(all_profiled_fwds) > 1 else 0.0
+        profiled_info['profiled_grads_std'] = statistics.stdev(all_profiled_grads) if len(all_profiled_grads) > 1 else 0.0
+        profiled_info['profiled_total_std'] = statistics.stdev(all_profiled_total) if len(all_profiled_total) > 1 else 0.0
         return profiled_info
 
     def create_comparison(self, args, memory_summary_dict, profiled_info, output_file_path, estimated_rank):
