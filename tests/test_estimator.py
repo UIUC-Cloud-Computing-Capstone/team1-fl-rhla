@@ -449,7 +449,7 @@ class TestRankEstimator(unittest.TestCase):
         config = LoraConfig(
             r=r,
             lora_alpha=r,
-            target_modules=['query', 'value', 'attention.output.dense', 'intermediate.dense', 'output.dense'],
+            target_modules=['query', 'key', 'value', 'attention.output.dense', 'intermediate.dense', 'output.dense'],
             lora_dropout=0.1,
             bias="none",
         )

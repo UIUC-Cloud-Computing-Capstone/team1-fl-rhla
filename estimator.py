@@ -102,6 +102,73 @@ class RankEstimator:
         if lora_portion <= 0:
             print(f'Warning: GPU memory is too small to train the model')
             return 0
+
+        B = args.batch_size
+        mlp_ratio = args.mlp_ratio if args.mlp_ratio else 4
+        H = self._get_hidden_dimension(args)
+        sequence_length = self._get_sequence_length(args)
+        args.lora_target_modules
+        bytes_per_parameter = self._get_byte_per_parameter(args.precision)
+
+    
+        def is_normal_mod(module_name):
+            return 'query' in module_name or 'key' in module_name or 'value' in module_name or 'attention.output.dense' in module_name or 'intermediate.dense' in module_name
+
+        C = 2 # two matrices A and B
+        
+        def get_param_mem(r, module_name, bytes_per_parameter):
+            
+            
+            if is_normal_mod(module_name):
+                return H * r * C * bytes_per_parameter
+            elif 'output.dense' in module_name:
+                return mlp_ratio * H * r * C * bytes_per_parameter
+
+        def get_optimizer_state_count(optim_type):
+            if optim_type == 'Adam' or optim_type == 'Adamw':
+                return 2
+            elif optim_type == 'SGD':
+                return 1
+            raise NotImplementedError('unsupported optimizer type')
+
+        def get_optimizer_state_mem(r, module_name, bytes_per_parameter, optim_type):
+            return get_optimizer_state_count(optim_type) * get_param_mem(r, module_name, bytes_per_parameter)
+            
+
+        def get_gradient_mem(r, module_name, bytes_per_parameter):
+            return get_param_mem(r, module_name, bytes_per_parameter)
+        
+        def get_fwd_betas(module_name):
+            # TODO
+            if is_normal_mod(module_name):
+                return 1, 1.25 
+            elif 'output.dense' in module_name:
+                return 5, 1
+
+        def get_forward_mem(r, module_name, bytes_per_parameter):
+            
+            beta1, beta2 = get_fwd_betas(module_name)
+            return (beta1 * B * sequence_length * H + beta2 * B * sequence_length * r) * bytes_per_parameter
+
+        
+        D = H * C * bytes_per_parameter
+        mD = mlp_ratio * D
+        opt = get_optimizer_state_count(args.optimizer) * D
+        grad = D
+        beta1, beta2 = get_fwd_betas(module_name)
+        b2BSb =  beta2 * B * sequence_length * bytes_per_parameter
+        # TODO wrong: D + mD
+        total_dim = D + mD + opt + grad + grad + b2BSb
+        
+        b1BSHb = beta1 * B * sequence_length * H * bytes_per_parameter
+        return (lora_portion - b1BSHb) / (total_dim)
+
+
+
+    def _get_rank_based_on_lora_portion_v1(self, args, model, lora_portion, memory_summary_dict):
+        if lora_portion <= 0:
+            print(f'Warning: GPU memory is too small to train the model')
+            return 0
         
         # get rank based on lora_portion
         # lora_portion includes (1) parameter size, (2) activations and safety margin size, and (3) optimizer states size.
