@@ -273,37 +273,9 @@ class RankEstimator:
         intermediate_size = hidden_dimension * 4
         dtype_bytes = self._get_byte_per_parameter(args.precision)
         workspace_margin = args.overhead_and_safety_margin_factor
-    
-        # Per-layer activation memory breakdown:
-        # 1. Input to layer (for residual): B × S × D
-        input_activations = batch_size * sequence_length * hidden_dimension
-        
-        # 2. Attention output: B × S × D
-        attn_output = batch_size * sequence_length * hidden_dimension
-        
-        # 3. MLP intermediate (after first dense, before second): B × S × 4D
-        mlp_intermediate = batch_size * sequence_length * intermediate_size
-        
-        # 4. Attention scores (QK^T): B × num_heads × S × S
-        attn_scores = batch_size * num_heads * sequence_length * sequence_length
 
-        # 5. Attention probabilities: B × num_heads × S × S
-        attn_probabilities = batch_size * num_heads * sequence_length * sequence_length
-        
-        # Total per layer
-        activations_per_layer = (input_activations + attn_output + mlp_intermediate + attn_scores + attn_probabilities)
-        
-        # Peak memory = all layers simultaneously during backprop
-        # Note: In practice, some activations can be recomputed (gradient checkpointing)
-        # but for conservative estimate, assume all are stored
-        peak_activations_all_layers = activations_per_layer * num_layers
-        
-        # Convert to bytes
-        peak_activations_bytes = peak_activations_all_layers * dtype_bytes
-
-        # Add workspace margin
-        #print(f"peak_activations_MB: {self._bytes_to_mb(peak_activations_bytes)}")
-        return peak_activations_bytes * (1 + workspace_margin)
+        base_beta1, base_beta2 = 8, 49 # obtained through profiling + regression, hard coded for now TODO
+        return (base_beta1 * batch_size * sequence_length * hidden_dimension + base_beta2 * batch_size * sequence_length * sequence_length * num_heads) * dtype_bytes
 
     def _get_sequence_length(self, args):
         if args.model != 'facebook/deit-small-patch16-224':
