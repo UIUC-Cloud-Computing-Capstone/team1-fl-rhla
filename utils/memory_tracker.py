@@ -78,7 +78,7 @@ class MemoryTracker:
         """Convert bytes to gigabytes."""
         return bytes_value / GB_TO_BYTES
     
-    def get_parameter_memory(self, model: torch.nn.Module, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
+    def _get_parameter_memory(self, model: torch.nn.Module, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
         """
         Calculate parameter memory usage.
         
@@ -104,7 +104,7 @@ class MemoryTracker:
             'trainable_memory_MB': self._bytes_to_mb(trainable_memory_bytes),
         }
     
-    def get_optimizer_state_memory(self, optimizer: torch.optim.Optimizer, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
+    def _get_optimizer_state_memory(self, optimizer: torch.optim.Optimizer, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
         """
         Calculate optimizer state memory usage.
         
@@ -140,7 +140,7 @@ class MemoryTracker:
             'optimizer_memory_MB': self._bytes_to_mb(total_optimizer_memory),
         }
 
-    def get_grads_memory(self, optimizer: torch.optim.Optimizer, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
+    def _get_grads_memory(self, optimizer: torch.optim.Optimizer, precision: str = 'fp32') -> Dict[str, Union[int, float]]:
         """
         Calculate grads memory usage.
         
@@ -167,27 +167,27 @@ class MemoryTracker:
             'grads_memory_MB': self._bytes_to_mb(total_grads_memory),
         }
     
-    def loss_fn(self, outputs, labels):
+    def _loss_fn(self, outputs, labels):
         return outputs.loss if hasattr(outputs, 'loss') else torch.nn.functional.cross_entropy(outputs, labels)
     
     def profile(self, args, base_model, output_file_path, rank, memory_summary_dict):
         
 
-        model, optimizer, batch, device = self.init_profiling(args, rank)
+        model, optimizer, batch, device = self._init_profiling(args, rank)
         
         is_cuda = device.type == 'cuda'
         if not is_cuda:
             raise ValueError('CPU memory profiling is not supported yet.')
         
-        return self.create_statistics_of_all_runs(args, is_cuda, model, optimizer, batch)
+        return self._create_statistics_of_all_runs(args, is_cuda, model, optimizer, batch)
         #self.create_comparison(args, memory_summary_dict, profiled_info, output_file_path, rank)
 
 
     def profile_and_compare(self, args, base_model, output_file_path, rank, memory_summary_dict):
         profiled_info = self.profile(args, base_model, output_file_path, rank, memory_summary_dict)
-        self.create_comparison(args, memory_summary_dict, profiled_info, output_file_path, rank)
+        self._create_comparison(args, memory_summary_dict, profiled_info, output_file_path, rank)
 
-    def get_profiled_data_for_all_runs(self, args, is_cuda, model, optimizer, batch):
+    def _get_profiled_data_for_all_runs(self, args, is_cuda, model, optimizer, batch):
         print(f"\nProfiling actual memory {args.num_profiling_actual_runs} times...")
         all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total = [], [], [], [], []
         for run in range(args.num_profiling_warmup_runs + args.num_profiling_actual_runs):
@@ -210,13 +210,13 @@ class MemoryTracker:
                 activities.append(ProfilerActivity.CUDA)
             
             
-            param_memory_dict = self.get_parameter_memory(model, args.precision)
+            param_memory_dict = self._get_parameter_memory(model, args.precision)
             param_memory_MB = param_memory_dict['total_param_memory_MB']
             
-            optimizer_memory_dict = self.get_optimizer_state_memory(optimizer, args.precision)
+            optimizer_memory_dict = self._get_optimizer_state_memory(optimizer, args.precision)
             optimizer_memory_MB = optimizer_memory_dict['optimizer_memory_MB']
 
-            grad_memory_MB = self.get_grads_memory(optimizer, args.precision)['grads_memory_MB']
+            grad_memory_MB = self._get_grads_memory(optimizer, args.precision)['grads_memory_MB']
             
             # Profile forward and backward pass to get activation memory
             with profile(
@@ -226,7 +226,7 @@ class MemoryTracker:
             ) as prof:
                 # Forward pass
                 outputs = model(**batch)
-                loss = self.loss_fn(outputs, batch['labels'])
+                loss = self._loss_fn(outputs, batch['labels'])
                 # Backward pass
                 loss.backward()
                 # Optimizer step (to include optimizer state allocations)
@@ -261,10 +261,10 @@ class MemoryTracker:
         return all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total
 
 
-    def create_statistics_of_all_runs(self, args, is_cuda, model, optimizer, batch):
+    def _create_statistics_of_all_runs(self, args, is_cuda, model, optimizer, batch):
         
         all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total = \
-            self.get_profiled_data_for_all_runs(args, is_cuda, model, optimizer, batch)
+            self._get_profiled_data_for_all_runs(args, is_cuda, model, optimizer, batch)
         profiled_info = {}
         profiled_info['avg_profiled_params'] = sum(all_profiled_params) / len(all_profiled_params)
         profiled_info['avg_profiled_optimizer'] = sum(all_profiled_optimizer) / len(all_profiled_optimizer)
@@ -278,7 +278,7 @@ class MemoryTracker:
         profiled_info['profiled_total_std'] = statistics.stdev(all_profiled_total) if len(all_profiled_total) > 1 else 0.0
         return profiled_info
 
-    def create_comparison(self, args, memory_summary_dict, profiled_info, output_file_path, estimated_rank):
+    def _create_comparison(self, args, memory_summary_dict, profiled_info, output_file_path, estimated_rank):
         estimated_total_params = memory_summary_dict.get('total_parameters_in_MB', 0)
         estimated_total_activations = memory_summary_dict.get('total_activations_gradients_and_with_safety_margin_in_MB', 0)
         estimated_total_optimizer = memory_summary_dict.get('total_optimizer_states_in_MB', 0)
@@ -343,7 +343,7 @@ class MemoryTracker:
         print("="*80)
         
         
-        self.create_latex(args, comparison_data, output_file_path)
+        self._create_latex(args, comparison_data, output_file_path)
         
         # Print summary statistics
         print(f"\nSummary Statistics:")
@@ -354,7 +354,7 @@ class MemoryTracker:
         
         return df
 
-    def create_latex(self, args, comparison_data, output_file_path):
+    def _create_latex(self, args, comparison_data, output_file_path):
         output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
         
         # Generate LaTeX table with custom formatting
@@ -394,7 +394,7 @@ class MemoryTracker:
             f.write(latex_table)
         print(f"LaTeX table saved to: {latex_path}")
 
-    def init_profiling(self, args, r):
+    def _init_profiling(self, args, r):
         print(f"\nCreating model with rank {r} and profiling actual memory...")
         config = LoraConfig(
             r=r,
