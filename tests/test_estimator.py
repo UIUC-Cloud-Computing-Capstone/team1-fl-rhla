@@ -207,7 +207,7 @@ class TestRankEstimator(unittest.TestCase):
         num_profiling_runs = 1
         print(f"\nProfiling actual memory {num_profiling_runs} times to get average...")
         
-        all_profiled_params, all_profiled_optimizer, all_profiled_activations, all_profiled_total = [], [], [], []
+        all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_total = [], [], [], [], []
         for run in range(num_warmup_runs + num_profiling_runs):
             if run < num_warmup_runs:
                 print('warm up')
@@ -222,19 +222,20 @@ class TestRankEstimator(unittest.TestCase):
             
             time.sleep(3)
             
-            # Use PyTorch profiler directly (like ResNet example)
             model.train()
             activities = [ProfilerActivity.CPU]
             if is_cuda:
                 activities.append(ProfilerActivity.CUDA)
             
-            # Get parameter memory using MemoryTracker method
+            
             param_memory_dict = tracker.get_parameter_memory(model, args.precision)
             param_memory_MB = param_memory_dict['total_memory_MB']
             
-            # Get optimizer memory using MemoryTracker method
             optimizer_memory_dict = tracker.get_optimizer_state_memory(optimizer, args.precision)
             optimizer_memory_MB = optimizer_memory_dict['optimizer_memory_MB']
+
+            # TODO
+            grad_memory_MB = param_memory_MB
             
             # Profile forward and backward pass to get activation memory
             with profile(
@@ -251,34 +252,22 @@ class TestRankEstimator(unittest.TestCase):
                 optimizer.step()
                 optimizer.zero_grad()
             
-            # Extract memory information from profiler
-            # Get peak memory from profiler
             if is_cuda:
                 peak_memory_bytes = torch.cuda.max_memory_allocated()
                 peak_memory_MB = peak_memory_bytes / (1024 * 1024)
             else:
                 raise ValueError('CPU memory profiling is not supported yet.')
             
-            # Activation memory is peak memory minus parameters and optimizer states
-            # (approximation, as activations are temporary)
-            activation_memory_MB = max(0, peak_memory_MB - param_memory_MB - optimizer_memory_MB)
+            fwd_memory_MB = max(0, peak_memory_MB - param_memory_MB - optimizer_memory_MB - grad_memory_MB)
             
-            # Structure results in the same format as before
-            # profiled_results = {
-            #     'param_memory_MB': param_memory_MB,
-            #     'optimizer_memory_MB': optimizer_memory_MB,
-            #     'fwd_memory_MB': activation_memory_MB,
-            #     'peak_memory_MB': peak_memory_MB
-            # }
-            
-            # Collect values from this run
             # skip first run, to warm up
             if run < num_warmup_runs:
                 print(f"Warm-up {run + 1} Done (Total: {peak_memory_MB:.2f} MB)")
             else:
                 all_profiled_params.append(param_memory_MB)
                 all_profiled_optimizer.append(optimizer_memory_MB)
-                all_profiled_activations.append(activation_memory_MB)
+                all_profiled_fwds.append(fwd_memory_MB)
+                all_profiled_grads.append(grad_memory_MB)
                 all_profiled_total.append(peak_memory_MB)
                 print(f"Done (Total: {peak_memory_MB:.2f} MB)")
                 
@@ -293,11 +282,13 @@ class TestRankEstimator(unittest.TestCase):
         profiled_info = {}
         profiled_info['avg_profiled_params'] = sum(all_profiled_params) / len(all_profiled_params)
         profiled_info['avg_profiled_optimizer'] = sum(all_profiled_optimizer) / len(all_profiled_optimizer)
-        profiled_info['avg_profiled_activations'] = sum(all_profiled_activations) / len(all_profiled_activations)
+        profiled_info['avg_profiled_activations'] = sum(all_profiled_fwds) / len(all_profiled_fwds)
+        profiled_info['avg_profiled_grads'] = sum(all_profiled_grads) / len(all_profiled_grads)
         profiled_info['avg_profiled_total'] = sum(all_profiled_total) / len(all_profiled_total)
         profiled_info['profiled_params_std'] = statistics.stdev(all_profiled_params) if len(all_profiled_params) > 1 else 0.0
         profiled_info['profiled_optimizer_std'] = statistics.stdev(all_profiled_optimizer) if len(all_profiled_optimizer) > 1 else 0.0
-        profiled_info['profiled_activations_std'] = statistics.stdev(all_profiled_activations) if len(all_profiled_activations) > 1 else 0.0
+        profiled_info['profiled_activations_std'] = statistics.stdev(all_profiled_fwds) if len(all_profiled_fwds) > 1 else 0.0
+        profiled_info['profiled_grads_std'] = statistics.stdev(all_profiled_grads) if len(all_profiled_grads) > 1 else 0.0
         profiled_info['profiled_total_std'] = statistics.stdev(all_profiled_total) if len(all_profiled_total) > 1 else 0.0
         
         # comparison
@@ -308,15 +299,18 @@ class TestRankEstimator(unittest.TestCase):
         estimated_total_params = memory_summary_dict.get('total_parameters_in_MB', 0)
         estimated_total_activations = memory_summary_dict.get('total_activations_gradients_and_with_safety_margin_in_MB', 0)
         estimated_total_optimizer = memory_summary_dict.get('total_optimizer_states_in_MB', 0)
+        estimated_total_grads = memory_summary_dict.get('total_grads_in_MB', 0) # TODO
         estimated_total = memory_summary_dict.get('total_memory_in_MB', 0)
 
         profiled_params = profiled_info['avg_profiled_params']
         profiled_optimizer = profiled_info['avg_profiled_optimizer']
         profiled_activations = profiled_info['avg_profiled_activations']
+        profiled_grads = profiled_info['avg_profiled_grads']
         profiled_total = profiled_info['avg_profiled_total']     
         profiled_params_std = profiled_info['profiled_params_std']
         profiled_optimizer_std = profiled_info['profiled_optimizer_std']
         profiled_activations_std = profiled_info['profiled_activations_std']
+        profiled_grads_std = profiled_info['profiled_grads_std']
         profiled_total_std = profiled_info['profiled_total_std']
 
         # Calculate errors
@@ -327,26 +321,30 @@ class TestRankEstimator(unittest.TestCase):
         param_error = calculate_error(estimated_total_params, profiled_params)
         activation_error = calculate_error(estimated_total_activations, profiled_activations)
         optimizer_error = calculate_error(estimated_total_optimizer, profiled_optimizer)
+        grad_error = calculate_error(estimated_total_grads, profiled_grads)
         total_error = calculate_error(estimated_total, profiled_total)
         
         # Create comparison table
         comparison_data = {
-            'Component': ['Parameters', 'Activations', 'Optimizer States', 'Total Peak'],
+            'Component': ['Parameters', 'Forward Pass', 'Gradients', 'Optimizer States', 'Total Peak'],
             'Estimated (MB)': [
                 f'{estimated_total_params:.2f}',
                 f'{estimated_total_activations:.2f}',
+                f'{estimated_total_grads:.2f}',
                 f'{estimated_total_optimizer:.2f}',
                 f'{estimated_total:.2f}'
             ],
             'Profiled (MB)': [
-                f'{profiled_params:.2f} ± {profiled_params_std:.2f}',
-                f'{profiled_activations:.2f} ± {profiled_activations_std:.2f}',
-                f'{profiled_optimizer:.2f} ± {profiled_optimizer_std:.2f}',
-                f'{profiled_total:.2f} ± {profiled_total_std:.2f}'
+                f'{profiled_params:.2f}',
+                f'{profiled_activations:.2f}',
+                f'{profiled_grads:.2f}',
+                f'{profiled_optimizer:.2f}',
+                f'{profiled_total:.2f}'
             ],
             'Error (%)': [
                 f'{param_error:.2f}',
                 f'{activation_error:.2f}',
+                f'{grad_error:.2f}',
                 f'{optimizer_error:.2f}',
                 f'{total_error:.2f}'
             ]
