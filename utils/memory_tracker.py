@@ -466,8 +466,18 @@ class MemoryTracker:
         info_r2_fwd = info_r2[fwd_key] / bytes_per_parameter
         # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
         # beta1 * bsh + beta2 * bsr2 = info_r2_fwd
-        # TODO solve the linear equations to get beta1 and beta2
-        return info_r1, info_r2
+        # Solve the linear equations:
+        # Subtract equation 2 from equation 1:
+        # beta2 * (bsr1 - bsr2) = info_r1_fwd - info_r2_fwd
+        # beta2 = (info_r1_fwd - info_r2_fwd) / (bsr1 - bsr2)
+        # Then from equation 1:
+        # beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
+        denominator = bsr1 - bsr2
+        if abs(denominator) < 1e-10:
+            raise ValueError(f"Cannot solve: bsr1 ({bsr1}) and bsr2 ({bsr2}) are too close, making the system singular")
+        beta2 = (info_r1_fwd - info_r2_fwd) / denominator
+        beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
+        return beta1, beta2
         
     def _get_base_model_fwd_in_bytes_for_estimator_helper(self, args, config, base_model, r, target_modules, device):
         def clear_mem(device):
