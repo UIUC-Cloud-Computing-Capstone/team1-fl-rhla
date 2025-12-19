@@ -30,26 +30,13 @@ class RankEstimator:
             memory_summary_dict['total_grads_in_MB'] = memory_summary_dict.get('base_model_grads_memory_size_in_MB', 0) + memory_summary_dict.get('lora_portion_grads_size_in_MB', 0)
             memory_summary_dict['total_memory_in_MB'] = round(memory_summary_dict['total_parameters_in_MB'] + memory_summary_dict['total_fwd_in_MB'] + memory_summary_dict['total_optimizer_states_in_MB'], 2)
             
-            self._print_memory_summary(memory_summary_dict)
+            
 
             print('------------------------------------------------------------------------------------------------')
         
         
         print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
         return rank_for_all_client_groups
-
-    def _print_memory_summary(self, memory_summary_dict):
-        total_parameters_in_MB = memory_summary_dict['total_parameters_in_MB']
-        total_fwd_in_MB = memory_summary_dict['total_fwd_in_MB']
-        total_optimizer_states_in_MB = memory_summary_dict['total_optimizer_states_in_MB']
-        total_grads_in_MB = memory_summary_dict['total_grads_in_MB']
-        total_memory_in_MB = memory_summary_dict['total_memory_in_MB']
-        
-        print(f"Parameters: {total_parameters_in_MB} MB ({total_parameters_in_MB / total_memory_in_MB * 100:.2f}%)")
-        print(f"Optimizer States: {total_optimizer_states_in_MB} MB ({total_optimizer_states_in_MB / total_memory_in_MB * 100:.2f}%)")
-        print(f"Fwd: {total_fwd_in_MB} MB ({total_fwd_in_MB / total_memory_in_MB * 100:.2f}%)")
-        print(f"Grads: {total_fwd_in_MB} MB ({total_grads_in_MB / total_memory_in_MB * 100:.2f}%)")
-        print(f"Total Memory: {total_memory_in_MB} MB ({total_memory_in_MB / total_memory_in_MB * 100:.2f}%)")
 
     def _get_rank_for_one_client_group(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
         if args.rank_estimator_method == FEDHELLO:
