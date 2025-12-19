@@ -196,10 +196,6 @@ class RankEstimator:
             return 2
         else:
             raise ValueError(f'Invalid precision: {precision}')
-    
-    def _get_base_model_fwd_in_bytes(self, args, config, base_model):
-        # TODO
-         
 
     def _get_sequence_length(self, args, config):
         config = AutoConfig.from_pretrained(args.model)
