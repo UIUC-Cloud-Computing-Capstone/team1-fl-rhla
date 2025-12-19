@@ -92,7 +92,7 @@ class MemoryTracker:
         
         total_params = sum(param.numel() for param in model.parameters())
         trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
-        print('trainable_params * 4 bytes', trainable_params * 4)
+        #print('trainable_params * 4 bytes', trainable_params * 4)
         #print('trainable_params * 2 * 4 bytes', trainable_params * 2 * 4)
         
         param_memory_bytes = total_params * bytes_per_param
@@ -320,64 +320,60 @@ class MemoryTracker:
     def _get_profiled_data_for_all_runs(self, args, is_cuda, model, optimizer, batch):
         print(f"\nProfiling actual memory {args.num_profiling_actual_runs} times...")
         all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_overhead, all_profiled_total = [], [], [], [], [], []
-        for run in range(args.num_profiling_warmup_runs + args.num_profiling_actual_runs):
-            if run < args.num_profiling_warmup_runs:
-                print('warm up')
-            else:
-                print(f"  Run {run - args.num_profiling_warmup_runs + 1}/{args.num_profiling_actual_runs}...", end=' ', flush=True)
-            
-            # Clear memory before each run to avoid interference
-            if is_cuda:
-                torch.cuda.empty_cache()  # Clear GPU cache
-                torch.cuda.reset_peak_memory_stats()  # Reset peak memory stats
-            gc.collect()  # Force Python garbage collection
-            
-            time.sleep(3)
-            
-            model.train()
-            activities = [ProfilerActivity.CPU]
-            if is_cuda:
-                activities.append(ProfilerActivity.CUDA)
-            
-            param_memory_dict = self._get_parameter_memory(model, args.precision)
-            param_memory_MB = param_memory_dict['total_param_memory_MB']
-
-            grad_memory_bytes = self._get_grads_memory_bytes(optimizer, args.precision)
-
-            # Profile forward and backward pass to get activation memory
-            with profile(
+        
+        if is_cuda:
+            torch.cuda.empty_cache()  # Clear GPU cache
+            torch.cuda.reset_peak_memory_stats()  # Reset peak memory stats
+        gc.collect()  # Force Python garbage collection
+        
+        activities = [ProfilerActivity.CPU]
+        if is_cuda:
+            activities.append(ProfilerActivity.CUDA)
+        
+        model.train()
+        with profile(
                 activities=activities,
                 profile_memory=True,
                 record_shapes=True
             ) as prof:
+            for run in range(args.num_profiling_warmup_runs + args.num_profiling_actual_runs):
+                torch.cuda.reset_peak_memory_stats()
+                if run < args.num_profiling_warmup_runs:
+                    print('warm up')
+                else:
+                    print(f"  Run {run - args.num_profiling_warmup_runs + 1}/{args.num_profiling_actual_runs}...", end=' ', flush=True)
+
+                param_memory_dict = self._get_parameter_memory(model, args.precision)
+                param_memory_MB = param_memory_dict['total_param_memory_MB']    
+                
+                grad_memory_bytes = self._get_grads_memory_bytes(optimizer, args.precision)
+
+                # Profile forward and backward pass to get activation memory
+                
                 torch.cuda.reset_peak_memory_stats()
                 baseline_mem = torch.cuda.max_memory_allocated()
-                print('baseline memory (param + overhead)', baseline_mem)
-                overhead = baseline_mem - param_memory_MB * MB_TO_BYTES
-                overhead_MB = self._bytes_to_mb(overhead)
-                print('overhead1', overhead_MB)
-                
+                    
                 # Forward pass
                 outputs = model(**batch)
                 loss = self._loss_fn(outputs, batch['labels'])
                 peak_forward_mem = torch.cuda.max_memory_allocated()
                 peak_fwd_mem_excl_baseline = peak_forward_mem - baseline_mem
                 fwd_memory_MB = self._bytes_to_mb(peak_fwd_mem_excl_baseline)
-                
+                    
                 torch.cuda.reset_peak_memory_stats()
                 # Backward pass
                 loss.backward()
                 peak_backward_mem = torch.cuda.max_memory_allocated()
-                
+                    
                 # Optimizer step (to include optimizer state allocations)
                 torch.cuda.reset_peak_memory_stats()
                 before_opt_step_mem = torch.cuda.max_memory_allocated()
                 optimizer.step()
                 peak_opt_step_mem = torch.cuda.max_memory_allocated()
-            
+                
                 opt_state_mem = self._get_optimizer_states_memory_bytes(optimizer)
                 optimizer_memory_MB = self._bytes_to_mb(opt_state_mem)
-                
+                    
                 # grad
                 grad_memory_bytes = self._get_grads_memory_bytes(optimizer, args.precision)
                 grad_memory_MB = self._bytes_to_mb(grad_memory_bytes)                
@@ -387,41 +383,29 @@ class MemoryTracker:
                 #print('peak memory during zero grad: ', peak_zero_grad_mem)
                 torch.cuda.reset_peak_memory_stats()
                 peak_after_zero_grad = torch.cuda.max_memory_allocated()
-            
-            if is_cuda:
-                peak_memory_bytes = max(baseline_mem, peak_forward_mem, peak_backward_mem, peak_opt_step_mem, peak_zero_grad_mem, peak_after_zero_grad)
-                if run >=  args.num_profiling_warmup_runs:
-                    print('peak_memory_bytes', peak_memory_bytes)
-                peak_memory_MB = peak_memory_bytes / (MB_TO_BYTES)
-            else:
-                raise ValueError('CPU memory profiling is not supported yet.')
-            
-            #fwd_memory_MB = max(0, peak_memory_MB - param_memory_MB - optimizer_memory_MB - grad_memory_MB)
-            
-            # skip first run, to warm up
-            if run < args.num_profiling_warmup_runs:
-                print(f"Warm-up {run + 1} Done (Total: {peak_memory_MB:.2f} MB)")
-            else:
-                all_excl_overhead_MB = param_memory_MB + optimizer_memory_MB + fwd_memory_MB + grad_memory_MB
-                overhead_in_MB = peak_memory_MB - all_excl_overhead_MB
-                all_profiled_params.append(param_memory_MB)
-                all_profiled_optimizer.append(optimizer_memory_MB)
-                all_profiled_fwds.append(fwd_memory_MB)
-                all_profiled_grads.append(grad_memory_MB)
-                all_profiled_overhead.append(overhead_in_MB)
-                all_profiled_total.append(peak_memory_MB)
-                print(f"Done (Total: {peak_memory_MB:.2f} MB)")
                 
-            
-            # Clear memory after each run
-            if is_cuda:
-                torch.cuda.empty_cache()
-            gc.collect()
-        
+                peak_memory_bytes = max(baseline_mem, peak_forward_mem, peak_backward_mem, peak_opt_step_mem, peak_zero_grad_mem, peak_after_zero_grad)
+                peak_memory_MB = self._bytes_to_mb(peak_memory_bytes)
+                
+                # skip first run, to warm up
+                if run < args.num_profiling_warmup_runs:
+                    print(f"Warm-up {run + 1} Done (Total: {peak_memory_MB:.2f} MB)")
+                else:
+                    all_excl_overhead_MB = param_memory_MB + optimizer_memory_MB + fwd_memory_MB + grad_memory_MB
+                    overhead_in_MB = peak_memory_MB - all_excl_overhead_MB
+                    all_profiled_params.append(param_memory_MB)
+                    all_profiled_optimizer.append(optimizer_memory_MB)
+                    all_profiled_fwds.append(fwd_memory_MB)
+                    all_profiled_grads.append(grad_memory_MB)
+                    all_profiled_overhead.append(overhead_in_MB)
+                    all_profiled_total.append(peak_memory_MB)
+                    print(f"Done (Total: {peak_memory_MB:.2f} MB)")
+                
+                
         return all_profiled_params, all_profiled_optimizer, all_profiled_fwds, all_profiled_grads, all_profiled_overhead, all_profiled_total
 
     def _get_opt_batch_and_update_args(self, args, config, model, device):
-        args.num_profiling_warmup_runs = 0
+        args.num_profiling_warmup_runs = 1
         args.num_profiling_actual_runs = 1
 
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
