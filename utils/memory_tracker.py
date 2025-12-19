@@ -204,19 +204,19 @@ class MemoryTracker:
         grads_perc = profiled_grads / profiled_total * 100
         opt_perc = profiled_optimizer / profiled_total * 100
         overhead_perc = profiled_overhead / profiled_total * 100
-        if overhead_perc > 0:
-            print('overhead perc', overhead_perc)
+        
         total_perc = param_perc + fwd_perc + grads_perc + opt_perc + overhead_perc 
 
         
         # Create comparison table
         comparison_data = {
-            'Component': ['Parameters', 'Forward Pass', 'Gradients', 'Optimizer States', 'Total Peak'],
+            'Component': ['Parameters', 'Forward Pass', 'Gradients', 'Optimizer States', 'Overhead', 'Total Peak'],
             'Estimated (MB)': [
                 f'{estimated_total_params:.2f}',
                 f'{estimated_total_activations:.2f}',
                 f'{estimated_total_grads:.2f}',
                 f'{estimated_total_optimizer:.2f}',
+                f'{estimated_overhead:.2f}',
                 f'{estimated_total:.2f}'
             ],
             'Profiled (MB)': [
@@ -224,7 +224,7 @@ class MemoryTracker:
                 f'{profiled_activations:.2f} ({(fwd_perc):.2f}%)',
                 f'{profiled_grads:.2f} ({(grads_perc):.2f}%)',
                 f'{profiled_optimizer:.2f} ({(opt_perc):.2f}%)',
-                #f'{profiled_overhead:.2f} ({(overhead_perc):.2f}%)',
+                f'{profiled_overhead:.2f} ({(overhead_perc):.2f}%)',
                 f'{profiled_total:.2f} ({(total_perc):.2f}%)'
             ],
             'Error (%)': [
@@ -232,7 +232,7 @@ class MemoryTracker:
                 f'{activation_error:.2f}',
                 f'{grad_error:.2f}',
                 f'{optimizer_error:.2f}',
-                #f'{overhead_error:.2f}',
+                f'{overhead_error:.2f}',
                 f'{total_error:.2f}'
             ]
         }
@@ -245,7 +245,8 @@ class MemoryTracker:
         print("="*80)
         print(df.to_string(index=False))
         print("="*80)
-        
+        # if overhead_perc > 0:
+        #     print('Overhead: ', f'{profiled_overhead:.2f} ({overhead_perc:.2f}%)')
         
         self._create_latex(args, comparison_data, output_file_path)
         
@@ -339,9 +340,9 @@ class MemoryTracker:
             for run in range(args.num_profiling_warmup_runs + args.num_profiling_actual_runs):
                 torch.cuda.reset_peak_memory_stats()
                 if run < args.num_profiling_warmup_runs:
-                    print('warm up')
+                    print('Model warming up')
                 else:
-                    print(f"  Run {run - args.num_profiling_warmup_runs + 1}/{args.num_profiling_actual_runs}...", end=' ', flush=True)
+                    print(f"Run {run - args.num_profiling_warmup_runs + 1}/{args.num_profiling_actual_runs}...", end=' ', flush=True)
 
                 param_memory_dict = self._get_parameter_memory(model, args.precision)
                 param_memory_MB = param_memory_dict['total_param_memory_MB']    
@@ -389,7 +390,7 @@ class MemoryTracker:
                 
                 # skip first run, to warm up
                 if run < args.num_profiling_warmup_runs:
-                    print(f"Warm-up {run + 1} Done (Total: {peak_memory_MB:.2f} MB)")
+                    print(f"Model warm-up run {run + 1} done (total: {peak_memory_MB:.2f} MB)")
                 else:
                     all_excl_overhead_MB = param_memory_MB + optimizer_memory_MB + fwd_memory_MB + grad_memory_MB
                     overhead_in_MB = peak_memory_MB - all_excl_overhead_MB
@@ -448,8 +449,6 @@ class MemoryTracker:
             bias="none",
         )
 
-
-
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         memory_summary_dict_q = {}
@@ -488,7 +487,6 @@ class MemoryTracker:
         del model
         del optimizer
         del batch
-        #clear_mem(device)
         return result
         
 
