@@ -434,19 +434,40 @@ class MemoryTracker:
     def get_base_model_fwd_in_bytes_for_estimator(self, args, config, base_model):
 
         H = config.hidden_size
-        r = H
+        r = int(H / 2)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        info_q = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["attention.attention.query"], device)
-        info_k = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["attention.attention.key"], device)
-        info_qk = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["attention.attention.query", "attention.attention.key"], device)
+        info_q = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.query"], device)
+        info_k = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.key"], device)
+        info_qk = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.query", "0.attention.attention.key"], device)
 
         fwd_key, overhead_key = 'avg_profiled_fwd', 'avg_profiled_overhead'
         print('q', info_q[fwd_key], 'qk', info_qk[fwd_key], 'k', info_k[fwd_key])
-        base_fwd_MB = info_q[fwd_key] - (info_qk[fwd_key] - info_k[fwd_key])
-        overhead_MB = statistics.mean([info_q[overhead_key], info_qk[overhead_key], info_k[overhead_key]])
-        return base_fwd_MB, overhead_MB
+        base_fwd_bytes = info_q[fwd_key] - (info_qk[fwd_key] - info_k[fwd_key])
+        overhead_bytes = statistics.mean([info_q[overhead_key], info_qk[overhead_key], info_k[overhead_key]])
+        return base_fwd_bytes, overhead_bytes
+
+    def get_lora_betas(self, args, config, base_model, module_name, B, S, H, bytes_per_parameter):
+        H = config.hidden_size
+        r1 = int(H / 2)
+        r2 = int(H / 3)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        info_r1 = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, [module_name], device)
+        info_r2 = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r2, [module_name], device)
+        
+        bs = B * S
+        bsh = bs * H
+        bsr1  = bs * r1
+        bsr2  = bs * r2
+        fwd_key= 'avg_profiled_fwd'
+        info_r1_fwd = info_r1[fwd_key] / bytes_per_parameter
+        info_r2_fwd = info_r2[fwd_key] / bytes_per_parameter
+        # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
+        # beta1 * bsh + beta2 * bsr2 = info_r2_fwd
+        # TODO solve the linear equations to get beta1 and beta2
+        return info_r1, info_r2
         
     def _get_base_model_fwd_in_bytes_for_estimator_helper(self, args, config, base_model, r, target_modules, device):
         def clear_mem(device):
