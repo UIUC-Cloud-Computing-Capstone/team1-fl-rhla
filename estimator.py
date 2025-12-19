@@ -1,9 +1,13 @@
 from transformers import AutoModelForImageClassification, AutoConfig
+from utils.memory_tracker import MemoryTracker
 
 FEDHELLO = 'FedHello'
 OURS = 'Ours'
 
 class RankEstimator:
+
+    def __init__(self):
+        self._tracker = MemoryTracker()
 
     def get_rank_for_all_client_groups(self, args, base_model):
 
@@ -32,9 +36,6 @@ class RankEstimator:
         
         
         print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
-        
-        
-        
         return rank_for_all_client_groups
 
     def _print_memory_summary(self, memory_summary_dict):

@@ -33,7 +33,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 12 / 12
         args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [15]
         args.desired_downloading_time_for_each_group_in_seconds = [15]
