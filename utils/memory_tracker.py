@@ -24,6 +24,7 @@ import gc
 import time
 import statistics
 from peft import LoraConfig, get_peft_model
+import copy
 
 # Constants
 MB_TO_BYTES = 1024 * 1024
@@ -453,11 +454,12 @@ class MemoryTracker:
 
         memory_summary_dict_q = {}
         
-        info_q = self._get_base_model_fwd_in_MB_for_estimator_helper(args, config, base_model, r, ["attention.attention.query"], device)
-        #info_k = self._get_base_model_fwd_in_MB_for_estimator_helper(args, config, base_model, r, ["attention.attention.key"], device)
-        #info_qk = self._get_base_model_fwd_in_MB_for_estimator_helper(args, config, base_model, r, ["attention.attention.query", "attention.attention.key"], device)
+        info_q = self._get_base_model_fwd_in_MB_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["attention.attention.query"], device)
+        info_k = self._get_base_model_fwd_in_MB_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["attention.attention.key"], device)
+        info_qk = self._get_base_model_fwd_in_MB_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["attention.attention.query", "attention.attention.key"], device)
 
-        #return info_q['avg_profiled_fwd'] - (info_qk['avg_profiled_fwd'] - info_k['avg_profiled_fwd'])
+        print('q', info_q['avg_profiled_fwd'], 'qk', info_qk['avg_profiled_fwd'], 'k', info_k['avg_profiled_fwd'])
+        return info_q['avg_profiled_fwd'] - (info_qk['avg_profiled_fwd'] - info_k['avg_profiled_fwd'])
         
     def _get_base_model_fwd_in_MB_for_estimator_helper(self, args, config, base_model, r, target_modules, device):
         def clear_mem(device):
@@ -467,7 +469,6 @@ class MemoryTracker:
                 torch.cuda.empty_cache()  # Clear GPU cache
                 torch.cuda.reset_peak_memory_stats()  # Reset peak memory stats
             gc.collect()  # Force Python garbage collection
-            
             time.sleep(3) # seconds
             #print('after reset', torch.cuda.max_memory_allocated())
         
