@@ -496,7 +496,7 @@ class MemoryTracker:
         r1 = int(H / 2)
         r2 = int(H / 3)
 
-        run = 50 # at least 2
+        run = 100 # at least 2
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         fwd_key= 'avg_profiled_fwd'
         # generate random r values
@@ -530,12 +530,12 @@ class MemoryTracker:
         beta1, beta2 = beta_vector
 
         # plot the data
-        plt.scatter(bsrs, ys)
-        plt.xlabel('bsrs')
-        plt.ylabel('ys')
-        plt.title('data')
-        plt.show()
-        plt.savefig('data.png')
+        # plt.scatter(bsrs, ys)
+        # plt.xlabel('bsrs')
+        # plt.ylabel('ys')
+        # plt.title('data')
+        # plt.show()
+        # plt.savefig('data.png')
 
         
 

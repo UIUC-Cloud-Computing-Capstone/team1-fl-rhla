@@ -1,0 +1,36 @@
+% batch size: 32
+\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page
+
+\centering
+
+\caption{Memory Breakdown Comparison Table}
+
+\begin{tabular}{lrrr}
+
+\toprule
+Component & Estimated (MB) & Profiled (MB) & Error (\%) \\
+
+\midrule
+Parameters      &    87.28  & 87.28 (4.61%)        &   0.00 \\
+Activations     &  1725.04  & 1706.12 (90.16%)     &   1.11 \\
+Optimizer States &     3.16  & 3.16 (0.17%)         &   0.00 \\
+Total Peak      &     6.33  & 6.33 (0.33%)         &   0.00 \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+mem = 2.2GB
+rank = 45
+beta_profiling_run = 100
+================================================================================
+MEMORY BREAKDOWN COMPARISON TABLE
+================================================================================
+       Component Estimated (MB)     Profiled (MB) Error (%)
+      Parameters          87.28     87.28 (4.61%)      0.00
+    Forward Pass        1725.04  1706.12 (90.16%)      1.11
+       Gradients           3.16      3.16 (0.17%)      0.00
+Optimizer States           6.33      6.33 (0.33%)      0.00
+        Overhead          91.82     89.48 (4.73%)      2.62
+      Total Peak        1821.81 1892.37 (100.00%)      3.73
+================================================================================      
