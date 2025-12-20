@@ -488,7 +488,7 @@ class MemoryTracker:
         print('betas: ', beta1, beta2)
         return beta1, beta2
     
-    def get_lora_betas_v2(self, args, config, base_model, module_names, B, S, H, bytes_per_parameter):
+    def get_lora_betas_v2(self, args, config, base_model, module_names, B, S, H, bytes_per_parameter, memory_summary_dict):
         '''
         betas for for one module (two matrices) on one layer 
         '''
@@ -496,7 +496,7 @@ class MemoryTracker:
         r1 = int(H / 2)
         r2 = int(H / 3)
 
-        run = 10
+        run = 50 # at least 2
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         fwd_key= 'avg_profiled_fwd'
         # generate random r values
@@ -505,7 +505,9 @@ class MemoryTracker:
         bsrs = [B * S * r for r in rs]
     
         for i in range(run):
-            ys.append(self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), rs[i], module_names, device)[fwd_key])
+            y = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), rs[i], module_names, device)[fwd_key]
+            y -= memory_summary_dict['base_model_fwd_bytes']
+            ys.append(y / 4)
             
         
 
@@ -514,8 +516,18 @@ class MemoryTracker:
 
         # y = beta1 * bsh + beta2 * bsrs
         # regression analysis to get beta1 and beta2
-        X = np.array([[bsh, bsrs]])
+        # y = beta1 * bsh + beta2 * bsrs
+        # regression analysis to get beta1 and beta2
+        bsh_column = np.full(len(ys), bsh) 
+
+        # Create the feature matrix X by stacking the columns
+        # X will be shape (10, 2)
+        X = np.column_stack((bsh_column, bsrs))
+
         y = np.array(ys)
+
+        beta_vector, residuals, _, _ = np.linalg.lstsq(X, y, rcond=None)
+        beta1, beta2 = beta_vector
 
         # plot the data
         plt.scatter(bsrs, ys)
@@ -523,8 +535,10 @@ class MemoryTracker:
         plt.ylabel('ys')
         plt.title('data')
         plt.show()
+        plt.savefig('data.png')
 
-        beta1, beta2 = np.linalg.lstsq(X, y, rcond=None)[0]
+        
+
         print('betas: ', beta1, beta2)
         return beta1, beta2
         
@@ -547,8 +561,6 @@ class MemoryTracker:
         # beta2 = (info_r1_fwd - info_r2_fwd) / denominator
         # beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
         
-        print('betas: ', beta1, beta2)
-        return beta1, beta2
         
     def _get_base_model_fwd_in_bytes_for_estimator_helper(self, args, config, base_model, r, target_modules, device):
         def clear_mem(device):
@@ -558,7 +570,7 @@ class MemoryTracker:
                 torch.cuda.empty_cache()  # Clear GPU cache
                 torch.cuda.reset_peak_memory_stats()  # Reset peak memory stats
             gc.collect()  # Force Python garbage collection
-            time.sleep(3) # seconds
+            #time.sleep(3) # seconds
             #print('after reset', torch.cuda.max_memory_allocated())
         
         lora_config = LoraConfig(

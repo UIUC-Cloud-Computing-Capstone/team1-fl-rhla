@@ -169,7 +169,7 @@ class RankEstimator:
         #     sum_of_b1BSHbytes += beta1 * B * sequence_length * H * bytes_per_parameter * C
         # lora_portion_per_layer -= sum_of_b1BSHbytes
 
-        (beta1, beta2) = self._tracker.get_lora_betas_v2(args, config, base_model, args.lora_target_modules, B, sequence_length, H, bytes_per_parameter)
+        (beta1, beta2) = self._tracker.get_lora_betas_v2(args, config, base_model, args.lora_target_modules, B, sequence_length, H, bytes_per_parameter, memory_summary_dict)
         for lora_target_module in args.lora_target_modules:
             print(lora_target_module)
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
