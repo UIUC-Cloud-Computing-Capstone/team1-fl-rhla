@@ -538,7 +538,6 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
 
 def update_global_model(args, global_model, local_updates, num_samples):
     """
-    # TODO Liam: add aggregation function for heterogenous rank
     print('######################### initial #######################')
     for k in global_model.keys():
         if 'lora_B' in k and ('layer.2.' in k):

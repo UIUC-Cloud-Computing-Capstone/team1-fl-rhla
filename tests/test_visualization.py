@@ -33,7 +33,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.image_width = 224
         args.patch_size = 16
         args.batch_size = 32
-        args.percentage_of_layers_in_memory = 12 / 12
         args.overhead_and_safety_margin_factor = 0.1
         args.desired_uploading_time_for_each_group_in_seconds = [15]
         args.desired_downloading_time_for_each_group_in_seconds = [15]
@@ -41,39 +40,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.train_classifier = False # do not train classifier in the base model. Only train LoRA matrices.
         return args
     
-    def test_rank_vs_memory_diagram(self):
-        """Generate a diagram showing rank size vs memory with fixed network speeds"""
-        # Fixed network speeds
-        fixed_upload_speed_Mbps = 7
-        fixed_download_speed_Mbps = 50.0
-        
-        # Vary memory sizes (realistic range: 4GB to 16GB)
-        memory_sizes_GB = [1.5, 1.8, 1.9, 2, 4, 8]
-        
-        # Model and training configuration
-        args = self._init_args()
-        
-        # Load model once
-        model = AutoModelForImageClassification.from_pretrained(args.model)
-        
-        # Collect rank values for each memory size
-        rank_values = []
-        
-        for memory_size_GB in memory_sizes_GB:
-            # Set memory and network speeds for this iteration
-            args.gpu_memory_size_for_each_group_in_GB = [memory_size_GB]
-            args.avg_upload_network_speed_for_each_group_in_Mbps = [fixed_upload_speed_Mbps]
-            args.avg_download_network_speed_for_each_group_in_Mbps = [fixed_download_speed_Mbps]
-            
-            # Get rank for this memory size
-            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, model)
-            rank_values.append(rank_budgets[0])  # Get rank for the single group
-        
-        # Create the diagram with improved x-axis handling for uneven spacing
-        self._create_rank_vs_memory_diagram(fixed_upload_speed_Mbps, fixed_download_speed_Mbps, memory_sizes_GB, rank_values)
-        
-        # Save the diagram
-        self._save_diagram('rank_vs_memory_diagram.pdf')
 
     def _save_diagram(self, diagram_name):
         output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
@@ -124,60 +90,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         plt.tight_layout()
 
-    def test_rank_vs_network_speed_diagram(self):
-        """Generate a diagram showing rank size vs network speeds with fixed memory"""
-        # Fixed memory size
-        fixed_memory_GB = 8.0
-        
-        # Vary network speeds (realistic range: 0.5 Mbps to 10 Mbps)
-        network_speeds_Mbps = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0]
-        
-        # Model and training configuration
-        args = self._init_args()
-        args.gpu_memory_size_for_each_group_in_GB = [fixed_memory_GB]
-        
-        # Load model once
-        model = AutoModelForImageClassification.from_pretrained(args.model)
-        
-        # Collect rank values for each network speed
-        rank_values_upload = []
-        
-        for network_speed_Mbps in network_speeds_Mbps:
-            # Test with varying upload speed (fixed download)
-            args.avg_upload_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
-            args.avg_download_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]  # Fixed download
-            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, model)
-            rank_values_upload.append(rank_budgets[0])
-        
-        # Create the diagram
-        plt.figure(figsize=(12, 7))
-        plt.plot(network_speeds_Mbps, rank_values_upload, marker='o', linewidth=2, markersize=8, 
-                label='Varying Network Speed', color='blue')
-        plt.xlabel('Network Speed (Mbps)', fontsize=16)
-        plt.ylabel('Rank Size', fontsize=16)
-        plt.title(f'Rank Size vs Network Speed\n(Fixed Memory: {fixed_memory_GB} GB)', 
-                  fontsize=18, fontweight='bold')
-        plt.grid(True, alpha=0.3)
-        plt.legend(loc='best', fontsize=14)
-        plt.xticks(network_speeds_Mbps)
-        plt.tick_params(axis='both', labelsize=14)
-        
-        # Add padding to x-axis to prevent last point from being too close to edge
-        x_min = min(network_speeds_Mbps)
-        x_max = max(network_speeds_Mbps)
-        x_range = x_max - x_min
-        plt.xlim(x_min - 0.1 * x_range, x_max + 0.15 * x_range)  # Add 10% padding on left, 15% on right
-        
-        # Add value labels on points (only for upload line to avoid clutter)
-        for i, (speed, rank) in enumerate(zip(network_speeds_Mbps, rank_values_upload)):
-            if i % 2 == 0:  # Label every other point to avoid clutter
-                plt.annotate(f'{int(rank)}', (speed, rank), textcoords="offset points", 
-                            xytext=(0,10), ha='center', fontsize=12, color='blue')
-        
-        plt.tight_layout()
-        
-        # Save the diagram
-        self._save_diagram('rank_vs_network_speed_diagram.pdf')
 
     def test_rank_vs_memory_and_network_speed_combined(self):
         """Generate a combined diagram with both lines in the same figure, sharing the Y-axis"""
@@ -198,7 +110,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args = self._init_args()
         
         # Load model once
-        model = AutoModelForImageClassification.from_pretrained(args.model)
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
         
         # Collect rank values for memory variation
         rank_values_memory = []
@@ -206,7 +118,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
             args.gpu_memory_size_for_each_group_in_GB = [memory_size_GB]
             args.avg_upload_network_speed_for_each_group_in_Mbps = [fixed_upload_speed_Mbps]
             args.avg_download_network_speed_for_each_group_in_Mbps = [fixed_download_speed_Mbps]
-            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, model)
+            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, base_model)
             rank_values_memory.append(rank_budgets[0])
         
         # Collect rank values for network speed variation
@@ -215,7 +127,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         for network_speed_Mbps in network_speeds_Mbps:
             args.avg_upload_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
             args.avg_download_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
-            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, model)
+            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, base_model)
             rank_values_network.append(rank_budgets[0])
         
         # Create a single figure with dual X-axes - even larger size for better readability

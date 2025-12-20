@@ -1,0 +1,46 @@
+% batch size: 32
+\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page
+
+\centering
+
+\caption{Memory Breakdown Comparison Table}
+
+\begin{tabular}{lrrr}
+
+\toprule
+Component & Estimated (MB) & Profiled (MB) & Error (\%) \\
+
+\midrule
+Parameters      &    87.84  & 87.84 (4.64%)        &   0.00 \\
+Activations     &  1733.41  & 1706.12 (90.08%)     &   1.60 \\
+Optimizer States &     3.73  & 3.73 (0.20%)         &   0.00 \\
+Total Peak      &     7.45  & 7.45 (0.39%)         &   0.00 \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+args.gpu_memory_size_for_each_group_in_GB = [2.35]
+rank = 53
+beta_profiling_run = 100
+================================================================================
+MEMORY BREAKDOWN COMPARISON TABLE
+================================================================================
+       Component Estimated (MB)     Profiled (MB) Error (%)
+      Parameters          87.84     87.84 (4.64%)      0.00
+    Forward Pass        1733.41  1706.12 (90.08%)      1.60
+       Gradients           3.73      3.73 (0.20%)      0.00
+Optimizer States           7.45      7.45 (0.39%)      0.00
+        Overhead          91.82     88.92 (4.69%)      3.26
+      Total Peak        1832.43 1894.05 (100.00%)      3.25
+================================================================================
+LaTeX table saved to: /home/jovyan/team1-fl-rhla/utils/../results/diagrams/memory_breakdown_comparison_lora_qv.tex
+
+Summary Statistics:
+  Mean Absolute Percentage Error (MAPE): 1.21%
+  Rank used: 53
+  Available memory: 2.35 GB (2406.40 MB)
+  Memory utilization: 78.71%
+.
+----------------------------------------------------------------------

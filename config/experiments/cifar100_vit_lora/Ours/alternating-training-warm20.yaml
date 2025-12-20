@@ -9,7 +9,7 @@ num_users: 20 # number of users: K
 num_selected_users: 5 # number of selected users: 100, for shakespeare, it is 10, femnist 20
 round: 200
 tau: 1 # 5
-# TODO Liam: for dev, change later
+
 #batch_size: 128 # local batch size
 batch_size: 32 # local batch size
 optimizer: adamw

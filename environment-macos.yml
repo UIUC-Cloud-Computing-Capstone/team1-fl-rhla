@@ -35,6 +35,7 @@ dependencies:
     - comm==0.1.4
     - cython==0.29.34
     - datasets==2.18.0
+    - d2l
     - dill==0.3.8
     - docker-pycreds==0.4.0
     - evaluate==0.4.0
