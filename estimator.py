@@ -234,6 +234,7 @@ class RankEstimator:
         bytes_per_parameter = self._get_byte_per_parameter(args.precision)
         total_dimension_size = C * num_modules_per_layer * H * num_layers * bytes_per_parameter
         rank = int(parameter_size_in_bytes / total_dimension_size)
+        rank = min(rank, H)
         return rank
 
 
