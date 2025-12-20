@@ -98,8 +98,8 @@ class TestRankEstimatorVisualization(unittest.TestCase):
     def test_rank_vs_memory_and_network_speed_combined(self):
         """Generate a combined diagram with both lines in the same figure, sharing the Y-axis"""
         # Fixed network speeds for memory diagram
-        fixed_upload_speed_Mbps = 20
-        fixed_download_speed_Mbps = 50.0
+        fixed_upload_speed_Mbps = 100
+        fixed_download_speed_Mbps = 100
         
         # Fixed memory size for network speed diagram
         fixed_memory_GB = 8.0
@@ -144,15 +144,15 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         # This makes small differences much more readable while preserving the uneven nature
         def transform_memory(mem_val):
             """Transform memory value to spread small values more for readability"""
-            # # Use a piecewise approach: more aggressive for small values, less for large
-            # if mem_val <= 2:
-            #     # Very aggressive transformation for small values (1.5-2 range)
-            #     return 0.5 * mem_val  # Linear scaling for small values gives more space
-            # else:
-            #     # Less aggressive for larger values
-            #     base = 1.0  # Value at mem_val=2
-            #     return base + 0.3 * np.power(mem_val - 2, 0.5)
-            return mem_val
+            # Use a piecewise approach: more aggressive for small values, less for large
+            if mem_val <= 2:
+                # Very aggressive transformation for small values (1.5-2 range)
+                return 0.5 * mem_val  # Linear scaling for small values gives more space
+            else:
+                # Less aggressive for larger values
+                base = 1.0  # Value at mem_val=2
+                return base + 0.3 * np.power(mem_val - 2, 0.5)
+            #return mem_val
             
         # Transform memory values for x-positions
         x_positions_memory = [transform_memory(mem) for mem in memory_sizes_GB]
