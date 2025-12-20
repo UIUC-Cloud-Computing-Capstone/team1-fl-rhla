@@ -3,6 +3,7 @@ from utils.memory_tracker import MemoryTracker
 
 FEDHELLO = 'FedHello'
 OURS = 'Ours'
+MEM_ONLY = 'mem_only'
 
 class RankEstimator:
 
@@ -14,13 +15,29 @@ class RankEstimator:
         #config = AutoConfig.from_pretrained(args.model)
         rank_for_all_client_groups = []
         for i in range(len(args.heterogeneous_group)):
+            self._helper(args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i)
+        
+        print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
+        return rank_for_all_client_groups
+    
+    def get_rank_for_one_client_group(self, args, config, base_model, memory_summary_dict):
+
+        #config = AutoConfig.from_pretrained(args.model)
+        rank_for_all_client_groups = []
+        for i in range(1):
+            self._helper(args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i)
+
+        print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
+        return rank_for_all_client_groups
+
+    def _helper(self, args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i):
             print(f"client group {i}")
             total_gpu_memory_size_in_GB_for_one_client_group = args.gpu_memory_size_for_each_group_in_GB[i]
             upload_network_speed_in_Mbps_for_one_client_group = args.avg_upload_network_speed_for_each_group_in_Mbps[i]
             download_network_speed_in_Mbps_for_one_client_group = args.avg_download_network_speed_for_each_group_in_Mbps[i]
             desired_uploading_time_in_seconds_for_one_client_group = args.desired_uploading_time_for_each_group_in_seconds[i]
             desired_downloading_time_in_seconds_for_one_client_group = args.desired_downloading_time_for_each_group_in_seconds[i]
-            #memory_summary_dict = {}
+            
             rank_for_one_client_group = self._get_rank_for_one_client_group(args, config, base_model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group, memory_summary_dict)
             rank_for_all_client_groups.append(rank_for_one_client_group)
             
@@ -35,13 +52,9 @@ class RankEstimator:
             print('estimated: ')
             for k, v in memory_summary_dict.items():
                 print(k, self._bytes_to_mb(v))
-        
-        
-        print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
-        return rank_for_all_client_groups
 
     def _get_rank_for_one_client_group(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
-        if args.rank_estimator_method == FEDHELLO:
+        if args.rank_estimator_method == FEDHELLO or args.rank_estimator_method == MEM_ONLY:
             return self._get_rank_based_on_gpu_memory(args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict)
         elif args.rank_estimator_method == OURS:
             return self._get_rank_based_on_all(args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict)
@@ -142,13 +155,14 @@ class RankEstimator:
         lora_portion_per_layer = lora_portion / layers
 
         
-        D = H * bytes_per_parameter
+        D = H * bytes_per_parameter * C
 
         total_dim = 0
         sum_of_b1BSHbytes = 0
         sum_of_ratio_D = 0
         sum_of_b2BSbytes = 0
         for lora_target_module in args.lora_target_modules:
+            print(lora_target_module)
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
             beta1, beta2 = module_name_to_betas[lora_target_module]
             sum_of_ratio_D += ratio * D
@@ -164,7 +178,8 @@ class RankEstimator:
         rank = max(rank, 0)
         print('est rank by memory:', rank)
 
-        memory_summary_dict['lora_param_bytes'] = sum_of_ratio_D * rank * layers
+        print('sum_of_ratio_D * layers', sum_of_ratio_D * layers)
+        memory_summary_dict['lora_param_bytes'] = sum_of_ratio_D * layers * rank
         print(memory_summary_dict['lora_param_bytes'], self._bytes_to_mb(memory_summary_dict['lora_param_bytes']))
         memory_summary_dict['lora_optimizer_states_bytes'] = memory_summary_dict['lora_param_bytes'] * get_optimizer_state_count(args.optimizer)
         memory_summary_dict['lora_grads_bytes'] = memory_summary_dict['lora_param_bytes']

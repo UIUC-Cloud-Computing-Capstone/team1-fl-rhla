@@ -443,7 +443,7 @@ class MemoryTracker:
         info_qk = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.query", "0.attention.attention.key"], device)
 
         fwd_key, overhead_key = 'avg_profiled_fwd', 'avg_profiled_overhead'
-        #print('q', info_q[fwd_key], 'qk', info_qk[fwd_key], 'k', info_k[fwd_key])
+        print('q', info_q[fwd_key], 'qk', info_qk[fwd_key], 'k', info_k[fwd_key])
         base_fwd_bytes = info_q[fwd_key] - (info_qk[fwd_key] - info_k[fwd_key])
         overhead_bytes = statistics.mean([info_q[overhead_key], info_qk[overhead_key], info_k[overhead_key]])
         print('base_fw_bytes', base_fwd_bytes, 'overhead_bytes', overhead_bytes)
@@ -466,8 +466,9 @@ class MemoryTracker:
         bsr1  = bs * r1
         bsr2  = bs * r2
         fwd_key= 'avg_profiled_fwd'
-        info_r1_fwd = info_r1[fwd_key] 
-        info_r2_fwd = info_r2[fwd_key]
+        count_of_matrix = 2
+        info_r1_fwd = info_r1[fwd_key] / bytes_per_parameter / config.num_hidden_layers / count_of_matrix
+        info_r2_fwd = info_r2[fwd_key] / bytes_per_parameter / config.num_hidden_layers / count_of_matrix
         # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
         # beta1 * bsh + beta2 * bsr2 = info_r2_fwd
         # Solve the linear equations:
@@ -481,8 +482,6 @@ class MemoryTracker:
             raise ValueError(f"Cannot solve: bsr1 ({bsr1}) and bsr2 ({bsr2}) are too close, making the system singular")
         beta2 = (info_r1_fwd - info_r2_fwd) / denominator
         beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
-        beta2 = beta2 / bytes_per_parameter / config.num_hidden_layers
-        beta1 = beta1 / bytes_per_parameter / config.num_hidden_layers
         return beta1, beta2
         
     def _get_base_model_fwd_in_bytes_for_estimator_helper(self, args, config, base_model, r, target_modules, device):

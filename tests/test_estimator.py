@@ -24,6 +24,8 @@ from estimator import RankEstimator
 from peft import LoraConfig, get_peft_model
 from utils.memory_tracker import MemoryTracker
 
+MEM_ONLY = 'mem_only'
+
 
 class TestRankEstimator(unittest.TestCase):
     """Test cases for RankEstimator class"""
@@ -168,7 +170,9 @@ class TestRankEstimator(unittest.TestCase):
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
         config = AutoConfig.from_pretrained(args.model)
         memory_summary_dict = {}
-        rank = self.estimator.get_rank_for_all_client_groups(args, config, copy.copy(base_model), memory_summary_dict)[0]
+        args.rank_estimator_method = MEM_ONLY
+        # 
+        rank = self.estimator.get_rank_for_one_client_group(args, config, copy.copy(base_model), memory_summary_dict)[0]
         print('est rank', rank)
         self.tracker.profile_and_compare(args, config, base_model, 'memory_breakdown_comparison_lora_qv.tex', rank, memory_summary_dict)
 
