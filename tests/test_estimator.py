@@ -85,7 +85,7 @@ class TestRankEstimator(unittest.TestCase):
 
         # resource heterogeneity
         # all clients belong to 3 heterogeneous groups. Each group has different resource limitation.
-        args.gpu_memory_size_for_each_group_in_GB = [8, 8, 8]
+        args.gpu_memory_size_for_each_group_in_GB = [2, 4, 8]
         args.avg_upload_network_speed_for_each_group_in_Mbps = [1, 1.5, 2]
         args.avg_download_network_speed_for_each_group_in_Mbps = [10, 10, 10]
         args.desired_uploading_time_for_each_group_in_seconds = [15, 15, 15]
@@ -165,7 +165,7 @@ class TestRankEstimator(unittest.TestCase):
 
     def test_memory_breakdown_comparison_table_qv(self):
         args = self._init_args()
-        args.gpu_memory_size_for_each_group_in_GB = [4]
+        args.gpu_memory_size_for_each_group_in_GB = [2]
         args.lora_target_modules = ['query', 'value']
         
         

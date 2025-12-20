@@ -1,0 +1,29 @@
+% Profiling runs to solve betas: 10
+% batch size: 32.00
+% Summary Statistics:
+%   Mean Absolute Percentage Error (MAPE): 2.17%
+%   Rank used: 202
+%   Available memory: 2 GB (2048.00 MB)
+%   Memory utilization: 97.99%
+\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page
+
+\centering
+
+\caption{Memory Breakdown Comparison Table}
+
+\begin{tabular}{lrrr}
+
+\toprule
+Component & Estimated (MB) & Profiled (MB) & Error (\%) \\
+
+\midrule
+Parameters      &    98.32  & 98.32 (4.90%)        &   0.00 \\
+Forward Pass    &  1906.55  & 1787.53 (89.07%)     &   6.66 \\
+Gradients       &    14.20  & 14.20 (0.71%)        &   0.00 \\
+Optimizer States &    28.41  & 28.41 (1.42%)        &   0.00 \\
+Overhead        &    81.11  & 78.44 (3.91%)        &   3.41 \\
+Total Peak      &  2047.48  & 2006.90 (100.00%)    &   2.02 \\
+
+\bottomrule
+\end{tabular}
+\end{table}

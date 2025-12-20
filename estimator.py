@@ -1,5 +1,6 @@
 from transformers import AutoModelForImageClassification, AutoConfig
 from utils.memory_tracker import MemoryTracker
+import copy
 
 FEDHELLO = 'FedHello'
 OURS = 'Ours'
@@ -16,7 +17,7 @@ class RankEstimator:
         #config = AutoConfig.from_pretrained(args.model)
         rank_for_all_client_groups = []
         for i in range(len(args.heterogeneous_group)):
-            self._helper(args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i)
+            self._helper(args, config, copy.deepcopy(base_model), memory_summary_dict, rank_for_all_client_groups, i)
         
         print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
         return rank_for_all_client_groups
@@ -25,8 +26,8 @@ class RankEstimator:
 
         #config = AutoConfig.from_pretrained(args.model)
         rank_for_all_client_groups = []
-        for i in range(1):
-            self._helper(args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i)
+        
+        self._helper(args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i)
 
         print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
         return rank_for_all_client_groups
@@ -68,8 +69,8 @@ class RankEstimator:
 
     def _get_rank_based_on_all(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
         rank_based_on_gpu_memory = self._get_rank_based_on_gpu_memory(args, config, base_model,  total_gpu_memory_size_in_GB, memory_summary_dict)
-        rank_based_on_upload_network_speed = self._get_rank_based_on_network_speed(args, config, base_model, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
-        rank_based_on_download_network_speed = self._get_rank_based_on_network_speed(args, config, base_model, download_network_speed_in_Mbps, desired_downloading_time_in_seconds)
+        rank_based_on_upload_network_speed = self._get_rank_based_on_network_speed(args, config, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
+        rank_based_on_download_network_speed = self._get_rank_based_on_network_speed(args, config, download_network_speed_in_Mbps, desired_downloading_time_in_seconds)
         return self._get_final_rank(args, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed)
 
     def _get_final_rank(self, args, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed):
