@@ -41,6 +41,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.desired_downloading_time_for_each_group_in_seconds = [15]
         args.heterogeneous_group = [1.0]  # Single group for simplicity
         args.train_classifier = False # do not train classifier in the base model. Only train LoRA matrices.
+        args.beta_profiling_run = 10
         args.CLS_TOKEN = 1
         return args
     

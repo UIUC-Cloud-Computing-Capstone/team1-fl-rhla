@@ -473,7 +473,7 @@ class MemoryTracker:
         r2 = int(H / 3)
 
         if not hasattr(args, 'beta_profiling_run') or not args.beta_profiling_run:
-            args.beta_profiling_run = 2
+            args.beta_profiling_run = 10
         beta_profiling_run = args.beta_profiling_run
         if beta_profiling_run < 2:
             raise ValueError('beta_profiling_run should be at least 2')
