@@ -41,7 +41,6 @@ class RankEstimator:
             rank_for_one_client_group = self._get_rank_for_one_client_group(args, config, base_model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group, memory_summary_dict)
             rank_for_all_client_groups.append(rank_for_one_client_group)
             
-            # TODO Liam
             memory_summary_dict['total_para_bytes'] = memory_summary_dict['base_model_para_bytes'] + memory_summary_dict['lora_param_bytes']
             memory_summary_dict['total_fwd_bytes'] = memory_summary_dict['base_model_fwd_bytes'] + memory_summary_dict['lora_fwd_bytes']
             memory_summary_dict['total_optimizer_states_bytes'] = memory_summary_dict['lora_optimizer_states_bytes']
@@ -142,47 +141,26 @@ class RankEstimator:
             return get_param_mem(r, module_name, bytes_per_parameter)
 
 
-        # (beta1 * B * sequence_length * H + beta2 * B * sequence_length * r) * bytes_per_parameter = lora_portion_per_layer   
+        # (beta1 * B * sequence_length * H + beta2 * B * sequence_length * r) * bytes_per_parameter * layers = lora_portion
 
         layers = config.num_hidden_layers
         lora_portion_per_layer = lora_portion / layers
         D = H * bytes_per_parameter * C
         
-        # module_name_to_betas = {}
-        # for module_name in args.lora_target_modules:
-        #     (beta1, beta2) = self._tracker.get_lora_betas(args, config, base_model, module_name, B, sequence_length, H, bytes_per_parameter)
-        #     print(module_name, beta1, beta2)
-        #     module_name_to_betas[module_name] = (beta1, beta2)
-
         total_dim = 0
         sum_of_b1BSHbytes = 0
         sum_of_ratio_D = 0
         sum_of_b2BSbytes = 0
-        # for lora_target_module in args.lora_target_modules:
-        #     print(lora_target_module)
-        #     ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
-        #     beta1, beta2 = module_name_to_betas[lora_target_module]
-        #     sum_of_ratio_D += ratio * D
-        #     b2BSbytes = beta2 * B * sequence_length * bytes_per_parameter * C
-        #     sum_of_b2BSbytes += b2BSbytes
-        #     total_dim += ratio * D * (2 + get_optimizer_state_count(args.optimizer)) + b2BSbytes
-        #     sum_of_b1BSHbytes += beta1 * B * sequence_length * H * bytes_per_parameter * C
-        # lora_portion_per_layer -= sum_of_b1BSHbytes
 
         (beta1, beta2) = self._tracker.get_lora_betas_v2(args, config, base_model, args.lora_target_modules, B, sequence_length, H, bytes_per_parameter, memory_summary_dict)
         for lora_target_module in args.lora_target_modules:
             print(lora_target_module)
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
-            #beta1, beta2 = module_name_to_betas[lora_target_module]
             sum_of_ratio_D += ratio * D
             b2BSbytes = beta2 * B * sequence_length * bytes_per_parameter * C
-            #sum_of_b2BSbytes += b2BSbytes
-            #total_dim += ratio * D * (2 + get_optimizer_state_count(args.optimizer)) + b2BSbytes
             total_dim += ratio * D * (2 + get_optimizer_state_count(args.optimizer)) * layers
             sum_of_b1BSHbytes += beta1 * B * sequence_length * H * bytes_per_parameter
         
-        #avg_of_b1BSHbytes = sum_of_b1BSHbytes / len(args.lora_target_modules)
-        #lora_portion_per_layer -= sum_of_b1BSHbytes
         lora_portion -= beta1 * B * sequence_length * H * bytes_per_parameter
         total_dim += b2BSbytes
         rank = int(lora_portion_per_layer / total_dim)
@@ -196,8 +174,6 @@ class RankEstimator:
         print(memory_summary_dict['lora_param_bytes'], self._bytes_to_mb(memory_summary_dict['lora_param_bytes']))
         memory_summary_dict['lora_optimizer_states_bytes'] = memory_summary_dict['lora_param_bytes'] * get_optimizer_state_count(args.optimizer)
         memory_summary_dict['lora_grads_bytes'] = memory_summary_dict['lora_param_bytes']
-        
-        #memory_summary_dict['lora_fwd_bytes'] = (avg_of_b1BSHbytes + sum_of_b2BSbytes * rank) * layers / C
         memory_summary_dict['lora_fwd_bytes'] = (beta1 * B * sequence_length * H * bytes_per_parameter + b2BSbytes * rank)
         memory_summary_dict['lora_total_bytes'] = memory_summary_dict['lora_param_bytes'] + memory_summary_dict['lora_fwd_bytes'] + memory_summary_dict['lora_optimizer_states_bytes'] + memory_summary_dict['lora_grads_bytes']
 
