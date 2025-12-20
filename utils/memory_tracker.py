@@ -166,7 +166,7 @@ class MemoryTracker:
 
     def _create_comparison(self, args, memory_summary_dict, profiled_info, output_file_path, estimated_rank):
         estimated_total_params = memory_summary_dict.get('total_para_bytes', 0)
-        estimated_total_activations = memory_summary_dict.get('total_fwd_bytes', 0)
+        estimated_total_fwd = memory_summary_dict.get('total_fwd_bytes', 0)
         estimated_total_optimizer = memory_summary_dict.get('total_optimizer_states_bytes', 0)
         estimated_total_grads = memory_summary_dict.get('total_grads_bytes', 0)
         estimated_overhead = memory_summary_dict.get('overhead_bytes', 0)
@@ -174,7 +174,7 @@ class MemoryTracker:
 
         profiled_params = profiled_info['avg_profiled_params']
         profiled_optimizer = profiled_info['avg_profiled_optimizer']
-        profiled_activations = profiled_info['avg_profiled_fwd']
+        profiled_fwd = profiled_info['avg_profiled_fwd']
         profiled_grads = profiled_info['avg_profiled_grads']
         profiled_overhead = profiled_info['avg_profiled_overhead']
         profiled_total = profiled_info['avg_profiled_total']     
@@ -191,7 +191,7 @@ class MemoryTracker:
                 return float('inf') if estimated > 0 else 0.0
             return abs(estimated - profiled) / profiled * 100
         param_error = calculate_error(estimated_total_params, profiled_params)
-        activation_error = calculate_error(estimated_total_activations, profiled_activations)
+        activation_error = calculate_error(estimated_total_fwd, profiled_fwd)
         optimizer_error = calculate_error(estimated_total_optimizer, profiled_optimizer)
         grad_error = calculate_error(estimated_total_grads, profiled_grads)
         overhead_error = calculate_error(estimated_overhead, profiled_overhead)
@@ -199,7 +199,7 @@ class MemoryTracker:
 
         # percentage
         param_perc = profiled_params / profiled_total * 100
-        fwd_perc = profiled_activations / profiled_total * 100
+        fwd_perc = profiled_fwd / profiled_total * 100
         grads_perc = profiled_grads / profiled_total * 100
         opt_perc = profiled_optimizer / profiled_total * 100
         overhead_perc = profiled_overhead / profiled_total * 100
@@ -208,14 +208,14 @@ class MemoryTracker:
 
         # convert bytes to MB
         estimated_total_params = self._bytes_to_mb(estimated_total_params)
-        estimated_total_activations = self._bytes_to_mb(estimated_total_activations)
+        estimated_total_fwd = self._bytes_to_mb(estimated_total_fwd)
         estimated_total_grads = self._bytes_to_mb(estimated_total_grads)
         estimated_total_optimizer = self._bytes_to_mb(estimated_total_optimizer)
         estimated_overhead = self._bytes_to_mb(estimated_overhead)
         estimated_total = self._bytes_to_mb(estimated_total)
 
         profiled_params = self._bytes_to_mb(profiled_params)
-        profiled_activations = self._bytes_to_mb(profiled_activations)
+        profiled_fwd = self._bytes_to_mb(profiled_fwd)
         profiled_grads = self._bytes_to_mb(profiled_grads)
         profiled_optimizer = self._bytes_to_mb(profiled_optimizer)
         profiled_overhead = self._bytes_to_mb(profiled_overhead)
@@ -226,7 +226,7 @@ class MemoryTracker:
             'Component': ['Parameters', 'Forward Pass', 'Gradients', 'Optimizer States', 'Overhead', 'Total Peak'],
             'Estimated (MB)': [
                 f'{estimated_total_params:.2f}',
-                f'{estimated_total_activations:.2f}',
+                f'{estimated_total_fwd:.2f}',
                 f'{estimated_total_grads:.2f}',
                 f'{estimated_total_optimizer:.2f}',
                 f'{estimated_overhead:.2f}',
@@ -234,7 +234,7 @@ class MemoryTracker:
             ],
             'Profiled (MB)': [
                 f'{profiled_params:.2f} ({(param_perc):.2f}%)',
-                f'{profiled_activations:.2f} ({(fwd_perc):.2f}%)',
+                f'{profiled_fwd:.2f} ({(fwd_perc):.2f}%)',
                 f'{profiled_grads:.2f} ({(grads_perc):.2f}%)',
                 f'{profiled_optimizer:.2f} ({(opt_perc):.2f}%)',
                 f'{profiled_overhead:.2f} ({(overhead_perc):.2f}%)',
@@ -261,22 +261,33 @@ class MemoryTracker:
         # if overhead_perc > 0:
         #     print('Overhead: ', f'{profiled_overhead:.2f} ({overhead_perc:.2f}%)')
         
-        self._create_latex(args, comparison_data, output_file_path)
+        # Calculate summary statistics
+        mape = (param_error + activation_error + optimizer_error + total_error) / 4
+        available_memory_gb = args.gpu_memory_size_for_each_group_in_GB[0]
+        available_memory_mb = available_memory_gb * 1024
+        memory_utilization = profiled_total / available_memory_mb * 100
+        
+        self._create_latex(args, comparison_data, output_file_path, mape, estimated_rank, available_memory_gb, available_memory_mb, memory_utilization)
         
         # Print summary statistics
         print(f"\nSummary Statistics:")
-        print(f"  Mean Absolute Percentage Error (MAPE): {(param_error + activation_error + optimizer_error + total_error) / 4:.2f}%")
+        print(f"  Mean Absolute Percentage Error (MAPE): {mape:.2f}%")
         print(f"  Rank used: {estimated_rank}")
-        print(f"  Available memory: {args.gpu_memory_size_for_each_group_in_GB[0]} GB ({args.gpu_memory_size_for_each_group_in_GB[0] * 1024:.2f} MB)")
-        print(f"  Memory utilization: {profiled_total / (args.gpu_memory_size_for_each_group_in_GB[0] * 1024) * 100:.2f}%")
+        print(f"  Available memory: {available_memory_gb} GB ({available_memory_mb:.2f} MB)")
+        print(f"  Memory utilization: {memory_utilization:.2f}%")
         
         return df
 
-    def _create_latex(self, args, comparison_data, output_file_path):
+    def _create_latex(self, args, comparison_data, output_file_path, mape, rank, available_memory_gb, available_memory_mb, memory_utilization):
         output_dir = os.path.join(os.path.dirname(__file__), '..', 'results', 'diagrams')
         
         # Generate LaTeX table with custom formatting
         latex_table = "% batch size: " + str(args.batch_size) + "\n"
+        latex_table += "% Summary Statistics:\n"
+        latex_table += f"%   Mean Absolute Percentage Error (MAPE): {mape:.2f}%\n"
+        latex_table += f"%   Rank used: {rank}\n"
+        latex_table += f"%   Available memory: {available_memory_gb} GB ({available_memory_mb:.2f} MB)\n"
+        latex_table += f"%   Memory utilization: {memory_utilization:.2f}%\n"
         latex_table += "\\begin{table}[htbp]  % 'htbp' allows flexible placement: here, top, bottom, or page\n"
         latex_table += "\n"
         latex_table += "\\centering\n"
@@ -291,7 +302,7 @@ class MemoryTracker:
         latex_table += "\\midrule\n"
         
         # Format each row to match the example format
-        component_names = ['Parameters', 'Activations', 'Optimizer States', 'Total Peak']
+        component_names = ['Parameters', 'Forward Pass', 'Gradients', 'Optimizer States', 'Overhead', 'Total Peak']
         for i, component in enumerate(component_names):
             estimated = comparison_data['Estimated (MB)'][i]
             # Replace ± with $\pm$ and format the profiled value
@@ -305,6 +316,12 @@ class MemoryTracker:
         latex_table += "\n"
         latex_table += "\\bottomrule\n"
         latex_table += "\\end{tabular}\n"
+        # latex_table += "\n"
+        # latex_table += "% Summary Statistics:\n"
+        # latex_table += f"%   Mean Absolute Percentage Error (MAPE): {mape:.2f}%\n"
+        # latex_table += f"%   Rank used: {rank}\n"
+        # latex_table += f"%   Available memory: {available_memory_gb} GB ({available_memory_mb:.2f} MB)\n"
+        # latex_table += f"%   Memory utilization: {memory_utilization:.2f}%\n"
         latex_table += "\\end{table}\n"
         
         latex_path = os.path.join(output_dir, output_file_path)
