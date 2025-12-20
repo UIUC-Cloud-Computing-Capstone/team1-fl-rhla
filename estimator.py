@@ -32,8 +32,9 @@ class RankEstimator:
             memory_summary_dict['total_memory_bytes'] = round(memory_summary_dict['total_para_bytes'] + memory_summary_dict['total_fwd_bytes'] + memory_summary_dict['total_optimizer_states_bytes'] + memory_summary_dict['total_grads_bytes'], 2)
             
             print('------------------------------------------------------------------------------------------------')
-            print(memory_summary_dict)
-            print('total_memory_bytes', memory_summary_dict['total_memory_bytes'])
+            print('estimated: ')
+            for k, v in memory_summary_dict.items():
+                print(k, self._bytes_to_mb(v))
         
         
         print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
@@ -149,6 +150,7 @@ class RankEstimator:
         sum_of_b2BSbytes = 0
         for lora_target_module in args.lora_target_modules:
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
+            print('ratio', ratio)
             beta1, beta2 = module_name_to_betas[lora_target_module]
             sum_of_ratio_D += ratio * D
             b2BSbytes = beta2 * B * sequence_length * bytes_per_parameter
@@ -157,10 +159,13 @@ class RankEstimator:
             sum_of_b1BSHbytes += beta1 * B * sequence_length * H * bytes_per_parameter
 
         lora_portion_per_layer -= sum_of_b1BSHbytes
+        # TODO Liam: wrong
         rank = int(lora_portion_per_layer / total_dim)
+        print('est rank:', rank)
 
-
+        print('sum_of_ratio_D', sum_of_ratio_D, rank, layers, sum_of_ratio_D * rank * layers)
         memory_summary_dict['lora_param_bytes'] = sum_of_ratio_D * rank * layers
+        print(memory_summary_dict['lora_param_bytes'], self._bytes_to_mb(memory_summary_dict['lora_param_bytes']))
         memory_summary_dict['lora_optimizer_states_bytes'] = memory_summary_dict['lora_param_bytes'] * get_optimizer_state_count(args.optimizer)
         memory_summary_dict['lora_grads_bytes'] = memory_summary_dict['lora_param_bytes']
         memory_summary_dict['lora_fwd_bytes'] = (sum_of_b1BSHbytes + sum_of_b2BSbytes * rank) * layers
