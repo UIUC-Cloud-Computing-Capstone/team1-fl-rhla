@@ -77,8 +77,6 @@ class RankEstimator:
         # TODO
         #* config.num_hidden_layers * len(args.lora_target_modules)
 
-
-    
     def _get_rank_based_on_gpu_memory(self, args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict):
 
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
@@ -112,6 +110,9 @@ class RankEstimator:
         if lora_portion <= 0:
             print(f'Warning: GPU memory is too small to train the model')
             return 0
+        
+        print('lora_portion', lora_portion)
+        print('lora portion in MB', self._bytes_to_mb(lora_portion))
 
         B = args.batch_size
         H = config.hidden_size
@@ -150,7 +151,6 @@ class RankEstimator:
         # (beta1 * B * sequence_length * H + beta2 * B * sequence_length * r) * bytes_per_parameter * layers = lora_portion
 
         layers = config.num_hidden_layers
-        lora_portion_per_layer = lora_portion / layers
         D = H * bytes_per_parameter * C
         
         total_dim = 0
@@ -169,7 +169,7 @@ class RankEstimator:
         
         lora_portion -= beta1 * B * sequence_length * H * bytes_per_parameter
         total_dim += b2BSbytes
-        rank = int(lora_portion_per_layer / total_dim)
+        rank = int(lora_portion / total_dim)
         rank = min(rank, H)
         print(rank)
         rank = max(rank, 0)
