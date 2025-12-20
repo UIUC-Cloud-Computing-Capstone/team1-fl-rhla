@@ -7,7 +7,7 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from transformers import AutoModelForImageClassification, AutoConfig
+from transformers import AutoModelForImageClassification, AutoModelForCausalLM, AutoConfig
 from torch.profiler import profile, ProfilerActivity
 import torch
 import pandas as pd
@@ -118,7 +118,7 @@ class TestRankEstimator(unittest.TestCase):
     def _init_args(self):
         args = argparse.Namespace()
         args.rank_estimator_method = 'Ours'
-        args.model = 'facebook/deit-small-patch16-224'
+        args.model = 'openai-community/openai-gpt'
         args.precision = 'fp32'
         args.optimizer = 'adam'
         args.num_of_layers_to_allocate_LoRA = 12
@@ -169,7 +169,9 @@ class TestRankEstimator(unittest.TestCase):
         args.lora_target_modules = ['query', 'value']
         
         
-        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+        base_model = AutoModelForCausalLM.from_pretrained(args.model)
+        for name, _ in base_model.named_modules():
+            print(name)
         config = AutoConfig.from_pretrained(args.model)
         memory_summary_dict = {}
         args.rank_estimator_method = MEM_ONLY
