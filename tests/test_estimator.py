@@ -135,6 +135,7 @@ class TestRankEstimator(unittest.TestCase):
         args.gpu_memory_size_for_each_group_in_GB = [8.0]
         args.avg_upload_network_speed_for_each_group_in_Mbps = [7.0]
         args.avg_download_network_speed_for_each_group_in_Mbps = [50.0]
+        args.train_classifier = False
         args.CLS_TOKEN = 1
         return args
 
@@ -164,7 +165,7 @@ class TestRankEstimator(unittest.TestCase):
 
     def test_memory_breakdown_comparison_table_qv(self):
         args = self._init_args()
-        args.gpu_memory_size_for_each_group_in_GB = [3]
+        args.gpu_memory_size_for_each_group_in_GB = [4]
         args.lora_target_modules = ['query', 'value']
         
         
