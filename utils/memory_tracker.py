@@ -378,7 +378,7 @@ class MemoryTracker:
                 # Profile forward and backward pass to get activation memory
                 
                 torch.cuda.reset_peak_memory_stats()
-                baseline_mem = torch.cuda.max_memory_allocated()
+                baseline_mem = torch.cuda.max_memory_allocated()  # param + overhead
                     
                 # Forward pass
                 outputs = model(**batch)
