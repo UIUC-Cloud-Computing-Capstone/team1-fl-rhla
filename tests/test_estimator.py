@@ -14,6 +14,7 @@ import pandas as pd
 import gc
 import time
 import statistics
+import copy
 #import timm
 
 # Add parent directory to path to import the module
@@ -167,7 +168,9 @@ class TestRankEstimator(unittest.TestCase):
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
         config = AutoConfig.from_pretrained(args.model)
         memory_summary_dict = {}
-        self.tracker.profile_and_compare(args, config, base_model, 'memory_breakdown_comparison_lora_qv.tex', self.estimator.get_rank_for_all_client_groups(args, config, base_model, memory_summary_dict)[0], memory_summary_dict)
+        rank = self.estimator.get_rank_for_all_client_groups(args, config, copy.copy(base_model), memory_summary_dict)[0]
+        print('est rank', rank)
+        self.tracker.profile_and_compare(args, config, base_model, 'memory_breakdown_comparison_lora_qv.tex', rank, memory_summary_dict)
 
     def test_memory_breakdown_comparison_table_lora_mlp_output_dense(self):
         args = self._init_args()
