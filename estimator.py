@@ -132,23 +132,36 @@ class RankEstimator:
         for module_name in args.lora_target_modules:
             module_name_to_betas[module_name] = self._tracker.get_lora_betas(args, config, base_model, module_name, B, sequence_length, H, bytes_per_parameter)
         
-
-        lora_portion_per_layer = lora_portion / config.num_hidden_layers
+        layers = config.num_hidden_layers
+        lora_portion_per_layer = lora_portion / layers
 
         
         D = H * C * bytes_per_parameter
 
         total_dim = 0
         sum_of_b1BSHbytes = 0
+        sum_of_ratio_D = 0
+        sum_of_b2BSbytes = 0
         for lora_target_module in args.lora_target_modules:
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
             beta1, beta2 = module_name_to_betas[lora_target_module]
-            total_dim += ratio * D * (2 + get_optimizer_state_count(args.optimizer)) + beta2 * B * sequence_length * bytes_per_parameter
+            sum_of_ratio_D += ratio * D
+            b2BSbytes = beta2 * B * sequence_length * bytes_per_parameter
+            sum_of_b2BSbytes += b2BSbytes
+            total_dim += ratio * D * (2 + get_optimizer_state_count(args.optimizer)) + b2BSbytes
             sum_of_b1BSHbytes += beta1 * B * sequence_length * H * bytes_per_parameter
 
 
         lora_portion_per_layer -= sum_of_b1BSHbytes
         rank = int(lora_portion_per_layer / total_dim)
+
+
+        memory_summary_dict['lora_param_bytes'] = sum_of_ratio_D * rank * layers
+        
+        memory_summary_dict['lora_optimizer_states_bytes'] = memory_summary_dict['lora_param_bytes'] * get_optimizer_state_count(args.optimizer)
+        memory_summary_dict['lora_grads_bytes'] = memory_summary_dict['lora_param_bytes']
+        memory_summary_dict['lora_fwd_bytes'] = (sum_of_b1BSHbytes + sum_of_b2BSbytes * rank) * layers
+        memory_summary_dict['lora_total_bytes'] = memory_summary_dict['lora_param_bytes'] + memory_summary_dict['lora_fwd_bytes'] + memory_summary_dict['lora_optimizer_states_bytes'] + memory_summary_dict['lora_grads_bytes']
 
         return rank
     
