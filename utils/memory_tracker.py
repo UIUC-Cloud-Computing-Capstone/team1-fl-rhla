@@ -21,6 +21,8 @@ import statistics
 from peft import LoraConfig, get_peft_model
 import copy
 import numpy as np
+import random
+import matplotlib.pyplot as plt
 
 # Constants
 MB_TO_BYTES = 1024 * 1024
@@ -494,29 +496,41 @@ class MemoryTracker:
         r1 = int(H / 2)
         r2 = int(H / 3)
 
+        run = 10
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         fwd_key= 'avg_profiled_fwd'
-        val1s = []
-        val2s = []
-        for i in range(5):
-            val1s.append(self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key])
-            val2s.append(self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r2, module_names, device)[fwd_key])
+        # generate random r values
+        rs = [random.randint(1, H) for _ in range(run)]
+        ys = []
+        bsrs = [B * S * r for r in rs]
+    
+        for i in range(run):
+            ys.append(self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), rs[i], module_names, device)[fwd_key])
+            
         
-        # info_r1 = (info_r1 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
-        # info_r2 = (info_r2 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
-        # info_r1 = (info_r1 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
-        # info_r2 = (info_r2 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
 
         bs = B * S
         bsh = bs * H
-        bsr1  = bs * r1
-        bsr2  = bs * r2
+
+        # y = beta1 * bsh + beta2 * bsrs
+        # regression analysis to get beta1 and beta2
+        X = np.array([[bsh, bsrs]])
+        y = np.array(ys)
+
+        # plot the data
+        plt.scatter(bsrs, ys)
+        plt.xlabel('bsrs')
+        plt.ylabel('ys')
+        plt.title('data')
+        plt.show()
+
+        beta1, beta2 = np.linalg.lstsq(X, y, rcond=None)[0]
+        print('betas: ', beta1, beta2)
+        return beta1, beta2
+        
         
         # regression analysis to get beta1 and beta2
-        X = np.array([[bsh, bsr1], [bsh, bsr2]])
-        y = np.array([val1s, val2s])
-        beta1, beta2 = np.linalg.lstsq(X, y, rcond=None)[0]
-        matrix_count = 2
+        
         # info_r1_fwd = info_r1 / bytes_per_parameter
         # info_r2_fwd = info_r2 / bytes_per_parameter
         # # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
