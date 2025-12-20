@@ -114,7 +114,8 @@ class TestRankEstimator(unittest.TestCase):
         config = AutoConfig.from_pretrained(args.model)
         module_rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, config, base_model, {})
         print('one module: ', module_rank_budgets_for_all_heterogeneous_groups)
-        multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
+        # TODO Liam: need to ask Youye
+        multiplication_factor = config.num_hidden_layers
         client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in module_rank_budgets_for_all_heterogeneous_groups]
         print('all: ', client_rank_budgets_for_all_heterogeneous_groups)
 
