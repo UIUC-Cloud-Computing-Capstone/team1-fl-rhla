@@ -112,9 +112,11 @@ class TestRankEstimator(unittest.TestCase):
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
         
         config = AutoConfig.from_pretrained(args.model)
-        rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, config, base_model, {})
-        print('one module: ', rank_budgets_for_all_heterogeneous_groups)
-        print('all: ', rank_budgets_for_all_heterogeneous_groups * config.num_hidden_layers * len(args.lora_target_modules))
+        module_rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, config, base_model, {})
+        print('one module: ', module_rank_budgets_for_all_heterogeneous_groups)
+        multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
+        client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in module_rank_budgets_for_all_heterogeneous_groups]
+        print('all: ', client_rank_budgets_for_all_heterogeneous_groups)
 
     def _init_args(self):
         args = argparse.Namespace()
