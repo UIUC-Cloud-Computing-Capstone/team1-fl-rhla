@@ -484,6 +484,47 @@ class MemoryTracker:
         beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
         print('betas: ', beta1, beta2)
         return beta1, beta2
+    
+    def get_lora_betas_v2(self, args, config, base_model, module_names, B, S, H, bytes_per_parameter):
+        '''
+        betas for for one module (two matrices) on one layer 
+        '''
+        H = config.hidden_size
+        r1 = int(H / 2)
+        r2 = int(H / 3)
+
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        fwd_key= 'avg_profiled_fwd'
+        info_r1 = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]
+        info_r2 = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r2, module_names, device)[fwd_key]
+        # info_r1 = (info_r1 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
+        # info_r2 = (info_r2 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
+        # info_r1 = (info_r1 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
+        # info_r2 = (info_r2 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
+
+        bs = B * S
+        bsh = bs * H
+        bsr1  = bs * r1
+        bsr2  = bs * r2
+        
+        
+        info_r1_fwd = info_r1 / bytes_per_parameter / config.num_hidden_layers
+        info_r2_fwd = info_r2 / bytes_per_parameter / config.num_hidden_layers
+        # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
+        # beta1 * bsh + beta2 * bsr2 = info_r2_fwd
+        # Solve the linear equations:
+        # Subtract equation 2 from equation 1:
+        # beta2 * (bsr1 - bsr2) = info_r1_fwd - info_r2_fwd
+        # beta2 = (info_r1_fwd - info_r2_fwd) / (bsr1 - bsr2)
+        # Then from equation 1:
+        # beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
+        denominator = bsr1 - bsr2
+        if abs(denominator) < 1e-10:
+            raise ValueError(f"Cannot solve: bsr1 ({bsr1}) and bsr2 ({bsr2}) are too close, making the system singular")
+        beta2 = (info_r1_fwd - info_r2_fwd) / denominator
+        beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
+        print('betas: ', beta1, beta2)
+        return beta1, beta2
         
     def _get_base_model_fwd_in_bytes_for_estimator_helper(self, args, config, base_model, r, target_modules, device):
         def clear_mem(device):
