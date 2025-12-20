@@ -443,9 +443,10 @@ class MemoryTracker:
         info_qk = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.query", "0.attention.attention.key"], device)
 
         fwd_key, overhead_key = 'avg_profiled_fwd', 'avg_profiled_overhead'
-        print('q', info_q[fwd_key], 'qk', info_qk[fwd_key], 'k', info_k[fwd_key])
+        #print('q', info_q[fwd_key], 'qk', info_qk[fwd_key], 'k', info_k[fwd_key])
         base_fwd_bytes = info_q[fwd_key] - (info_qk[fwd_key] - info_k[fwd_key])
         overhead_bytes = statistics.mean([info_q[overhead_key], info_qk[overhead_key], info_k[overhead_key]])
+        print('base_fw_bytes', base_fwd_bytes, 'overhead_bytes', overhead_bytes)
         return base_fwd_bytes, overhead_bytes
 
     def get_lora_betas(self, args, config, base_model, module_name, B, S, H, bytes_per_parameter):
