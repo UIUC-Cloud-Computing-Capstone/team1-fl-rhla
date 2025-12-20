@@ -164,7 +164,7 @@ class TestRankEstimator(unittest.TestCase):
 
     def test_memory_breakdown_comparison_table_qv(self):
         args = self._init_args()
-        args.gpu_memory_size_for_each_group_in_GB = [2.2]
+        args.gpu_memory_size_for_each_group_in_GB = [2.35]
         args.lora_target_modules = ['query', 'value']
         
         # Load base model
