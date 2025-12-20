@@ -30,6 +30,7 @@ GB_TO_BYTES = 1024 * 1024 * 1024
 FP32_BYTES_PER_PARAM = 4
 FP16_BYTES_PER_PARAM = 2
 OPTIMIZER_STATE_BYTES_PER_PARAM = 4  # Optimizer states are typically fp32
+FWD_KEY, OVERHEAD_KEY = 'avg_profiled_fwd', 'avg_profiled_overhead'
 
 
 class MemoryTracker:
@@ -457,10 +458,9 @@ class MemoryTracker:
         info_k = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.key"], device)
         info_qk = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r, ["0.attention.attention.query", "0.attention.attention.key"], device)
 
-        fwd_key, overhead_key = 'avg_profiled_fwd', 'avg_profiled_overhead'
-        print('q', info_q[fwd_key], 'qk', info_qk[fwd_key], 'k', info_k[fwd_key])
-        base_fwd_bytes = info_q[fwd_key] - (info_qk[fwd_key] - info_k[fwd_key])
-        overhead_bytes = statistics.mean([info_q[overhead_key], info_qk[overhead_key], info_k[overhead_key]])
+        print('q', info_q[FWD_KEY], 'qk', info_qk[FWD_KEY], 'k', info_k[FWD_KEY])
+        base_fwd_bytes = info_q[FWD_KEY] - (info_qk[FWD_KEY] - info_k[FWD_KEY])
+        overhead_bytes = statistics.mean([info_q[OVERHEAD_KEY], info_qk[OVERHEAD_KEY], info_k[OVERHEAD_KEY]])
         print('base_fw_bytes', base_fwd_bytes, 'overhead_bytes', overhead_bytes)
         return base_fwd_bytes, overhead_bytes
     
@@ -479,16 +479,21 @@ class MemoryTracker:
         if beta_profiling_run < 2:
             raise ValueError('beta_profiling_run should be at least 2')
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        fwd_key= 'avg_profiled_fwd'
         # generate random r values
         rs = [random.randint(1, H) for _ in range(beta_profiling_run)]
         ys = []
         bsrs = [B * S * r for r in rs]
     
+        overheads = [memory_summary_dict['overhead_bytes']]
         for i in range(beta_profiling_run):
-            y = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), rs[i], module_names, device)[fwd_key]
+            info = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), rs[i], module_names, device)
+            y = info[FWD_KEY]
+            overheads.append(info[OVERHEAD_KEY])
             y -= memory_summary_dict['base_model_fwd_bytes']
             ys.append(y / 4)
+
+        avg_overhead = sum(overheads) / len(overheads)
+        memory_summary_dict['overhead_bytes'] = avg_overhead
             
         
 
