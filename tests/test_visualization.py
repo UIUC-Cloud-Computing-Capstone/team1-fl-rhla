@@ -56,46 +56,6 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         plt.close()
 
-    def _create_rank_vs_memory_diagram(self, fixed_upload_speed_Mbps, fixed_download_speed_Mbps, memory_sizes_GB, rank_values):
-        fig, ax = plt.subplots(figsize=(12, 6))
-        
-        # Create custom x-axis positions for better visualization
-        # Map memory values to evenly spaced positions
-        x_positions = list(range(len(memory_sizes_GB)))
-        
-        # Plot with custom x positions
-        ax.plot(x_positions, rank_values, marker='o', linewidth=2, markersize=8, color='blue')
-        ax.set_xlabel('GPU Memory Size (GB)', fontsize=16)
-        ax.set_ylabel('Rank Size', fontsize=16)
-        ax.set_title(f'Rank Size vs GPU Memory\n(Fixed Upload: {fixed_upload_speed_Mbps} Mbps, Download: {fixed_download_speed_Mbps} Mbps)', 
-                     fontsize=18, fontweight='bold')
-        ax.grid(True, alpha=0.3)
-        
-        # Set custom x-axis labels with actual memory values
-        ax.set_xticks(x_positions)
-        ax.set_xticklabels([f'{mem:.2f}' if mem < 1 else f'{mem:.1f}' if mem < 2 else f'{int(mem)}' 
-                            for mem in memory_sizes_GB], rotation=45, ha='right', fontsize=14)
-        ax.tick_params(axis='y', labelsize=14)
-        
-        # Add value labels on points
-        for i, (pos, rank) in enumerate(zip(x_positions, rank_values)):
-            ax.annotate(f'{int(rank)}', (pos, rank), textcoords="offset points", 
-                       xytext=(0,10), ha='center', fontsize=12)
-        
-        # Add a visual break indicator if there's a large gap
-        if max(memory_sizes_GB) > 2 * max([m for m in memory_sizes_GB if m <= 2]):
-            # Find where the gap occurs
-            gap_start_idx = len([m for m in memory_sizes_GB if m <= 2])
-            if gap_start_idx < len(memory_sizes_GB):
-                # Add a subtle vertical line to indicate the gap
-                ax.axvline(x=gap_start_idx - 0.5, color='gray', linestyle='--', alpha=0.5, linewidth=1)
-                # Add text annotation
-                ax.text(gap_start_idx - 0.5, ax.get_ylim()[1] * 0.95, '...', 
-                        ha='center', fontsize=16, color='gray', alpha=0.7)
-        
-        plt.tight_layout()
-
-
     def test_rank_vs_memory_and_network_speed_combined(self):
         """Generate a combined diagram with both lines in the same figure, sharing the Y-axis"""
         # Fixed network speeds for memory diagram
@@ -106,7 +66,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         fixed_memory_GB = 8.0
         
         # Vary memory sizes (realistic range: 4GB to 16GB)
-        memory_sizes_GB = [1.5, 1.8, 1.9, 2, 2.1, 2.2, 2.5, 4, 8]
+        memory_sizes_GB = [1.5, 1.8, 2, 2.2, 2.5, 4, 8]
         
         # Vary network speeds (realistic range: 0.5 Mbps to 10 Mbps)
         network_speeds_Mbps = [1.0, 2.0, 4.0, 8.0, 12.0, 15.0, 20.0]
@@ -145,22 +105,22 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         # This makes small differences much more readable while preserving the uneven nature
         def transform_memory(mem_val):
             """Transform memory value to spread small values more for readability"""
-            # Use a piecewise approach: more aggressive for small values, less for large
-            if mem_val <= 2:
-                # Very aggressive transformation for small values (1.5-2 range)
-                return 0.5 * mem_val  # Linear scaling for small values gives more space
-            else:
-                # Less aggressive for larger values
-                base = 1.0  # Value at mem_val=2
-                return base + 0.3 * np.power(mem_val - 2, 0.5)
-            #return mem_val
+            # # Use a piecewise approach: more aggressive for small values, less for large
+            # if mem_val <= 2:
+            #     # Very aggressive transformation for small values (1.5-2 range)
+            #     return 0.5 * mem_val  # Linear scaling for small values gives more space
+            # else:
+            #     # Less aggressive for larger values
+            #     base = 1.0  # Value at mem_val=2
+            #     return base + 0.3 * np.power(mem_val - 2, 0.5)
+            return mem_val
             
         # Transform memory values for x-positions
         x_positions_memory = [transform_memory(mem) for mem in memory_sizes_GB]
         
         # Plot memory line on bottom X-axis using transformed positions
         line1 = ax.plot(x_positions_memory, rank_values_memory, marker='o', linewidth=2, markersize=8, 
-                       color='blue', label=f'Rank vs Memory (Fixed Network: {fixed_upload_speed_Mbps}/{fixed_download_speed_Mbps} Mbps)')
+                       color='blue', label=f'Rank vs Memory')
         
         # Set bottom X-axis for memory sizes - use less rotation for better readability
         ax.set_xlabel('GPU Memory Size (GB)', fontsize=26, color='blue', labelpad=15)
@@ -208,7 +168,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         # Plot network speed line on top X-axis
         line2 = ax2.plot(network_x_positions, rank_values_network, marker='s', linewidth=2, markersize=8, 
-                        color='green', label=f'Rank vs Network Speed (Fixed Memory: {fixed_memory_GB} GB)')
+                        color='green', label=f'Rank vs Network Speed')
         
         # Set top X-axis for network speeds - show all labels
         ax2.set_xlabel('Network Speed (Mbps)', fontsize=26, color='green', labelpad=15)
