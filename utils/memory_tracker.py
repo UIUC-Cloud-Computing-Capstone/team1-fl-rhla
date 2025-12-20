@@ -20,6 +20,7 @@ import time
 import statistics
 from peft import LoraConfig, get_peft_model
 import copy
+import numpy as np
 
 # Constants
 MB_TO_BYTES = 1024 * 1024
@@ -495,8 +496,12 @@ class MemoryTracker:
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         fwd_key= 'avg_profiled_fwd'
-        info_r1 = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]
-        info_r2 = self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r2, module_names, device)[fwd_key]
+        val1s = []
+        val2s = []
+        for i in range(5):
+            val1s.append(self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key])
+            val2s.append(self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r2, module_names, device)[fwd_key])
+        
         # info_r1 = (info_r1 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
         # info_r2 = (info_r2 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
         # info_r1 = (info_r1 + self._get_base_model_fwd_in_bytes_for_estimator_helper(args, config, copy.deepcopy(base_model), r1, module_names, device)[fwd_key]) / 2
@@ -507,22 +512,27 @@ class MemoryTracker:
         bsr1  = bs * r1
         bsr2  = bs * r2
         
+        # regression analysis to get beta1 and beta2
+        X = np.array([[bsh, bsr1], [bsh, bsr2]])
+        y = np.array([val1s, val2s])
+        beta1, beta2 = np.linalg.lstsq(X, y, rcond=None)[0]
         matrix_count = 2
-        info_r1_fwd = info_r1 / bytes_per_parameter
-        info_r2_fwd = info_r2 / bytes_per_parameter
-        # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
-        # beta1 * bsh + beta2 * bsr2 = info_r2_fwd
-        # Solve the linear equations:
-        # Subtract equation 2 from equation 1:
-        # beta2 * (bsr1 - bsr2) = info_r1_fwd - info_r2_fwd
-        # beta2 = (info_r1_fwd - info_r2_fwd) / (bsr1 - bsr2)
-        # Then from equation 1:
+        # info_r1_fwd = info_r1 / bytes_per_parameter
+        # info_r2_fwd = info_r2 / bytes_per_parameter
+        # # beta1 * bsh + beta2 * bsr1 = info_r1_fwd
+        # # beta1 * bsh + beta2 * bsr2 = info_r2_fwd
+        # # Solve the linear equations:
+        # # Subtract equation 2 from equation 1:
+        # # beta2 * (bsr1 - bsr2) = info_r1_fwd - info_r2_fwd
+        # # beta2 = (info_r1_fwd - info_r2_fwd) / (bsr1 - bsr2)
+        # # Then from equation 1:
+        # # beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
+        # denominator = bsr1 - bsr2
+        # if abs(denominator) < 1e-10:
+        #     raise ValueError(f"Cannot solve: bsr1 ({bsr1}) and bsr2 ({bsr2}) are too close, making the system singular")
+        # beta2 = (info_r1_fwd - info_r2_fwd) / denominator
         # beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
-        denominator = bsr1 - bsr2
-        if abs(denominator) < 1e-10:
-            raise ValueError(f"Cannot solve: bsr1 ({bsr1}) and bsr2 ({bsr2}) are too close, making the system singular")
-        beta2 = (info_r1_fwd - info_r2_fwd) / denominator
-        beta1 = (info_r1_fwd - beta2 * bsr1) / bsh
+        
         print('betas: ', beta1, beta2)
         return beta1, beta2
         
