@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from transformers import AutoModelForImageClassification, AutoConfig
 import copy
+MEM_ONLY = 'mem_only'
+UPLOAD_ONLY = 'upload_only'
 
 # Add parent directory to path to import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -121,6 +123,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
             args.gpu_memory_size_for_each_group_in_GB = [memory_size_GB]
             args.avg_upload_network_speed_for_each_group_in_Mbps = [fixed_upload_speed_Mbps]
             args.avg_download_network_speed_for_each_group_in_Mbps = [fixed_download_speed_Mbps]
+            args.rank_estimator_method = MEM_ONLY
             rank_budgets = self.estimator.get_rank_for_one_client_group(args, config, copy.deepcopy(base_model), {})
             rank_values_memory.append(rank_budgets[0])
         
@@ -130,6 +133,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         for network_speed_Mbps in network_speeds_Mbps:
             args.avg_upload_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
             args.avg_download_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
+            args.rank_estimator_method = UPLOAD_ONLY
             rank_budgets = self.estimator.get_rank_for_one_client_group(args, config, copy.deepcopy(base_model), {})
             rank_values_network.append(rank_budgets[0])
         

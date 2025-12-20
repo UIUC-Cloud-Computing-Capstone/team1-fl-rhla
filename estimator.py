@@ -4,6 +4,7 @@ from utils.memory_tracker import MemoryTracker
 FEDHELLO = 'FedHello'
 OURS = 'Ours'
 MEM_ONLY = 'mem_only'
+UPLOAD_ONLY = 'upload_only'
 
 class RankEstimator:
 
@@ -41,6 +42,9 @@ class RankEstimator:
             rank_for_one_client_group = self._get_rank_for_one_client_group(args, config, base_model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group, memory_summary_dict)
             rank_for_all_client_groups.append(rank_for_one_client_group)
             
+            if args.rank_estimator_method == UPLOAD_ONLY:
+                return
+
             memory_summary_dict['total_para_bytes'] = memory_summary_dict['base_model_para_bytes'] + memory_summary_dict['lora_param_bytes']
             memory_summary_dict['total_fwd_bytes'] = memory_summary_dict['base_model_fwd_bytes'] + memory_summary_dict['lora_fwd_bytes']
             memory_summary_dict['total_optimizer_states_bytes'] = memory_summary_dict['lora_optimizer_states_bytes']
@@ -57,6 +61,8 @@ class RankEstimator:
             return self._get_rank_based_on_gpu_memory(args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict)
         elif args.rank_estimator_method == OURS:
             return self._get_rank_based_on_all(args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict)
+        elif args.rank_estimator_method == UPLOAD_ONLY:
+            return self._get_rank_based_on_network_speed(args, config, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
         else:
             raise ValueError(f'Invalid rank estimator method: {args.rank_estimator_method}')
 
@@ -218,7 +224,7 @@ class RankEstimator:
         else:
             raise NotImplementedError('Not implemented yet.')
 
-    def _get_rank_based_on_network_speed(self, args, config, model,network_speed_in_Mbps, desired_communication_time_in_seconds):
+    def _get_rank_based_on_network_speed(self, args, config, network_speed_in_Mbps, desired_communication_time_in_seconds):
         bytes_per_second = network_speed_in_Mbps * 1_000_000 / 8
         parameter_size_in_bytes = desired_communication_time_in_seconds * bytes_per_second
         num_modules_per_layer = self._get_num_of_modules_per_layer(args)
