@@ -492,8 +492,10 @@ class MemoryTracker:
             y -= memory_summary_dict['base_model_fwd_bytes']
             ys.append(y / 4)
 
-        avg_overhead = sum(overheads) / len(overheads)
-        memory_summary_dict['overhead_bytes'] = avg_overhead
+        overheads.sort()
+        median_overhead = statistics.median(overheads)
+        #avg_overhead = sum(overheads) / len(overheads)
+        memory_summary_dict['overhead_bytes'] = median_overhead
             
         
 
