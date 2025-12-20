@@ -142,7 +142,7 @@ class RankEstimator:
         lora_portion_per_layer = lora_portion / layers
 
         
-        D = H * C * bytes_per_parameter
+        D = H * bytes_per_parameter
 
         total_dim = 0
         sum_of_b1BSHbytes = 0
@@ -150,7 +150,6 @@ class RankEstimator:
         sum_of_b2BSbytes = 0
         for lora_target_module in args.lora_target_modules:
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
-            print('ratio', ratio)
             beta1, beta2 = module_name_to_betas[lora_target_module]
             sum_of_ratio_D += ratio * D
             b2BSbytes = beta2 * B * sequence_length * bytes_per_parameter
@@ -163,9 +162,8 @@ class RankEstimator:
         rank = int(lora_portion_per_layer / total_dim)
         rank = min(rank, H)
         rank = max(rank, 0)
-        print('est rank:', rank)
+        print('est rank by memory:', rank)
 
-        print('sum_of_ratio_D', sum_of_ratio_D, rank, layers, sum_of_ratio_D * rank * layers)
         memory_summary_dict['lora_param_bytes'] = sum_of_ratio_D * rank * layers
         print(memory_summary_dict['lora_param_bytes'], self._bytes_to_mb(memory_summary_dict['lora_param_bytes']))
         memory_summary_dict['lora_optimizer_states_bytes'] = memory_summary_dict['lora_param_bytes'] * get_optimizer_state_count(args.optimizer)

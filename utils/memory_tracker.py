@@ -88,17 +88,17 @@ class MemoryTracker:
         
         total_params = sum(param.numel() for param in model.parameters())
         trainable_params = sum(param.numel() for param in model.parameters() if param.requires_grad)
-        #print('trainable_params * 4 bytes', trainable_params * 4)
-        #print('trainable_params * 2 * 4 bytes', trainable_params * 2 * 4)
+        trainable_memory_bytes = trainable_params * bytes_per_param
+        trainable_memory_MB = self._bytes_to_mb(trainable_memory_bytes)
+        #print('trainable_memory_MB', trainable_memory_MB)
         
         param_memory_bytes = total_params * bytes_per_param
-        trainable_memory_bytes = trainable_params * bytes_per_param
         
         return {
             'total_params': total_params,
             'trainable_params': trainable_params,
             'total_param_memory_bytes': param_memory_bytes,
-            'trainable_memory_MB': self._bytes_to_mb(trainable_memory_bytes),
+            'trainable_memory_MB': trainable_memory_MB,
         }
     
     def _get_optimizer_states_memory_bytes(self, optimizer):
