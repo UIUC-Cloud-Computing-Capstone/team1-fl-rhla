@@ -7,7 +7,8 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from transformers import AutoModelForImageClassification
+from transformers import AutoModelForImageClassification, AutoConfig
+import copy
 
 # Add parent directory to path to import the module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -38,6 +39,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         args.desired_downloading_time_for_each_group_in_seconds = [15]
         args.heterogeneous_group = [1.0]  # Single group for simplicity
         args.train_classifier = False # do not train classifier in the base model. Only train LoRA matrices.
+        args.CLS_TOKEN = 1
         return args
     
 
@@ -111,6 +113,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         # Load model once
         base_model = AutoModelForImageClassification.from_pretrained(args.model)
+        config = AutoConfig.from_pretrained(args.model)
         
         # Collect rank values for memory variation
         rank_values_memory = []
@@ -118,7 +121,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
             args.gpu_memory_size_for_each_group_in_GB = [memory_size_GB]
             args.avg_upload_network_speed_for_each_group_in_Mbps = [fixed_upload_speed_Mbps]
             args.avg_download_network_speed_for_each_group_in_Mbps = [fixed_download_speed_Mbps]
-            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, base_model)
+            rank_budgets = self.estimator.get_rank_for_one_client_group(args, config, copy.deepcopy(base_model), {})
             rank_values_memory.append(rank_budgets[0])
         
         # Collect rank values for network speed variation
@@ -127,7 +130,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         for network_speed_Mbps in network_speeds_Mbps:
             args.avg_upload_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
             args.avg_download_network_speed_for_each_group_in_Mbps = [network_speed_Mbps]
-            rank_budgets = self.estimator.get_rank_for_all_client_groups(args, base_model)
+            rank_budgets = self.estimator.get_rank_for_one_client_group(args, config, copy.deepcopy(base_model), {})
             rank_values_network.append(rank_budgets[0])
         
         # Create a single figure with dual X-axes - even larger size for better readability
