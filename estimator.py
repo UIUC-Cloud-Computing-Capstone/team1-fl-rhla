@@ -172,7 +172,6 @@ class RankEstimator:
         '''
         
         parameter_size = sum(p.numel() for p in base_model.parameters())
-        print('parameter_size', parameter_size)
         
         byte_per_parameter = self._get_byte_per_parameter(args.precision)
 
