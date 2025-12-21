@@ -20,7 +20,6 @@ class RankEstimator:
             self._helper(args, config, copy.deepcopy(base_model), memory_summary_dict, rank_per_module_per_layer_for_all_client_groups, i)
         
         print(f'rank budget per module for all client groups respectively: {str(rank_per_module_per_layer_for_all_client_groups)}')
-        #return rank_for_all_client_groups
         multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
         client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_per_module_per_layer_for_all_client_groups]
         print('per client: ', client_rank_budgets_for_all_heterogeneous_groups)
@@ -29,12 +28,15 @@ class RankEstimator:
     def get_rank_for_one_client_group(self, args, config, base_model, memory_summary_dict):
 
         #config = AutoConfig.from_pretrained(args.model)
-        rank_for_all_client_groups = []
+        rank_per_module_per_layer_for_all_client_groups = []
         
-        self._helper(args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i)
+        self._helper(args, config, base_model, memory_summary_dict, rank_per_module_per_layer_for_all_client_groups, 0)
 
-        print(f'rank budget per module for all client groups respectively: {str(rank_for_all_client_groups)}')
-        return rank_for_all_client_groups
+        print(f'rank budget per module for all client groups respectively: {str(rank_per_module_per_layer_for_all_client_groups)}')
+        multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
+        client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_per_module_per_layer_for_all_client_groups]
+        print('per client: ', client_rank_budgets_for_all_heterogeneous_groups)
+        return client_rank_budgets_for_all_heterogeneous_groups
 
     def _helper(self, args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i):
             print(f"client group {i}")
