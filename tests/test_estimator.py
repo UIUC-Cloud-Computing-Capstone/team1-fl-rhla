@@ -86,10 +86,10 @@ class TestRankEstimator(unittest.TestCase):
         # resource heterogeneity
         # all clients belong to 3 heterogeneous groups. Each group has different resource limitation.
         args.gpu_memory_size_for_each_group_in_GB = [2, 4, 8]
-        args.avg_upload_network_speed_for_each_group_in_Mbps = [1, 1.5, 2]
-        args.avg_download_network_speed_for_each_group_in_Mbps = [10, 10, 10]
-        args.desired_uploading_time_for_each_group_in_seconds = [15, 15, 15]
-        args.desired_downloading_time_for_each_group_in_seconds = [15, 15, 15]
+        args.avg_upload_network_speed_for_each_group_in_Mbps = [7.08, 10.62, 14.16]
+        args.avg_download_network_speed_for_each_group_in_Mbps = [51.1, 63.4, 86.3]
+        args.desired_uploading_time_for_each_group_in_seconds = [1, 1, 1]
+        args.desired_downloading_time_for_each_group_in_seconds = [1, 1, 1]
         args.heterogeneous_group = [1/3, 1/3, 1/3] # 1/3 of clients belong to each group.
 
         # model
@@ -113,7 +113,9 @@ class TestRankEstimator(unittest.TestCase):
         
         config = AutoConfig.from_pretrained(args.model)
         rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, config, base_model, {})
-        print(rank_budgets_for_all_heterogeneous_groups)
+        multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
+        client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_budgets_for_all_heterogeneous_groups]
+        print('per client: ', client_rank_budgets_for_all_heterogeneous_groups)
 
     def _init_args(self):
         args = argparse.Namespace()
