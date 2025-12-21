@@ -68,7 +68,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         memory_sizes_GB = [1.5, 1.8, 2, 2.2, 2.5, 4, 8]
         
         # Vary network speeds (realistic range: 0.5 Mbps to 10 Mbps)
-        network_speeds_Mbps = [1.0, 7.0, 10.0, 15.0, 50, 80, 160, 320]
+        network_speeds_Mbps = [1.0, 40, 80, 160, 320]
         
         # Model and training configuration
         args = self._init_args()
