@@ -57,18 +57,11 @@ class TestRankEstimatorVisualization(unittest.TestCase):
 
     def test_rank_vs_memory_and_network_speed_combined(self):
         """Generate a combined diagram with both lines in the same figure, sharing the Y-axis"""
-        # Fixed network speeds for memory diagram
-        #fixed_upload_speed_Mbps = 100
-        #fixed_download_speed_Mbps = 100
+        # Vary memory sizes
+        memory_sizes_GB = [1.5, 1.8, 2, 2.2, 2.5]
         
-        # Fixed memory size for network speed diagram
-        #fixed_memory_GB = 8.0
-        
-        # Vary memory sizes (realistic range: 4GB to 16GB)
-        memory_sizes_GB = [1.5, 1.8, 2, 2.2, 2.5, 4, 8]
-        
-        # Vary network speeds (realistic range: 0.5 Mbps to 10 Mbps)
-        network_speeds_Mbps = [1.0, 40, 80, 160, 320]
+        # Vary network speeds
+        network_speeds_Mbps = [1.0, 7.0, 15, 25, 40, 80]
         
         # Model and training configuration
         args = self._init_args()
