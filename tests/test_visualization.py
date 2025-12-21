@@ -179,7 +179,7 @@ class TestRankEstimatorVisualization(unittest.TestCase):
         
         # Set Y-axis label (shared)
         ax.set_ylabel('Rank Size', fontsize=26, labelpad=15)
-        ax.set_ylim(0, 600)
+        ax.set_ylim(0, 10000)
         ax.grid(True, alpha=0.3)
         
         # Combine legends from both axes
