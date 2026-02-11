@@ -1,4 +1,4 @@
-# 👋 Federated Learning Resource-Aware Heterogeneous LoRA Allocation
+# 👋 Heterogeneous-Resource-Aware Federated Learning with Intelligent LoRA Allocation and Aggregation
 
 ## 🧪 Getting Started
 
@@ -6,7 +6,9 @@
 
 Ensure you have [Conda](https://docs.conda.io/) installed. 
 
-Then update `prefix: /home/yourhomepath/anaconda3/envs/env.fl` in the `environment.yml` file based on your path. 
+Check out the branch ccgrid2026-v2
+
+Then update `prefix: /home/yourhomepath/anaconda3/envs/env.fl` in the `environment-final.yml` file based on your path. 
 
 Then activate the environment using the provided file:
 
@@ -53,29 +55,17 @@ bash run-cifar100.sh
 └── test.py         # Evaluation and testing routines
 ```
 ---
-## References
-
-This is a fork from the official code for the paper accepted to IEEE Transactions on Neural Networks and Learning Systems (TNNLS)
-
-```bibtext
-@article{zhang2025fed,
-  title={Fed-HeLLo: Efficient Federated Foundation Model Fine-Tuning with Heterogeneous LoRA Allocation},
-  author={Zhang, Zikai and Liu, Ping and Xu, Jiahao and Hu, Rui},
-  journal={arXiv preprint arXiv:2506.12213},
-  year={2025}
-}
-```
----
 
 ## 📄 Citation
 
 If you find this work useful for your research, please cite papers
 ```
-@article{xie2026hralora,
+@inproceedings{xie2026hralora,
   title={Heterogeneous-Resource-Aware Federated Learning with Intelligent LoRA Allocation and Aggregation},
   author={Xie, Youye and Lian, Yao and Chen, Kevin and Latif, Abdul and Zhao, Lingzhi and Farivar, Reza},
-  journal={},
-  year={2026}
+  booktitle={Proceedings of the 26th IEEE/ACM International Symposium on Cluster, Cloud and Internet Computing (CCGrid)},
+  year={2026},
+  organization={IEEE/ACM}
 }
 @article{zhang2025fed,
   title={Fed-HeLLo: Efficient Federated Foundation Model Fine-Tuning with Heterogeneous LoRA Allocation},
