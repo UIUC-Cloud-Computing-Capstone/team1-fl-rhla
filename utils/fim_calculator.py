@@ -135,7 +135,6 @@ class FIMCalculator:
         #print(latest_fim_diag)
         #print('##################################################')
         for param_name, param_fim_diag in latest_fim_diag.items():
-            # TODO (Done): check the layer name actually follow this convention.
             layer_name = int(re.search(r'\.layer\.(\d+)\.', param_name).group(1))
             # layer_name is the model index
             # combined lora_A lora_B gradient
@@ -157,6 +156,5 @@ class FIMCalculator:
         order = np.argsort(centers)                        # e.g., [2, 0, 1]
         remap = {old: new for new, old in enumerate(order)}# smallest center -> 0, etc.
         cluster_labels = np.array([remap[l] for l in kmeans.labels_], dtype=int)
-        # TODO (Remap done): the label needs to associated with the fim score! layer with smallest fim score should be label-2. So with the highest probablity to be selected as the blocked layer.
         return keys, cluster_labels
 

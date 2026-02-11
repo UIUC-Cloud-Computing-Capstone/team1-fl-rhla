@@ -1,4 +1,4 @@
-./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/hetlora/image_cifar100_vit_fedavg_hetlora_noniid-pat_10_dir_2024-04-16_02-00-55
+./log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/hetlora/image_cifar100_vit_fedavg_hetlora_noniid-pat_10_dir_2024-04-16_02-00-55
 ############ Case 0 ############
 --------------- data setup ---------------------------------
 length of dataset:60000
@@ -7,7 +7,7 @@ num. of testing data:10000
 num. of users:100
 average num. of samples per user:500
 --------------- log path -----------------------------------
-./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/hetlora/image_cifar100_vit_fedavg_hetlora_noniid-pat_10_dir_2024-04-16_02-00-55
+./log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/hetlora/image_cifar100_vit_fedavg_hetlora_noniid-pat_10_dir_2024-04-16_02-00-55
 --------------- model setup --------------------------------
 model dim: 86542280
 --------------- training... --------------------------------

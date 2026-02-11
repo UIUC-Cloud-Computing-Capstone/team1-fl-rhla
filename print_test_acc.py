@@ -2,11 +2,11 @@ import re
 import matplotlib.pyplot as plt
 
 # Example file content
-with open("log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-27_00-52-46/exp_log.txt", "r") as f:
+with open("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-27_00-52-46/exp_log.txt", "r") as f:
     text = f.read()
 
 # Example file content
-with open("log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-29_15-54-06/exp_log.txt", "r") as f:
+with open("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-29_15-54-06/exp_log.txt", "r") as f:
     text1 = f.read()
 
 
@@ -38,18 +38,18 @@ def getAccuracyList(file_path):
 
 
 
-rank18 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-28_09-37-08/exp_log.txt');
-rank32 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-28_01-40-45/exp_log.txt')
-rank6 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-27_19-38-07/exp_log.txt')
-rank12 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-27_09-54-13/exp_log.txt')
-rank24 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/rank-24-fedhello/exp_log.txt')
-rank48 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-22_05-08-18/exp_log.txt')
-rank48_fixA = getAccuracyList('log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-28_23-04-00/exp_log.txt')
-rank48_truncate24 = getAccuracyList("log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-29_15-54-06/exp_log.txt")
-rank48_fixA_svd = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-29_22-54-01/exp_log.txt')
+rank18 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-28_09-37-08/exp_log.txt');
+rank32 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-28_01-40-45/exp_log.txt')
+rank6 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-27_19-38-07/exp_log.txt')
+rank12 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-27_09-54-13/exp_log.txt')
+rank24 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/rank-24-fedhello/exp_log.txt')
+rank48 = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-22_05-08-18/exp_log.txt')
+rank48_fixA = getAccuracyList('log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-28_23-04-00/exp_log.txt')
+rank48_truncate24 = getAccuracyList("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-29_15-54-06/exp_log.txt")
+rank48_fixA_svd = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2025-10-29_22-54-01/exp_log.txt')
 
-proposed = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image-rank-var-b-only_2025-11-10_00-03-54/exp_log.txt')
-rank_var = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image-rank-variation-only_2025-11-10_07-54-26/exp_log.txt')
+proposed = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image-rank-var-b-only_2025-11-10_00-03-54/exp_log.txt')
+rank_var = getAccuracyList('/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image-rank-variation-only_2025-11-10_07-54-26/exp_log.txt')
 
 
 

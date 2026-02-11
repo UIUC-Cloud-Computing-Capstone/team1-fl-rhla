@@ -1,6 +1,6 @@
 import re
 
-log_path = "/home/youye/team1-fl-rhla/log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary_2025-12-07_00-45-38/exp_log.txt"
+log_path = "/home/youye/team1-fl-rhla/log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary_2025-12-07_00-45-38/exp_log.txt"
 
 with open(log_path, "r", encoding="utf-8") as f:
     log_text = f.read()

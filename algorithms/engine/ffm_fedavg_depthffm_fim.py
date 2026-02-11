@@ -364,7 +364,7 @@ def ffm_fedavg_depthffm_fim(args):
 
         if args.train_a:
             print('AAAAA train matrix A')
-        
+
         if args.train_b:
             print('BBBBB train matrix B')
 
@@ -538,7 +538,6 @@ def train_selected_clients(args, net_glob, global_model, data_loader_list, t, se
 
 def update_global_model(args, global_model, local_updates, num_samples):
     """
-    # TODO Liam: add aggregation function for heterogenous rank
     print('######################### initial #######################')
     for k in global_model.keys():
         if 'lora_B' in k and ('layer.2.' in k):
@@ -589,7 +588,7 @@ def update_global_model(args, global_model, local_updates, num_samples):
             B = global_model[k].detach().cpu()
             lora_name = k.replace('lora_B', 'lora_A')
             A = global_model[lora_name].detach().cpu()
-            U, S, VT = torch.linalg.svd(B@A, full_matrices=False) 
+            U, S, VT = torch.linalg.svd(B@A, full_matrices=False)
 
             # suppress the deficient singular value
             #print(f'smallest singulvar value = {min(S)}')
@@ -889,7 +888,7 @@ def get_rank_list(args, layer_list, fim, id):
 
     # add back the reserved rank for each block. Cap the rank assignment to the full rank setting.
     truncated_rank_list = [min(args.lora_max_rank,x + common_rank) for x in rank_list]
-    
+
     print(f'truncated rank list {truncated_rank_list}')
     # cap at the lora max rank and distribute starting from the layer with the biggest fim score
     total_rank_budget = getattr(args, 'var_rank_group'+str(id)+'_lora')
@@ -900,7 +899,7 @@ def get_rank_list(args, layer_list, fim, id):
         normalized_selected_layer_fim[max_index] = -1
         truncated_rank_list[max_index] = min(truncated_rank_list[max_index]+left_over, args.lora_max_rank)
         left_over = total_rank_budget - sum(truncated_rank_list)
-    
+
     final_rank_list = truncated_rank_list;
     args.rank_list.append(final_rank_list)
 
@@ -1174,7 +1173,7 @@ def update_dataset_fim(args, dataset_fim):
            - Requires tokenizer for proper formatting
     
     Example:
-        >>> args.model = 'google/vit-base-patch16-224-in21k'
+        >>> args.model = 'facebook/deit-small-patch16-224'
         >>> args.dataset = 'cifar100'
         >>> args.batch_size = 32
         >>> fim_loader = update_dataset_fim(args, fim_dataset)
@@ -1243,7 +1242,7 @@ def get_data_loader_list(args, dataset_train, dict_users):
     
     Example:
         >>> args.num_users = 100
-        >>> args.model = 'google/vit-base-patch16-224-in21k'
+        >>> args.model = 'facebook/deit-small-patch16-224'
         >>> args.dataset = 'cifar100'
         >>> args.batch_size = 32
         >>> data_loaders = get_data_loader_list(args, train_dataset, user_dict)

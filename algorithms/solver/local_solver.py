@@ -61,7 +61,7 @@ class LocalUpdate(object):
             if (lora_str in name and any(('layer.' + str(nd) + '.') in name for nd in args.block_ids_list[client_real_id])) or 'classifier' in name:
                 if args.train_b and 'lora_B' in name:
                     param.requires_grad = True
-                
+
                 if args.train_a and 'lora_A' in name:
                     param.requires_grad = True
 
@@ -135,7 +135,7 @@ class LocalUpdate(object):
                 if 'lora' in name and param.requires_grad:
                     layer_id = int(re.findall(r"\d+", name)[0])
                     layer_index = args.block_ids_list[client_real_id].index(layer_id)
-                    
+
                     rank = args.rank_list[client_real_id][layer_index]
                     #print(f'layer id {layer_id}, rank = {rank}')
                     if 'lora_A' in name:
@@ -153,7 +153,7 @@ class LocalUpdate(object):
 
                         if args.HetLoRA:
                             # truncate the param for HetLoRA
-                            param.data[:,rank:].zero_() 
+                            param.data[:,rank:].zero_()
         #print('############## trainable param ############')
         #print(f'args.block_ids_list[client_real_id] = {args.block_ids_list[client_real_id]}')
         #for name, param in model.named_parameters():

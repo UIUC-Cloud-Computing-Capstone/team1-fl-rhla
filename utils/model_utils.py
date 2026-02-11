@@ -29,7 +29,7 @@ def model_setup(args):
     
     Args:
         args: Configuration object containing model parameters. Expected attributes:
-            - model (str): Model identifier ('bert-base-uncased' or 'google/vit-base-patch16-224-in21k')
+            - model (str): Model identifier ('bert-base-uncased' or 'facebook/deit-small-patch16-224')
             - num_classes (int): Number of output classes for classification
             - device (torch.device): Device to move the model to (CPU/GPU)
             - label2id (dict): Mapping from labels to IDs (for ViT models)
@@ -48,7 +48,7 @@ def model_setup(args):
            - LoRA config: r=6, alpha=6, targets query/value modules
            - Dropout: 0.1, no bias adaptation
         
-        2. Vision Transformer ('google/vit-base-patch16-224-in21k'):
+        2. Vision Transformer ('facebook/deit-small-patch16-224'):
            - Uses facebook/deit-small-patch16-224 as base model
            - LoRA config: r=48, alpha=48, targets query/value modules
            - Dropout: 0.1, no bias adaptation
@@ -86,7 +86,7 @@ def model_setup(args):
 
         net_glob = get_peft_model(model, config)
         net_glob.to(args.device)
-    elif args.model == 'google/vit-base-patch16-224-in21k':
+    elif args.model == 'facebook/deit-small-patch16-224':
         model = AutoModelForImageClassification.from_pretrained(
             'facebook/deit-small-patch16-224',
             label2id=args.label2id,

@@ -1,4 +1,4 @@
-./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2024-05-01_11-22-29
+./log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2024-05-01_11-22-29
 ############ Case 0 ############
 --------------- data setup ---------------------------------
 selected_indices_fim:
@@ -9,7 +9,7 @@ num. of testing data:10000
 num. of users:100
 average num. of samples per user:499
 --------------- log path -----------------------------------
-./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2024-05-01_11-22-29
+./log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/depthffm_fim/image_cifar100_vit_fedavg_depthffm_fim-6_9_12-bone_iid-noprior-s50-e50_2024-05-01_11-22-29
 --------------- model setup --------------------------------
 model dim: 86542280
 --------------- training... --------------------------------
