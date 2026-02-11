@@ -113,6 +113,9 @@ class TestRankEstimator(unittest.TestCase):
         
         config = AutoConfig.from_pretrained(args.model)
         rank_budgets_for_all_heterogeneous_groups = self.estimator.get_rank_for_all_client_groups(args, config, base_model, {})
+        multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
+        client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_budgets_for_all_heterogeneous_groups]
+        print('per client: ', client_rank_budgets_for_all_heterogeneous_groups)
 
     def _init_args(self):
         args = argparse.Namespace()
