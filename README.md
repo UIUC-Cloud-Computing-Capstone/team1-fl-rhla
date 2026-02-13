@@ -53,7 +53,6 @@ bash run-cifar100.sh
 ├── config/         # YAML configuration files
 ├── data/           # Dataset cache directory
 ├── log/            # Output logs and saved results
-├── model/          # Model definitions
 ├── utils/          # Utility functions
 ├── main.py         # Entry point for training
 └── test.py         # Evaluation and testing routines
