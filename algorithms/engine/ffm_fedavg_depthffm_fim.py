@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from utils.fim_calculator import FIMCalculator
 import threading
 
+VISION_MODEL = 'facebook/deit-small-patch16-224'
 
 gpu_lock = threading.Lock()
 
@@ -1251,7 +1252,7 @@ def get_data_loader_list(args, dataset_train, dict_users):
     data_loader_list = []
     for i in range(args.num_users):
         dataset = DatasetSplit(dataset_train, dict_users[i], args)
-        if 'vit' in args.model:
+        if VISION_MODEL in args.model:
             ldr_train = DataLoader(dataset, shuffle=True, collate_fn=vit_collate_fn, batch_size=args.batch_size)
         elif 'sst2' in args.dataset or 'qqp' in args.dataset or 'qnli' in args.dataset or 'ledgar' in args.dataset:
             ldr_train = DataLoader(dataset, shuffle=True, collate_fn=args.data_collator, batch_size=args.batch_size)
