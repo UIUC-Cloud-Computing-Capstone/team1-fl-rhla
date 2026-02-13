@@ -52,11 +52,6 @@ class RankEstimator:
             memory_summary_dict['total_optimizer_states_bytes'] = memory_summary_dict['lora_optimizer_states_bytes']
             memory_summary_dict['total_grads_bytes'] = memory_summary_dict['lora_grads_bytes']
             memory_summary_dict['total_memory_bytes'] = round(memory_summary_dict['total_para_bytes'] + memory_summary_dict['total_fwd_bytes'] + memory_summary_dict['total_optimizer_states_bytes'] + memory_summary_dict['total_grads_bytes'], 2)
-            
-            print('------------------------------------------------------------------------------------------------')
-            print('estimated: ')
-            for k, v in memory_summary_dict.items():
-                print(k, self._bytes_to_mb(v))
 
     def _get_rank_for_one_client_group(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
         if args.rank_estimator_method == FEDHELLO or args.rank_estimator_method == MEM_ONLY:
