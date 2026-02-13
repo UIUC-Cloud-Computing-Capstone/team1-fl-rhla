@@ -52,7 +52,6 @@ bash run-cifar100.sh
 │   └── solver/   # Local training procedures
 ├── config/         # YAML configuration files
 ├── data/           # Dataset cache directory
-├── log/            # Output logs and saved results
 ├── utils/          # Utility functions
 ├── main.py         # Entry point for training
 └── test.py         # Evaluation and testing routines
