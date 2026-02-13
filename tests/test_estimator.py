@@ -14,6 +14,7 @@ import pandas as pd
 import gc
 import time
 import statistics
+import copy
 #import timm
 
 # Add parent directory to path to import the module
@@ -22,6 +23,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from estimator import RankEstimator
 from peft import LoraConfig, get_peft_model
 from utils.memory_tracker import MemoryTracker
+
+MEM_ONLY = 'mem_only'
 
 
 class TestRankEstimator(unittest.TestCase):
@@ -122,6 +125,30 @@ class TestRankEstimator(unittest.TestCase):
         for name, module in model.named_modules():
             if hasattr(module, 'weight') and module.weight is not None:
                 print(f"{name:<50} | {list(module.weight.shape)}")
+
+    def test_memory_breakdown_comparison_table_qv(self):
+        args = self._init_args()
+        args.gpu_memory_size_for_each_group_in_GB = [2]
+        args.lora_target_modules = ['query', 'value']
+        
+        
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+        config = AutoConfig.from_pretrained(args.model)
+        memory_summary_dict = {}
+        args.rank_estimator_method = MEM_ONLY
+        base_model1 = copy.copy(base_model)
+        rank = self.estimator.get_rank_for_one_client_group(args, config, base_model1, memory_summary_dict)[0]
+        del base_model1
+        self.tracker.profile_and_compare(args, config, copy.copy(base_model), 'memory_breakdown_comparison_lora_qv.tex', rank, memory_summary_dict)
+
+    def test_memory_breakdown_comparison_table_lora_mlp_output_dense(self):
+        args = self._init_args()
+        args.lora_target_modules = r".*layer\.\d+\.output\.dense$"
+        
+        # Load base model
+        base_model = AutoModelForImageClassification.from_pretrained(args.model)
+        config = AutoConfig.from_pretrained(args.model)
+        self.tracker.profile_and_compare(args, config, base_model, 'memory_breakdown_comparison_lora_mlp_int_dense.tex', self._get_rank(), {})
 
     def test_get_base_model_fwd_in_bytes_for_estimator(self):
         args = self._init_args()
