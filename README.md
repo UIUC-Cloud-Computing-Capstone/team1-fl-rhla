@@ -45,6 +45,13 @@ Per client (total rank budget): [288, 432, 576]
 Total time to finish the rank estimation task: 50.61s
 ``` 
 
+To run memory breakdown comparison and generate LaTeX tables:
+
+```bash
+python run_memory_breakdown_comparison.py [qv|mlp|all] [--config PATH]
+python run_memory_breakdown_comparison.py all --config config/memory_breakdown_comparison.yaml
+```
+
 To utilize the rank budget to fine-tune the model, run the command:
 
 ```bash

@@ -1,0 +1,21 @@
+# Config for memory breakdown comparison (run_memory_breakdown_comparison.py).
+# Single client group by default; qv/mlp modes override as needed.
+
+rank_estimator_method: Ours
+model: facebook/deit-small-patch16-224
+CLS_TOKEN: 1
+
+precision: fp32
+optimizer: adam
+num_of_layers_to_allocate_LoRA: 12
+lora_target_modules: ["query", "value"]
+train_classifier: false
+batch_size: 32
+
+resource_heterogeneity:
+  desired_uploading_time_for_each_group_in_seconds: [1]
+  desired_downloading_time_for_each_group_in_seconds: [1]
+  heterogeneous_group: [1.0]
+  gpu_memory_size_for_each_group_in_GB: [8.0]
+  avg_upload_network_speed_for_each_group_in_Mbps: [7.08]
+  avg_download_network_speed_for_each_group_in_Mbps: [10.62]
