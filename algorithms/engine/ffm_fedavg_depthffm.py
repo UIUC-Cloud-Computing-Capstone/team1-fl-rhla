@@ -1,27 +1,20 @@
 import copy
 import numpy as np
-import time, math
+import time
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-
 from utils.data_pre_process import load_partition, DatasetSplit
 from utils.model_utils import model_setup
-from utils.log_utils import set_log_path
 from test import test, test_vit, test_ledgar
-
 from ..solver.local_solver import LocalUpdate
-from ..solver.global_aggregator import average, average_lora, average_lora_depthfl, weighted_average_lora_depthfl
-import gc
+from ..solver.global_aggregator import average_lora_depthfl, weighted_average_lora_depthfl
 from fractions import Fraction
 import re
-import matplotlib.pyplot as plt
-import numpy as np
-from collections import Counter
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase, PaddingStrategy
 from typing import Optional, Union
 from dataclasses import dataclass
-import random
+
 
 def vit_collate_fn(examples):
     pixel_values = torch.stack([example[2] for example in examples])
