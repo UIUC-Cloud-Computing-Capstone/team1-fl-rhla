@@ -80,7 +80,7 @@ def main():
     print("Per client (total rank budget):", client_rank_budgets)
 
     elapsed = time.perf_counter() - start
-    print(f"Total time: {elapsed:.2f}s")
+    print(f"Total time to finish the rank estimation task: {elapsed:.2f}s")
 
 
 if __name__ == "__main__":

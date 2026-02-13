@@ -38,7 +38,12 @@ python run_rank_estimation.py
 # Or with an explicit config path
 python run_rank_estimation.py config/rank_estimator_ours.yaml
 ```
-With NVIDIA H100 80GB HBM3 (Driver version 580.65.06, CUDA version 13.0), the Rank Estimator will approximately take 50s to finish estimation.
+Using an NVIDIA H100 80GB HBM3 (Driver version 580.65.06, CUDA version 13.0), the Rank Estimator takes approximately 50 seconds to complete. The results are logged in the terminal upon completion:
+```
+...
+Per client (total rank budget): [288, 432, 576]
+Total time to finish the rank estimation task: 50.61s
+``` 
 
 To utilize the rank budget to fine-tune the model, run the command:
 

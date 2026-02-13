@@ -19,10 +19,8 @@ class RankEstimator:
         for i in range(len(args.heterogeneous_group)):
             self._helper(args, config, copy.deepcopy(base_model), memory_summary_dict, rank_per_module_per_layer_for_all_client_groups, i)
         
-        print(f'rank budget per module for all client groups respectively: {str(rank_per_module_per_layer_for_all_client_groups)}')
         multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
         client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_per_module_per_layer_for_all_client_groups]
-        print('per client: ', client_rank_budgets_for_all_heterogeneous_groups)
         return client_rank_budgets_for_all_heterogeneous_groups
     
     def get_rank_for_one_client_group(self, args, config, base_model, memory_summary_dict):
@@ -31,11 +29,8 @@ class RankEstimator:
         rank_per_module_per_layer_for_all_client_groups = []
         
         self._helper(args, config, base_model, memory_summary_dict, rank_per_module_per_layer_for_all_client_groups, 0)
-
-        print(f'rank budget per module for all client groups respectively: {str(rank_per_module_per_layer_for_all_client_groups)}')
         multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
         client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_per_module_per_layer_for_all_client_groups]
-        print('per client: ', client_rank_budgets_for_all_heterogeneous_groups)
         return client_rank_budgets_for_all_heterogeneous_groups
 
     def _helper(self, args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i):
@@ -117,9 +112,6 @@ class RankEstimator:
         if lora_portion <= 0:
             print(f'Warning: GPU memory is too small to train the model')
             return 0
-        
-        print('lora_portion', lora_portion)
-        print('lora portion in MB', self._bytes_to_mb(lora_portion))
 
         B = args.batch_size
         H = config.hidden_size
@@ -167,7 +159,6 @@ class RankEstimator:
 
         (beta1, beta2) = self._tracker.get_lora_betas_v2(args, config, base_model, args.lora_target_modules, B, sequence_length, H, bytes_per_parameter, memory_summary_dict)
         for lora_target_module in args.lora_target_modules:
-            print(lora_target_module)
             ratio = 1 if is_normal_mod(lora_target_module) else mlp_ratio
             sum_of_ratio_D += ratio * D
             b2BSbytes = beta2 * B * sequence_length * bytes_per_parameter * C
@@ -178,13 +169,9 @@ class RankEstimator:
         total_dim += b2BSbytes
         rank = int(lora_portion / total_dim)
         rank = min(rank, H)
-        print(rank)
         rank = max(rank, 0)
-        print('est rank by memory:', rank)
 
-        print('sum_of_ratio_D * layers', sum_of_ratio_D * layers)
         memory_summary_dict['lora_param_bytes'] = sum_of_ratio_D * layers * rank
-        print(memory_summary_dict['lora_param_bytes'], self._bytes_to_mb(memory_summary_dict['lora_param_bytes']))
         memory_summary_dict['lora_optimizer_states_bytes'] = memory_summary_dict['lora_param_bytes'] * get_optimizer_state_count(args.optimizer)
         memory_summary_dict['lora_grads_bytes'] = memory_summary_dict['lora_param_bytes']
         memory_summary_dict['lora_fwd_bytes'] = (beta1 * B * sequence_length * H * bytes_per_parameter + b2BSbytes * rank)

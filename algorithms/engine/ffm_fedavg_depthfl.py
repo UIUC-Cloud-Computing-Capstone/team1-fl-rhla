@@ -64,8 +64,6 @@ def ffm_fedavg_depthfl(args):
     args.logger.info('length of dataset:{}'.format(len(dataset_train) + len(dataset_test)), main_process_only=True)
     args.logger.info('num. of training data:{}'.format(len(dataset_train)), main_process_only=True)
     args.logger.info('num. of testing data:{}'.format(len(dataset_test)), main_process_only=True)
-    # print('num. of validation data:{}'.format(len(dataset_val)))
-    # print('num. of public data:{}'.format(len(dataset_public)))
     args.logger.info('num. of users:{}'.format(len(dict_users)), main_process_only=True)
     sample_per_users = int(sum([ len(dict_users[i]) for i in range(len(dict_users))])/len(dict_users))
     args.logger.info('average num. of samples per user:{}'.format(sample_per_users), main_process_only=True)
