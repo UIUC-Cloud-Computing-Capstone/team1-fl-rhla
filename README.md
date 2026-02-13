@@ -6,8 +6,6 @@
 
 Ensure you have [Conda](https://docs.conda.io/) installed. 
 
-Then update `prefix: /home/yourhomepath/anaconda3/envs/env.fl` in the `environment.yml` file based on your path. 
-
 Then activate the environment using the provided file:
 
 Default:
@@ -59,19 +57,7 @@ bash run-cifar100.sh
 ├── main.py         # Entry point for training
 └── test.py         # Evaluation and testing routines
 ```
----
-## References
 
-This is a fork from the official code for the paper accepted to IEEE Transactions on Neural Networks and Learning Systems (TNNLS)
-
-```bibtext
-@article{zhang2025fed,
-  title={Fed-HeLLo: Efficient Federated Foundation Model Fine-Tuning with Heterogeneous LoRA Allocation},
-  author={Zhang, Zikai and Liu, Ping and Xu, Jiahao and Hu, Rui},
-  journal={arXiv preprint arXiv:2506.12213},
-  year={2025}
-}
-```
 ---
 
 ## 📄 Citation
@@ -84,6 +70,21 @@ If you find this work useful for your research, please cite papers
   journal={},
   year={2026}
 }
+@article{zhang2025fed,
+  title={Fed-HeLLo: Efficient Federated Foundation Model Fine-Tuning with Heterogeneous LoRA Allocation},
+  author={Zhang, Zikai and Liu, Ping and Xu, Jiahao and Hu, Rui},
+  journal={arXiv preprint arXiv:2506.12213},
+  year={2025}
+}
+```
+
+---
+
+## References
+
+This is a fork from the official code for the paper accepted to IEEE Transactions on Neural Networks and Learning Systems (TNNLS)
+
+```bibtext
 @article{zhang2025fed,
   title={Fed-HeLLo: Efficient Federated Foundation Model Fine-Tuning with Heterogeneous LoRA Allocation},
   author={Zhang, Zikai and Liu, Ping and Xu, Jiahao and Hu, Rui},
