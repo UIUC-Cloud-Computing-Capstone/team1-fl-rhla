@@ -67,8 +67,7 @@ Activate the project environment (see [README](README.md#-getting-started) for s
 
 ### Rank Utilizer
 
-
-To reproduce **tables and figures** in the paper about rank allocation (FIM-based) and aggregation (SVD, weighted average):
+To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6): run from **project root** with the environment activated; see [README](README.md#-getting-started) and [Rank Utilizer](README.md#rank-utilizer).
 
 1. **Experiments**  
    Run the experiments that correspond to the paper’s settings. Each run writes logs under `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`; final and per-round accuracy are in `exp_log.txt`. From the project root:
@@ -78,48 +77,9 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
      bash scripts/experiments/run-cifar100-Ours.sh
      ```
    - **Baselines / ablations:** run the matching scripts in `scripts/experiments/`, e.g. `run-cifar100-FedHello.sh`, `run-cifar100-FlexLoRA.sh`, `run-cifar100-HetLoRA.sh`, `run-cifar100-iid.sh`, `run-cifar100-non-iid-10.sh`, `run-cifar100-non-iid-20.sh`, etc.
+   
 
-   To build the paper’s accuracy tables such as Table V, TABLE VI,  TABLE VII, and TABLE VIII, point to the desired run directories and parse `exp_log.txt` (e.g. final accuracy).
 
-2. **Fig. 1 (Accuracy vs. trainable parameters)**  
-   Produces the scatter plot of test accuracy (%) vs. number of trainable parameters for method comparison (FedIT, Straggler, Exclusive, LoKr, FFA-LoRA, LEGEND, Fed-HeLLo, HRALoRA). Uses data hardcoded in the script; no log paths. Run as-is:
-
-   ```bash
-   python scripts/figures/fig-param.py
-   ```
-
-   Output: `figures/accuracy_vs_params_custom_labels.pdf`.
-
-3. **Fig. 3 (Layer-wise FIM scores and allocated ranks)**  
-   The script reads one `exp_log.txt` from an Ours run with FIM (e.g. alternating-training with warm start). Set `log_path` at the top of `scripts/figures/fig-fim-score.py` to your run’s `exp_log.txt`, then run:
-
-   ```bash
-   python scripts/figures/fig-fim-score.py
-   ```
-
-   Output (by default): `figures/layer-rank.pdf` (allocated rank for selected layers over rounds). To also produce the subfigures (a) and (b), uncomment the blocks in the script that save `fim_mean_std.pdf` (FIM mean ± std per layer) and `rank_mean_std.pdf` (rank mean ± std per layer). The script also contains commented code for `layer-fim.pdf` (FIM per layer over rounds); uncomment that block if needed.
-
-4. **Fig. 5.**  
-   Produces the bar chart of accuracy/parameter ratio for different methods. Uses data hardcoded in the script. Run as-is:
-
-   ```bash
-   python scripts/figures/fig-param-performance-ratio.py
-   ```
-
-   TODO another figure
-   Output: `figures/ratio_grouped_histogram.pdf`.
-
-5. **Fig. 6**  
-   Produces the plot of accuracy vs LoRA rank. Uses data hardcoded in the script (no log paths). Run as-is:
-
-   ```bash
-   python scripts/figures/fig-rank.py
-   python scripts/figures/fig-train.py
-   ```
-
-   Output: `figures/cifar_rank_plot.pdf` and `figures/cifar_train_plot.pdf`
-
-Run all commands from the **project root** with the project environment activated (see [README](README.md#-getting-started). Figure scripts that read logs require having run the corresponding experiments first; see the [Rank Utilizer](README.md#rank-utilizer) section in the README for how to run experiments.
 
 
 
