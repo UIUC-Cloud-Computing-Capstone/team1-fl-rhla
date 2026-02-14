@@ -1,3 +1,11 @@
+"""
+LoRA rank estimation for heterogeneous federated learning.
+
+Estimates the maximum LoRA rank each client group can support based on GPU memory
+and/or network (upload/download) constraints. Supports methods: FedHello / mem_only
+(GPU memory only), Ours (min of memory and upload/download limits), upload_only
+(upload bandwidth only). Uses MemoryTracker for base-model and LoRA memory profiling.
+"""
 from transformers import AutoModelForImageClassification, AutoConfig
 from utils.memory_tracker import MemoryTracker
 import copy
@@ -7,12 +15,38 @@ OURS = 'Ours'
 MEM_ONLY = 'mem_only'
 UPLOAD_ONLY = 'upload_only'
 
+
 class RankEstimator:
+    """
+    Estimate per-client-group LoRA rank from GPU memory and network constraints.
+
+    Uses args.rank_estimator_method (FEDHELLO, OURS, MEM_ONLY, UPLOAD_ONLY) to choose
+    between memory-only, network-only, or combined (min of memory, upload, download) rank.
+    Populates memory_summary_dict with base and LoRA memory breakdown (bytes) for the
+    chosen rank.
+    """
 
     def __init__(self):
+        """Initialize with a MemoryTracker for profiling base/LoRA memory."""
         self._tracker = MemoryTracker()
 
     def get_rank_for_all_client_groups(self, args, config, base_model, memory_summary_dict):
+        """
+        Compute LoRA rank per client group for all heterogeneous groups.
+
+        Calls _helper for each group index in args.heterogeneous_group; each result
+        is a per-module-per-layer rank, then multiplied by num_hidden_layers * len(lora_target_modules)
+        to get a total rank budget per group.
+
+        Args:
+            args: Config (heterogeneous_group, rank_estimator_method, gpu/network per group, etc.).
+            config: Model config (num_hidden_layers).
+            base_model: Base model for memory profiling (deep-copied per group).
+            memory_summary_dict: Dict updated in place with memory breakdown; shared across groups.
+
+        Returns:
+            list: One rank budget (int) per heterogeneous group.
+        """
 
         #config = AutoConfig.from_pretrained(args.model)
         rank_per_module_per_layer_for_all_client_groups = []
@@ -22,10 +56,17 @@ class RankEstimator:
         multiplication_factor = config.num_hidden_layers * len(args.lora_target_modules)
         client_rank_budgets_for_all_heterogeneous_groups = [element * multiplication_factor for element in rank_per_module_per_layer_for_all_client_groups]
         return client_rank_budgets_for_all_heterogeneous_groups
-    
-    def get_rank_for_one_client_group(self, args, config, base_model, memory_summary_dict):
 
-        #config = AutoConfig.from_pretrained(args.model)
+    def get_rank_for_one_client_group(self, args, config, base_model, memory_summary_dict):
+        """
+        Compute LoRA rank for a single client group (group index 0).
+
+        Same as get_rank_for_all_client_groups but runs _helper once for group 0 and
+        returns a one-element list of rank budgets.
+
+        Returns:
+            list: Single-element list with the rank budget for that group.
+        """
         rank_per_module_per_layer_for_all_client_groups = []
         
         self._helper(args, config, base_model, memory_summary_dict, rank_per_module_per_layer_for_all_client_groups, 0)
@@ -34,26 +75,28 @@ class RankEstimator:
         return client_rank_budgets_for_all_heterogeneous_groups
 
     def _helper(self, args, config, base_model, memory_summary_dict, rank_for_all_client_groups, i):
-            print(f"client group {i}")
-            total_gpu_memory_size_in_GB_for_one_client_group = args.gpu_memory_size_for_each_group_in_GB[i] if hasattr(args, 'gpu_memory_size_for_each_group_in_GB') else None
-            upload_network_speed_in_Mbps_for_one_client_group = args.avg_upload_network_speed_for_each_group_in_Mbps[i] if hasattr(args, 'avg_upload_network_speed_for_each_group_in_Mbps') else None
-            download_network_speed_in_Mbps_for_one_client_group = args.avg_download_network_speed_for_each_group_in_Mbps[i] if hasattr(args, 'avg_download_network_speed_for_each_group_in_Mbps') else None
-            desired_uploading_time_in_seconds_for_one_client_group = args.desired_uploading_time_for_each_group_in_seconds[i]
-            desired_downloading_time_in_seconds_for_one_client_group = args.desired_downloading_time_for_each_group_in_seconds[i]
-            
-            rank_for_one_client_group = self._get_rank_for_one_client_group(args, config, base_model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group, memory_summary_dict)
-            rank_for_all_client_groups.append(rank_for_one_client_group)
-            
-            if args.rank_estimator_method == UPLOAD_ONLY:
-                return
+        """Compute rank for group i, append it to rank_for_all_client_groups; optionally update memory_summary_dict totals."""
+        print(f"client group {i}")
+        total_gpu_memory_size_in_GB_for_one_client_group = args.gpu_memory_size_for_each_group_in_GB[i] if hasattr(args, 'gpu_memory_size_for_each_group_in_GB') else None
+        upload_network_speed_in_Mbps_for_one_client_group = args.avg_upload_network_speed_for_each_group_in_Mbps[i] if hasattr(args, 'avg_upload_network_speed_for_each_group_in_Mbps') else None
+        download_network_speed_in_Mbps_for_one_client_group = args.avg_download_network_speed_for_each_group_in_Mbps[i] if hasattr(args, 'avg_download_network_speed_for_each_group_in_Mbps') else None
+        desired_uploading_time_in_seconds_for_one_client_group = args.desired_uploading_time_for_each_group_in_seconds[i]
+        desired_downloading_time_in_seconds_for_one_client_group = args.desired_downloading_time_for_each_group_in_seconds[i]
 
-            memory_summary_dict['total_para_bytes'] = memory_summary_dict['base_model_para_bytes'] + memory_summary_dict['lora_param_bytes']
-            memory_summary_dict['total_fwd_bytes'] = memory_summary_dict['base_model_fwd_bytes'] + memory_summary_dict['lora_fwd_bytes']
-            memory_summary_dict['total_optimizer_states_bytes'] = memory_summary_dict['lora_optimizer_states_bytes']
-            memory_summary_dict['total_grads_bytes'] = memory_summary_dict['lora_grads_bytes']
-            memory_summary_dict['total_memory_bytes'] = round(memory_summary_dict['total_para_bytes'] + memory_summary_dict['total_fwd_bytes'] + memory_summary_dict['total_optimizer_states_bytes'] + memory_summary_dict['total_grads_bytes'], 2)
+        rank_for_one_client_group = self._get_rank_for_one_client_group(args, config, base_model, total_gpu_memory_size_in_GB_for_one_client_group, upload_network_speed_in_Mbps_for_one_client_group, download_network_speed_in_Mbps_for_one_client_group, desired_uploading_time_in_seconds_for_one_client_group, desired_downloading_time_in_seconds_for_one_client_group, memory_summary_dict)
+        rank_for_all_client_groups.append(rank_for_one_client_group)
+
+        if args.rank_estimator_method == UPLOAD_ONLY:
+            return
+
+        memory_summary_dict['total_para_bytes'] = memory_summary_dict['base_model_para_bytes'] + memory_summary_dict['lora_param_bytes']
+        memory_summary_dict['total_fwd_bytes'] = memory_summary_dict['base_model_fwd_bytes'] + memory_summary_dict['lora_fwd_bytes']
+        memory_summary_dict['total_optimizer_states_bytes'] = memory_summary_dict['lora_optimizer_states_bytes']
+        memory_summary_dict['total_grads_bytes'] = memory_summary_dict['lora_grads_bytes']
+        memory_summary_dict['total_memory_bytes'] = round(memory_summary_dict['total_para_bytes'] + memory_summary_dict['total_fwd_bytes'] + memory_summary_dict['total_optimizer_states_bytes'] + memory_summary_dict['total_grads_bytes'], 2)
 
     def _get_rank_for_one_client_group(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
+        """Dispatch to memory-only, network-only, or combined (Ours) rank computation based on args.rank_estimator_method."""
         if args.rank_estimator_method == FEDHELLO or args.rank_estimator_method == MEM_ONLY:
             return self._get_rank_based_on_gpu_memory(args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict)
         elif args.rank_estimator_method == OURS:
@@ -64,18 +107,20 @@ class RankEstimator:
             raise ValueError(f'Invalid rank estimator method: {args.rank_estimator_method}')
 
     def _get_rank_based_on_all(self, args, config, base_model, total_gpu_memory_size_in_GB, upload_network_speed_in_Mbps, download_network_speed_in_Mbps, desired_uploading_time_in_seconds, desired_downloading_time_in_seconds, memory_summary_dict):
+        """Return min of rank from GPU memory, upload speed, and download speed (Ours method)."""
         rank_based_on_gpu_memory = self._get_rank_based_on_gpu_memory(args, config, base_model,  total_gpu_memory_size_in_GB, memory_summary_dict)
         rank_based_on_upload_network_speed = self._get_rank_based_on_network_speed(args, config, upload_network_speed_in_Mbps, desired_uploading_time_in_seconds)
         rank_based_on_download_network_speed = self._get_rank_based_on_network_speed(args, config, download_network_speed_in_Mbps, desired_downloading_time_in_seconds)
         return self._get_final_rank(args, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed)
 
     def _get_final_rank(self, args, config, rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed):
+        """Return the minimum of the three ranks (bottleneck)."""
         return min(rank_based_on_gpu_memory, rank_based_on_upload_network_speed, rank_based_on_download_network_speed) 
         # TODO
         #* config.num_hidden_layers * len(args.lora_target_modules)
 
     def _get_rank_based_on_gpu_memory(self, args, config, base_model, total_gpu_memory_size_in_GB, memory_summary_dict):
-
+        """Compute max LoRA rank that fits in (total_gpu_memory - base_model_portion)."""
         total_gpu_memory_size_in_bytes = self._get_total_gpu_memory_size_in_bytes(args, total_gpu_memory_size_in_GB)
         base_model_portion = self._get_base_model_portion(args, config, base_model, memory_summary_dict)
         lora_portion = total_gpu_memory_size_in_bytes - base_model_portion
@@ -83,6 +128,7 @@ class RankEstimator:
         return self._get_rank_based_on_lora_portion(args, config, base_model, lora_portion, memory_summary_dict)
 
     def _get_base_model_portion(self, args, config, base_model, memory_summary_dict):
+        """Base model memory (params + forward) in bytes; fill memory_summary_dict with base_model_* and overhead_bytes."""
         base_model_para_bytes = self._get_base_model_para_in_bytes(args, base_model)
         base_model_fwd_bytes, overhead_bytes = self._tracker.get_base_model_fwd_in_bytes_for_estimator(args, config, base_model)
         base_model_portion_bytes = base_model_para_bytes + base_model_fwd_bytes
@@ -95,15 +141,19 @@ class RankEstimator:
         return base_model_portion_bytes
 
     def _bytes_to_mb(self, bytes_value):
+        """Convert bytes to MB (rounded to 2 decimals)."""
         return round(bytes_value / 1024 / 1024, 2)
 
     def _get_num_of_adapted_matrices(self, args):
-        return 2 # A and B matrices
+        """Number of LoRA matrices per module (A and B)."""
+        return 2  # A and B matrices
 
     def _get_num_of_modules_per_layer(self, args):
+        """Number of LoRA target modules per layer (e.g. query, value)."""
         return len(args.lora_target_modules)
 
     def _get_rank_based_on_lora_portion(self, args, config, base_model, lora_portion, memory_summary_dict):
+        """Solve for max rank r such that LoRA params + fwd + optimizer + grads fit in lora_portion bytes; updates memory_summary_dict."""
         if lora_portion <= 0:
             print(f'Warning: GPU memory is too small to train the model')
             return 0
@@ -173,15 +223,13 @@ class RankEstimator:
         memory_summary_dict['lora_total_bytes'] = memory_summary_dict['lora_param_bytes'] + memory_summary_dict['lora_fwd_bytes'] + memory_summary_dict['lora_optimizer_states_bytes'] + memory_summary_dict['lora_grads_bytes']
 
         return rank
-    
+
     def _get_total_gpu_memory_size_in_bytes(self, args, total_gpu_memory_size_in_GB):
+        """Convert GPU memory from GB to bytes (1024^3)."""
         return total_gpu_memory_size_in_GB * 1024 * 1024 * 1024
 
     def _get_base_model_para_in_bytes(self, args, base_model):
-        '''
-        base_model = AutoModelForImageClassification.from_pretrained('facebook/deit-small-patch16-224')
-        '''
-        
+        """Total base model parameter memory in bytes (numel * bytes per param from args.precision)."""
         parameter_size = sum(p.numel() for p in base_model.parameters())
         
         byte_per_parameter = self._get_byte_per_parameter(args.precision)
@@ -189,6 +237,7 @@ class RankEstimator:
         return parameter_size * byte_per_parameter
 
     def _get_byte_per_parameter(self, precision):
+        """Bytes per parameter: 4 for fp32, 2 for fp16."""
         if precision == 'fp32':
             return 4
         elif precision == 'fp16':
@@ -197,23 +246,25 @@ class RankEstimator:
             raise ValueError(f'Invalid precision: {precision}')
 
     def _get_sequence_length(self, args, config):
+        """Effective sequence length for ViT: (image_size/patch_size)^2 + CLS_TOKEN."""
         config = AutoConfig.from_pretrained(args.model)
         CLS_TOKEN = args.CLS_TOKEN
         
         return config.image_size / config.patch_size * config.image_size / config.patch_size + CLS_TOKEN
         
     def _get_base_model_optimizer_states_memory_size_in_bytes(self, args, base_model_memory_size_in_bytes):
-        '''
-        Optimizer states include the part for base model and the part for LoRA.
-        This function only calculates the memory size for the base model portion.
-        '''
+        """
+        Base-model optimizer state memory (bytes). LoRA optimizer states are separate.
 
+        Returns 0 if not training classifier; else raises NotImplementedError.
+        """
         if not args.train_classifier:
             return 0
         else:
             raise NotImplementedError('Not implemented yet.')
 
     def _get_rank_based_on_network_speed(self, args, config, network_speed_in_Mbps, desired_communication_time_in_seconds):
+        """Max rank such that LoRA parameter payload fits in (speed * time) bytes; capped by hidden_size."""
         bytes_per_second = network_speed_in_Mbps * 1_000_000 / 8
         parameter_size_in_bytes = desired_communication_time_in_seconds * bytes_per_second
         num_modules_per_layer = self._get_num_of_modules_per_layer(args)
