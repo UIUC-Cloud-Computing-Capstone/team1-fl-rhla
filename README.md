@@ -77,7 +77,7 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) 
 ├── models/         # Model layer reference files (BERTlayerName, ViTLayerName)
 ├── setup/         # Environment and tool config (environment-final.yml, accelerate_default_config.yaml)
 ├── scripts/        # Run and figure scripts
-│   ├── figures/    # Figure scripts (fig-*.py, visualize_rank.py); output to ../../figures/
+│   ├── figures/    # Scripts to generate figures
 │   ├── run_rank_estimation.py
 │   ├── run_memory_breakdown_comparison.py
 │   └── run-*.sh    # Experiment scripts (CIFAR-100, LEDGAR, baselines, ablations)

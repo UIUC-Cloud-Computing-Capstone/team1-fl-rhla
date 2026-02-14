@@ -1,6 +1,9 @@
 """
-Script to visualize rank size vs GPU memory and network speed using RankEstimator.
-Generates a combined diagram and saves it to figures/.
+Generate Fig. 4: Rank budget per client vs. GPU memory and vs. network speed.
+
+The blue line is rank budget per client as a function of GPU memory.
+The green line is rank budget per client as a function of network speed,
+assuming weight transmission time is no greater than 1 second.
 """
 import argparse
 import sys
