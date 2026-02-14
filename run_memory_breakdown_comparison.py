@@ -5,10 +5,7 @@ Not a test: generates memory_breakdown_comparison_*.tex files.
 Config is loaded from a YAML file (default: config/memory_breakdown_comparison.yaml).
 
 Usage:
-    python run_memory_breakdown_comparison.py [qv|mlp|all] [--config PATH]
-    python run_memory_breakdown_comparison.py qv     # LoRA query/value, 2GB GPU
-    python run_memory_breakdown_comparison.py mlp    # LoRA MLP output.dense, fixed rank 178
-    python run_memory_breakdown_comparison.py all    # both (default)
+    python run_memory_breakdown_comparison.py qv [--config PATH]
 """
 import argparse
 import copy
@@ -81,25 +78,6 @@ def run_qv(tracker: MemoryTracker, estimator: RankEstimator, base_args: argparse
     )
     print("Wrote memory_breakdown_comparison_lora_qv.tex")
 
-
-def run_mlp(tracker: MemoryTracker, base_args: argparse.Namespace):
-    """LoRA on MLP output.dense, fixed rank 178."""
-    args = copy.deepcopy(base_args)
-    args.lora_target_modules = r".*layer\.\d+\.output\.dense$"
-
-    base_model = AutoModelForImageClassification.from_pretrained(args.model)
-    config = AutoConfig.from_pretrained(args.model)
-    tracker.profile_and_compare(
-        args,
-        config,
-        base_model,
-        "memory_breakdown_comparison_lora_mlp_int_dense.tex",
-        DEFAULT_RANK,
-        {},
-    )
-    print("Wrote memory_breakdown_comparison_lora_mlp_int_dense.tex")
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Run memory breakdown comparison and write .tex tables."
@@ -107,9 +85,9 @@ def main():
     parser.add_argument(
         "mode",
         nargs="?",
-        default="all",
-        choices=["qv", "mlp", "all"],
-        help="qv = LoRA query/value 2GB; mlp = LoRA MLP output.dense; all = both",
+        default="qv",
+        choices=["qv"],
+        help="qv = LoRA query/value 2GB",
     )
     parser.add_argument(
         "--config",
@@ -128,10 +106,8 @@ def main():
     tracker = MemoryTracker()
     estimator = RankEstimator()
 
-    if parsed.mode in ("qv", "all"):
+    if parsed.mode in ("qv"):
         run_qv(tracker, estimator, base_args)
-    if parsed.mode in ("mlp", "all"):
-        run_mlp(tracker, base_args)
 
 
 if __name__ == "__main__":
