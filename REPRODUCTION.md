@@ -1,5 +1,5 @@
 
-#Hardware
+# Hardware
 
 Hardware and OS we used:
 
