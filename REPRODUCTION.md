@@ -69,7 +69,7 @@ TODO review, test, and refine the content below
 
 To reproduce **tables and figures** in the paper about rank allocation (FIM-based) and aggregation (SVD, weighted average):
 
-1. **Result tables (accuracy)**  
+1. **TABLE V**  
    Run the experiments that correspond to the paper’s settings. Each run writes logs under `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`; final and per-round accuracy are in `exp_log.txt`. From the project root:
 
    - **Ours (CIFAR-100 IID, non-IID 10, non-IID 20):**
@@ -87,15 +87,17 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
    python scripts/figures/fig-train.py
    ```
 
+   TODO: Liam seems not correct
    Output: `figures/cifar_train_plot.pdf`.
 
-3. **Figure: Rank vs accuracy**  
+3. **Fig. 6**  
    Produces the plot of accuracy vs LoRA rank. Uses data hardcoded in the script (no log paths). Run as-is:
 
    ```bash
    python scripts/figures/fig-rank.py
    ```
 
+   TODO another figure
    Output: `figures/cifar_rank_plot.pdf`.
 
 4. **Figure: FIM-based rank allocation (allocated rank per layer over rounds)**  
