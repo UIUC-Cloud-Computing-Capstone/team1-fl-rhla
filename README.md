@@ -17,11 +17,9 @@ HRALoRA has two core components:
 
 ### ⚙️ Environment Setup
 
-Ensure you have [Conda](https://docs.conda.io/) installed. 
+**Prerequisites:** [Conda](https://docs.conda.io/), Python 3.x (see `setup/environment-final.yml`); GPU runs need CUDA.
 
-Then activate the environment using the provided file:
-
-Default:
+**Install:**
 
 ```bash
 conda env create --name env.fl --file=setup/environment-final.yml
@@ -40,6 +38,8 @@ Copy the accelerate config to the huggingface directory:
 mkdir -p ~/.cache/huggingface/accelerate/
 cp setup/accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_config.yaml
 ```
+
+**Verify:** `python scripts/run_rank_estimation.py` (see Rank Estimator below) should complete and print per-client rank budgets.
 
 ### 🚀 Running the Code
 
@@ -74,7 +74,9 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) 
 
 ---
 
-## 📁 Project Structure
+## Documentation
+
+### 📁 Project Structure
 
 ```
 .
@@ -101,7 +103,7 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) 
 
 ## Data
 
-See [data/README.md](data/README.md) for dataset used in our experiments.
+See [data/dataset/README.md](data/dataset/README.md) for datasets used in our experiments.
 
 ## 📄 Citation
 
