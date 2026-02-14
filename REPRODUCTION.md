@@ -1,11 +1,12 @@
 
 #Hardware
 
-Hardware we used:
+Hardware and OS we used:
 
 GPU: NVIDIA H100 80GB HBM3 (Driver version 580.65.06, CUDA version 13.0)
 CPU: 8
 Memory: 32Gi
+OS: Ubuntu 22.04.5 LTS.
 
 
 # Troubleshooting
