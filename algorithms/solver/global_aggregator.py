@@ -126,7 +126,7 @@ def svd_average(args, global_model, loc_updates, num_samples):
         print(f'$$$$$$$$$$$$$$ after stack size of svd_weights = {svd_weights.shape}')
         frobenius_norm = np.linalg.norm(svd_weights, 'fro')
         update_weights.append(frobenius_norm)
-    update_weights = update_weights / np.sum(update_weights)
+    update_weights = np.array(update_weights) / np.sum(update_weights)
     args.logger.info(f'the weights of different clients {update_weights}', main_process_only=True)
     for index, (u, w) in enumerate(zip(loc_updates, update_weights)):
         loc_updates[index] = {key: value * w for key, value in u.items()}
