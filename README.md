@@ -97,6 +97,10 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) 
 
 ---
 
+## Data
+
+See [data/README.md](data/README.md) for dataset used in our experiments.
+
 ## 📄 Citation
 
 If you find this work useful for your research, please cite papers
