@@ -15,9 +15,9 @@ conda env create --name env.fl --file=setup/environment-final.yml
 conda activate env.fl
 ```
 
-### 🚀 Running the Code
+#### HuggingFace Accelerate configuration
 
-First, set up the HuggingFace Accelerate configuration:
+Set up the HuggingFace Accelerate configuration:
 
 (Optional) If your system uses multiple GPUs, uncomment the "Multiple GPUs" config options in `setup/accelerate_default_config.yaml`
 
@@ -28,7 +28,9 @@ mkdir -p ~/.cache/huggingface/accelerate/
 cp setup/accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_config.yaml
 ```
 
-Next, launch the training script for the CIFAR-100 dataset:
+### 🚀 Running the Code
+
+#### Rank Estimator
 
 To experiment the Rank Estimator, run the command:
 ```bash
@@ -38,20 +40,14 @@ python scripts/run_rank_estimation.py
 # Or with an explicit config path
 python scripts/run_rank_estimation.py config/rank_estimator_ours.yaml
 ```
-Using an NVIDIA H100 80GB HBM3 (Driver version 580.65.06, CUDA version 13.0), the Rank Estimator takes approximately 50 seconds to complete. The results are logged in the terminal upon completion:
+The results are logged in the terminal upon completion:
 ```
 ...
 Per client (total rank budget): [288, 432, 576]
 Total time to finish the rank estimation task: 50.61s
 ``` 
 
-To run memory breakdown comparison (estimated vs profiled) and generate LaTeX tables:
-
-```bash
-python scripts/figures/fig_memory_breakdown_comparison.py qv
-# Or
-python scripts/figures/fig_memory_breakdown_comparison.py qv --config config/memory_breakdown_comparison.yaml
-```
+#### Fine-tuning
 
 To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/experiments/`. For example, our method on CIFAR-100:
 
