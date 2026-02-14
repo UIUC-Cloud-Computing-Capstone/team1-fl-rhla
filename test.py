@@ -1,3 +1,8 @@
+"""Evaluation utilities for federated learning: ViT, LEDGAR, and generic model testing.
+
+Provides test routines with optional attack/poisoning support (e.g., DBA, edge)
+and distributed evaluation via Accelerate.
+"""
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -11,6 +16,10 @@ from accelerate import Accelerator
 from accelerate import DistributedDataParallelKwargs
 
 def collate_fn(examples):
+    """Collate a list of examples into a batch of pixel_values and labels.
+
+    Expects each example to have "pixel_values" and either "label" or "fine_label".
+    """
     pixel_values = torch.stack([example["pixel_values"] for example in examples])
     if 'label' in examples[0]:
         labels = torch.tensor([example["label"] for example in examples])
@@ -19,7 +28,17 @@ def collate_fn(examples):
     return {"pixel_values": pixel_values, "labels": labels}
 
 def test_vit(model, dataset, args, t):
-    # Eval for each round
+    """Evaluate a ViT model on the given dataset using distributed evaluation.
+
+    Args:
+        model: The ViT model to evaluate.
+        dataset: Dataset to evaluate on.
+        args: Config with batch_size, logger, etc.
+        t: Round index (used for logging/description).
+
+    Returns:
+        Tuple of (accuracy, None).
+    """
     metric = evaluate.load("accuracy")
     ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
     accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
@@ -46,7 +65,17 @@ def test_vit(model, dataset, args, t):
     return cur_acc, None
 
 def test_ledgar(model, dataset, args, t):
-    # Eval for each round
+    """Evaluate a LEDGAR model on the given dataset using macro/micro F1.
+
+    Args:
+        model: The LEDGAR model to evaluate.
+        dataset: Dataset to evaluate on.
+        args: Config with batch_size, data_collator, logger, etc.
+        t: Round index (used for logging/description).
+
+    Returns:
+        Tuple of (macro_f1, micro_f1, None).
+    """
     ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
     accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
 
@@ -73,6 +102,21 @@ def test_ledgar(model, dataset, args, t):
     return cur_macro_f1, cur_micro_f1, None
 
 def test(net_g, dataset, args):
+    """Run evaluation of a generic model on the given dataset.
+
+    Supports FEMNIST, Shakespeare, and other datasets. Optionally applies
+    poisoning (e.g., DBA, edge) to a fraction of test batches when
+    args.attack is set.
+
+    Args:
+        net_g: The model to evaluate (will be deep-copied and moved to args.device).
+        dataset: Test dataset.
+        args: Config with dataset, batch_size, test_batch_size, device,
+              and optionally attack, num_attackers, num_selected_users, trigger_num.
+
+    Returns:
+        Tuple of (accuracy_percent, test_loss).
+    """
     net_g = copy.deepcopy(net_g).to(args.device)
     loss_func = nn.CrossEntropyLoss()
     net_g.eval()
