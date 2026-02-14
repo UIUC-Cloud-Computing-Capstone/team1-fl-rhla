@@ -60,7 +60,7 @@ Per client (total rank budget): [288, 432, 576]
 Total time to finish the rank estimation task: 50.61s
 ``` 
 
-#### Fine-tuning
+#### Rank Utilizer
 
 To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/experiments/`. For example, our method on CIFAR-100:
 
