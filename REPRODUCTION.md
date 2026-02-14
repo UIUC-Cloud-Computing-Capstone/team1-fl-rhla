@@ -80,17 +80,7 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
 
    To build the paper’s accuracy tables, point to the desired run directories and parse `exp_log.txt` (e.g. final accuracy or round-wise accuracy).
 
-2. **Figure: Training curves (accuracy vs round)**  
-   Produces the plot of accuracy over communication rounds (e.g. IID, non-IID 10, non-IID 20). The script reads three `exp_log.txt` paths that are **hardcoded** in the file. After running the three Ours runs above, edit the three `Path(...)` paths at the top of the script to your `log/.../exp_log.txt` paths, then run:
-
-   ```bash
-   python scripts/figures/fig-train.py
-   ```
-
-   TODO: Liam seems not correct
-   Output: `figures/cifar_train_plot.pdf`.
-
-3. **Fig. 6**  
+2. **Fig. 6**  
    Produces the plot of accuracy vs LoRA rank. Uses data hardcoded in the script (no log paths). Run as-is:
 
    ```bash
@@ -100,7 +90,7 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
    TODO another figure
    Output: `figures/cifar_rank_plot.pdf`.
 
-4. **Figure: FIM-based rank allocation (allocated rank per layer over rounds)**  
+3. **Figure: FIM-based rank allocation (allocated rank per layer over rounds)**  
    Produces the plot of allocated rank for selected layers over training rounds. The script reads one `exp_log.txt` that contains `fim score` and `rank list` lines (from an Ours run with FIM, e.g. alternating-training with warm start). Set `log_path` at the top of the script to your run’s `exp_log.txt`, then run:
 
    ```bash
@@ -109,7 +99,7 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
 
    Output: `figures/layer-rank.pdf`.
 
-5. **Figure: Parameter–performance ratio (method comparison)**  
+4. **Fig. 5.**  
    Produces the bar chart of accuracy/parameter ratio for different methods. Uses data hardcoded in the script. Run as-is:
 
    ```bash
@@ -118,7 +108,7 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
 
    Output: `figures/ratio_grouped_histogram.pdf`.
 
-6. **Figure: Fig. 1 (Accuracy vs. trainable parameters)**  
+5. **Fig. 1 (Accuracy vs. trainable parameters)**  
    Produces the scatter plot of test accuracy (%) vs. number of trainable parameters for method comparison (FedIT, Straggler, Exclusive, LoKr, FFA-LoRA, LEGEND, Fed-HeLLo, HRALoRA). Uses data hardcoded in the script; no log paths. Run as-is:
 
    ```bash
@@ -127,7 +117,7 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
 
    Output: `figures/accuracy_vs_params_custom_labels.pdf`.
 
-7. **Figure: Fig. 3 (Layer-wise FIM scores and allocated ranks)**  
+7. **Fig. 3 (Layer-wise FIM scores and allocated ranks)**  
    The script reads one `exp_log.txt` from an Ours run with FIM (e.g. alternating-training with warm start). Set `log_path` at the top of `scripts/figures/fig-fim-score.py` to your run’s `exp_log.txt`, then run:
 
    ```bash
