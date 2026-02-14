@@ -36,6 +36,33 @@ class LocalUpdate(object):
             self.loss_func = nn.NLLLoss()
 
     def lora_tuning(self, model, ldr_train, args, client_index, client_real_id, round, hete_group_id):
+        """
+        Run local LoRA fine-tuning for one client with heterogeneous layer and rank assignment.
+
+        Only LoRA (or LoKR) parameters in the client's assigned layers (args.block_ids_list[client_real_id])
+        are trained; optionally only lora_A or lora_B depending on args.train_a / args.train_b.
+        Supports per-layer rank via gradient hooks (proposed_method, LEGEND, HetLoRA, FlexLoRA) and
+        FlexLoRA rank reduction via SVD before training. Uses Accelerator for distributed training.
+        If the client has no trainable layers, returns immediately with no_weight_lora covering all layers.
+
+        Args:
+            model: The global model (will be copied and trained locally).
+            ldr_train: DataLoader for this client's local training data.
+            args: Config with block_ids_list, rank_list, train_a, train_b, local_lr, tau, LOKR,
+                  FlexLoRA, proposed_method, LEGEND, HetLoRA, weight_decay, logger, etc.
+            client_index (int): Index of this client in the current round's selected set.
+            client_real_id (int): Global client id (index into block_ids_list, rank_list).
+            round (int): Current communication round (for logging).
+            hete_group_id (int): Heterogeneous group id; used to resolve group config
+                                 (e.g. heterogeneous_group{id}_lora) and no_weight_lora.
+
+        Returns:
+            tuple: (state_dict, mean_loss, no_weight_lora)
+                - state_dict: Updated model state after local training.
+                - mean_loss: Mean training loss (float), or None if client had nothing to train.
+                - no_weight_lora: List of LoRA layer indices not trained by this client
+                  (used by the server to avoid aggregating those parameters from this client).
+        """
         ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
         accelerator = Accelerator(kwargs_handlers=[ddp_kwargs])
 
