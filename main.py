@@ -1,6 +1,6 @@
 import torch, random, argparse, os
 from algorithms.engine.ffm_fedavg_depthfl import ffm_fedavg_depthfl
-from algorithms.engine.ffm_fedavg_depthffm import ffm_fedavg_depthffm
+# from algorithms.engine.ffm_fedavg_depthffm import ffm_fedavg_depthffm
 from algorithms.engine.ffm_fedavg_depthffm_fim import ffm_fedavg_depthffm_fim
 from accelerate import Accelerator
 from accelerate import DistributedDataParallelKwargs
@@ -83,8 +83,8 @@ if __name__ == '__main__':
         if args.method == "ffm_fedavg":
             if args.model_heterogeneity == 'depthfl':
                 best_result, metric_keys = ffm_fedavg_depthfl(args)
-            elif args.model_heterogeneity == 'depthffm':
-                best_result, metric_keys = ffm_fedavg_depthffm(args)     
+            # elif args.model_heterogeneity == 'depthffm':
+            #     best_result, metric_keys = ffm_fedavg_depthffm(args)     
             elif args.model_heterogeneity == 'depthffm_fim':
                 best_result, metric_keys = ffm_fedavg_depthffm_fim(args)     
         score_box = [[] for _ in range(len(metric_keys))]
