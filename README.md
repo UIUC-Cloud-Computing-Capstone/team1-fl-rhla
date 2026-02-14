@@ -17,7 +17,7 @@ HRALoRA has two core components:
 
 ### ⚙️ Environment Setup
 
-**Prerequisites:** [Conda](https://docs.conda.io/), Python 3.x (see `setup/environment-final.yml`); GPU runs need CUDA. See [REPRODUCTION.md](REPRODUCTION.md) for the environment we used.
+**Prerequisites:** [Conda](https://docs.conda.io/); GPU runs need CUDA. See [REPRODUCTION.md](REPRODUCTION.md) for the environment we used.
 
 **Install:**
 
