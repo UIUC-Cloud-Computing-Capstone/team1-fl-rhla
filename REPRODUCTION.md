@@ -110,6 +110,13 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
 
    Output: `figures/ratio_grouped_histogram.pdf`.
 
+6. **Figure: Fig. 1**
+   ```bash
+   python scripts/figures/fig-param.py
+   
+   ```
+   TODO
+
 Run all commands from the **project root** with the project environment activated (e.g. `conda activate env.fl`). Figure scripts that read logs require having run the corresponding experiments first; see the [Rank Utilizer](README.md#rank-utilizer) section in the README for how to run experiments.
 
 
