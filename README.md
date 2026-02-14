@@ -53,13 +53,13 @@ python scripts/run_memory_breakdown_comparison.py qv
 python scripts/run_memory_breakdown_comparison.py qv --config config/memory_breakdown_comparison.yaml
 ```
 
-To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/`. For example, our method on CIFAR-100:
+To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/experiments/`. For example, our method on CIFAR-100:
 
 ```bash
-bash scripts/run-cifar100-Ours.sh
+bash scripts/experiments/run-cifar100-Ours.sh
 ```
 
-Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) are in `scripts/`; run any `run-*.sh` from the project root.
+Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) are in `scripts/experiments/`; run any `run-*.sh` from the project root.
 
 ---
 
@@ -77,10 +77,11 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) 
 ├── models/         # Model layer reference files (BERTlayerName, ViTLayerName)
 ├── setup/         # Environment and tool config (environment-final.yml, accelerate_default_config.yaml)
 ├── scripts/        # Run and figure scripts
+│   ├── experiments/   # Experiment run scripts (CIFAR-100, LEDGAR, baselines, ablations)
+│   │   └── run-*.sh
 │   ├── figures/    # Scripts to generate figures
 │   ├── run_rank_estimation.py
-│   ├── run_memory_breakdown_comparison.py
-│   └── run-*.sh    # Experiment scripts (CIFAR-100, LEDGAR, baselines, ablations)
+│   └── run_memory_breakdown_comparison.py
 ├── utils/          # Utility functions (including estimator.py for rank estimation)
 ├── main.py         # Entry point for training
 └── test.py         # Evaluation and testing routines
