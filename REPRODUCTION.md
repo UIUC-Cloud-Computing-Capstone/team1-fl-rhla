@@ -110,12 +110,14 @@ To reproduce **tables and figures** in the paper about rank allocation (FIM-base
 
    Output: `figures/ratio_grouped_histogram.pdf`.
 
-6. **Figure: Fig. 1**
+6. **Figure: Fig. 1 (Accuracy vs. trainable parameters)**  
+   Produces the scatter plot of test accuracy (%) vs. number of trainable parameters for method comparison (FedIT, Straggler, Exclusive, LoKr, FFA-LoRA, LEGEND, Fed-HeLLo, HRALoRA). Uses data hardcoded in the script; no log paths. Run as-is:
+
    ```bash
    python scripts/figures/fig-param.py
-   
    ```
-   TODO
+
+   Output: `figures/accuracy_vs_params_custom_labels.pdf`.
 
 Run all commands from the **project root** with the project environment activated (e.g. `conda activate env.fl`). Figure scripts that read logs require having run the corresponding experiments first; see the [Rank Utilizer](README.md#rank-utilizer) section in the README for how to run experiments.
 
