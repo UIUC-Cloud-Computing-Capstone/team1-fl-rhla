@@ -1,3 +1,12 @@
+"""
+Federated learning engine: FedAvg with heterogeneous LoRA depth (DepthFL).
+
+This module implements a federated averaging algorithm where clients may train
+different subsets of LoRA layers (heterogeneous depth) and optionally use
+alternative aggregation methods (weighted average, SVD average, product average).
+Supports ViT, BERT-style models, and LEDGAR; uses load_partition for data and
+model_setup for the global model.
+"""
 import copy
 import numpy as np
 import time
@@ -15,12 +24,50 @@ import random
 
 VISION_MODEL = 'facebook/deit-small-patch16-224'
 
+
 def vit_collate_fn(examples):
+    """
+    Collate a batch of examples for Vision Transformer (ViT) training.
+
+    Expects each example to be a tuple with label at index 1 and pixel values
+    at index 2. Returns a dict with "pixel_values" (stacked [N, C, H, W]) and
+    "labels" (tensor of length N).
+
+    Args:
+        examples: List of (_, label, pixel_values) tuples.
+
+    Returns:
+        dict: "pixel_values" and "labels" tensors for the batch.
+    """
     pixel_values = torch.stack([example[2] for example in examples])
     labels = torch.tensor([example[1] for example in examples])
     return {"pixel_values": pixel_values, "labels": labels}
 
+
 def ffm_fedavg_depthfl(args):
+    """
+    Federated averaging with heterogeneous LoRA depth (DepthFL).
+
+    Runs FedAvg over multiple rounds: each round samples clients, performs
+    local LoRA (or LoKR) tuning with per-client layer/rank config, aggregates
+    updates (simple average, weighted_average, svd_average, or product_average),
+    then evaluates the global model. Supports ViT, BERT, and LEDGAR evaluation.
+
+    Args:
+        args: Config object with at least:
+            - num_users, num_selected_users, round: FL setup
+            - heterogeneous_group: list of fraction strings (e.g. ['1/3','1/3','1/3'])
+            - heterogeneous_group{i}_lora: int or list of layer indices for group i
+            - lora_layer: total number of LoRA layers
+            - rank_group{i}_lora: used when LEGEND/HetLoRA/FlexLoRA
+            - peft: 'lora' (and LOKR flag for LoKR)
+            - lr_step_size, decay_weight, local_lr: learning rate decay
+            - model, dataset, batch_size, log_path, device
+            - logger, accelerator, (optional) aggregation, data_collator
+
+    Returns:
+        tuple: ((best_test_acc, best_test_f1, best_test_macro_f1, best_test_micro_f1), metric_keys).
+    """
     ################################### hyperparameter setup ########################################
     args.logger.info("{:<50}".format("-" * 15 + " data setup " + "-" * 50)[0:60], main_process_only=True)
     args, dataset_train, dataset_test, dataset_val, dataset_public, dict_users, dataset_fim = load_partition(args)
