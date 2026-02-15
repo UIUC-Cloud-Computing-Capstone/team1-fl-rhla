@@ -1,0 +1,5 @@
+# smoke test for verifying if environment is set up correctly: 1 round of training with 2 clients
+_base_ : ['alternating-training-warm20-double-rank-int-no-rank-vary.yaml']
+num_users: 20
+num_selected_users: 2
+round: 1

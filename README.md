@@ -40,7 +40,7 @@ mkdir -p ~/.cache/huggingface/accelerate/
 cp setup/accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_config.yaml
 ```
 
-**Verify:** Run `bash scripts/experiments/run-cifar100-smoke.sh` (this is smoke test: 1 round of training with 2 clients).
+**Verify:** Run `bash scripts/experiments/run-cifar100-smoke-test.sh` (this is smoke test: 1 round of training with 2 clients).
 
 ### 🚀 Running the Code
 
