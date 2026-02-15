@@ -1,6 +1,0 @@
-# Smoke test: 1 round, 2 clients (verify/CI). Same as Ours alternating-training-warm10 but minimal run.
-_base_: ['../Ours/alternating-training-warm10.yaml']
-
-round: 1
-num_users: 20
-num_selected_users: 2
