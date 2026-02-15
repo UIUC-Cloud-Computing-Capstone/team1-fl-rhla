@@ -1,0 +1,97 @@
+./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/FlexLoRA/FlexLoRA-iid_2025-12-16_21-42-56
+############ Case 0 ############
+--------------- data setup ---------------------------------
+length of dataset:60000
+num. of training data:50000
+num. of testing data:10000
+num. of users:20
+average num. of samples per user:2500
+--------------- log path -----------------------------------
+./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/FlexLoRA/FlexLoRA-iid_2025-12-16_21-42-56
+--------------- model setup --------------------------------
+model dim: 22185032
+--------------- training... --------------------------------
+Round: 0/200
+Total local training loss is: 4.640149116516113
+Total local training loss is: 4.627171993255615
+Total local training loss is: 4.620944499969482
+Total local training loss is: 4.6201629638671875
+Total local training loss is: 4.625100612640381
+{'accuracy': 0.0095}
+t   0: train_loss = 4.627, norm = 114.150, test_acc = 0.009
+Round: 1/200
+Total local training loss is: 4.630503177642822
+Total local training loss is: 4.631739139556885
+Total local training loss is: 4.632001876831055
+Total local training loss is: 4.634448051452637
+Total local training loss is: 4.632699012756348
+{'accuracy': 0.009}
+t   1: train_loss = 4.632, norm = 44.149, test_acc = 0.009
+Round: 2/200
+Total local training loss is: 4.632132530212402
+Total local training loss is: 4.637083530426025
+Total local training loss is: 4.626596927642822
+Total local training loss is: 4.632852077484131
+Total local training loss is: 4.641246795654297
+{'accuracy': 0.0091}
+t   2: train_loss = 4.634, norm = 18.361, test_acc = 0.009
+Round: 3/200
+Total local training loss is: 4.627867698669434
+Total local training loss is: 4.627005577087402
+Total local training loss is: 4.641149044036865
+Total local training loss is: 4.633218765258789
+Total local training loss is: 4.6341118812561035
+{'accuracy': 0.0093}
+t   3: train_loss = 4.633, norm = 22.204, test_acc = 0.009
+Round: 4/200
+Total local training loss is: 4.6334381103515625
+Total local training loss is: 4.63427209854126
+Total local training loss is: 4.628933429718018
+Total local training loss is: 4.632420063018799
+Total local training loss is: 4.629965305328369
+{'accuracy': 0.0093}
+t   4: train_loss = 4.632, norm = 23.916, test_acc = 0.009
+Round: 5/200
+Total local training loss is: 4.631178379058838
+Total local training loss is: 4.62930965423584
+Total local training loss is: 4.630235195159912
+Total local training loss is: 4.622289657592773
+Total local training loss is: 4.637075901031494
+{'accuracy': 0.0093}
+t   5: train_loss = 4.630, norm = 24.082, test_acc = 0.009
+Round: 6/200
+Total local training loss is: 4.625091075897217
+Total local training loss is: 4.634468078613281
+Total local training loss is: 4.626944541931152
+Total local training loss is: 4.633205890655518
+Total local training loss is: 4.619998931884766
+{'accuracy': 0.0093}
+t   6: train_loss = 4.628, norm = 24.126, test_acc = 0.009
+Round: 7/200
+Total local training loss is: 4.6269330978393555
+Total local training loss is: 4.621918201446533
+Total local training loss is: 4.616044998168945
+Total local training loss is: 4.6302642822265625
+Total local training loss is: 4.627888202667236
+{'accuracy': 0.0093}
+t   7: train_loss = 4.625, norm = 24.132, test_acc = 0.009
+Round: 8/200
+Total local training loss is: 4.619505405426025
+Total local training loss is: 4.620364189147949
+Total local training loss is: 4.618233680725098
+Total local training loss is: 4.634608745574951
+Total local training loss is: 4.63625431060791
+{'accuracy': 0.0092}
+t   8: train_loss = 4.626, norm = 24.135, test_acc = 0.009
+Round: 9/200
+Total local training loss is: 4.631770133972168
+Total local training loss is: 4.617254734039307
+Total local training loss is: 4.632630348205566
+Total local training loss is: 4.628618240356445
+Total local training loss is: 4.6258978843688965
+{'accuracy': 0.0093}
+t   9: train_loss = 4.627, norm = 24.117, test_acc = 0.009
+Round: 10/200
+Total local training loss is: 4.62272834777832
+Total local training loss is: 4.613892555236816
+Total local training loss is: 4.636453628540039
