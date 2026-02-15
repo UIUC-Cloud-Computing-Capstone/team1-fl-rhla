@@ -26,9 +26,6 @@ NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_
 #lokr
 NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/LOKR/LOKR-noniid-20.yaml'
 
-#FlexLoRA
-NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/FlexLoRA/FlexLoRA-noniid-pat_20_dir.yaml'
-
 #HetLoRA
 NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/HetLoRA/HetLoRA-noniid-pat_20_dir.yaml'
 
