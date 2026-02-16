@@ -9,7 +9,7 @@ NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_
 NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/FedHello/FedHello_noniid-pat_20_dir-noprior-s50-e50.yaml'
 
 #ours
-NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-20.yaml'
+NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/Ours/alternating-training-warm20-double-rank-int-noniid-20.yaml'
 
 #straggler
 NCCL_DEBUG=INFO TORCH_DISTRIBUTED_DETAIL=DEBUG accelerate launch --main_process_port 29505 main.py --config_name 'experiments/ledgar_bert_lora/Straggler/straggler-rank24-noniid-pat_20_dir.yaml'

@@ -1,4 +1,4 @@
-./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-10_2025-12-07_04-21-46
+./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-noniid-10_2025-12-07_04-21-46
 ############ Case 0 ############
 --------------- data setup ---------------------------------
 selected_indices_fim:
@@ -9,7 +9,7 @@ num. of testing data:10000
 num. of users:20
 average num. of samples per user:2495
 --------------- log path -----------------------------------
-./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-10_2025-12-07_04-21-46
+./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-noniid-10_2025-12-07_04-21-46
 --------------- model setup --------------------------------
 model dim: 22627400
 --------------- training... --------------------------------

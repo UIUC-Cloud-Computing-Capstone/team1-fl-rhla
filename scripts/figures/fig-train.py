@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "figures")
 
-iid = Path("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary_2025-12-07_00-45-38/exp_log.txt").read_text(encoding="utf-8", errors="ignore")
-noniid10 = Path("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-10_2025-12-07_04-21-46/exp_log.txt").read_text(encoding="utf-8", errors="ignore")
-noniid20 = Path("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-20_2025-12-07_07-54-51/exp_log.txt").read_text(encoding="utf-8", errors="ignore")
+iid = Path("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-2025-12-07_00-45-38/exp_log.txt").read_text(encoding="utf-8", errors="ignore")
+noniid10 = Path("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-noniid-10_2025-12-07_04-21-46/exp_log.txt").read_text(encoding="utf-8", errors="ignore")
+noniid20 = Path("log/cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora/Ours/alternating-training-warm20-double-rank-int-noniid-20_2025-12-07_07-54-51/exp_log.txt").read_text(encoding="utf-8", errors="ignore")
 
 def extract_round_accuracy(text: str, max_round=200):
     pattern = re.compile(

@@ -18,7 +18,7 @@ _BASE = "cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar10
 # HETLORA = _read_log(f"{_BASE}/HetLoRA/HetLoRA-noniid-pat_10_dir_2025-12-16_05-10-20/exp_log.txt")
 # LEGEND = _read_log(f"{_BASE}/LEGEND/LEGEND-noniid-10_2025-11-28_22-12-22/exp_log.txt")
 # FEDHELLO = _read_log(f"{_BASE}/FedHello/FedHello_noniid-pat_10_dir-noprior-s50-e50_2025-11-28_11-29-31/exp_log.txt")
-# HRALORA = _read_log(f"{_BASE}/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-10_2025-12-07_04-21-46/exp_log.txt")
+# HRALORA = _read_log(f"{_BASE}/Ours/alternating-training-warm20-double-rank-int-noniid-10_2025-12-07_04-21-46/exp_log.txt")
 
 # iid
 # FEDIT = _read_log(f"{_BASE}/FedIT/FedIT-iid_2025-11-26_11-29-11/exp_log.txt")
@@ -26,7 +26,7 @@ _BASE = "cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar10
 # HETLORA = _read_log(f"{_BASE}/HetLoRA/HetLoRA-iid_2025-12-16_01-32-48/exp_log.txt")
 # LEGEND = _read_log(f"{_BASE}/LEGEND/LEGEND-iid_2025-11-26_18-51-24/exp_log.txt")
 # FEDHELLO = _read_log(f"{_BASE}/FedHello/FedHello_rank-24iid-noprior-s50-e50_2025-11-26_07-52-20/exp_log.txt")
-# HRALORA = _read_log(f"{_BASE}/Ours/alternating-training-warm20-double-rank-int-no-rank-vary_2025-12-07_00-45-38/exp_log.txt")
+# HRALORA = _read_log(f"{_BASE}/Ours/alternating-training-warm20-double-rank-int-2025-12-07_00-45-38/exp_log.txt")
 
 # non-iid 20
 FEDIT = _read_log(f"{_BASE}/FedIT/FedIT-noniid-pat_20_dir_2025-11-25_13-32-44/exp_log.txt")
@@ -34,7 +34,7 @@ FLEXLORA  = _read_log(f"{_BASE}/FlexLoRA/FlexLoRA-noniid-pat_20_dir_2025-12-17_2
 HETLORA = _read_log(f"{_BASE}/HetLoRA/HetLoRA-noniid-pat_20_dir_2025-12-17_00-26-22/exp_log.txt")
 LEGEND = _read_log(f"{_BASE}/LEGEND/LEGEND-noniid-20_2025-11-25_20-38-24/exp_log.txt")
 FEDHELLO = _read_log(f"{_BASE}/FedHello/FedHello_noniid-pat_20_dir-noprior-s50-e50_2025-11-25_10-00-05/exp_log.txt")
-HRALORA = _read_log(f"{_BASE}/Ours/alternating-training-warm20-double-rank-int-no-rank-vary-noniid-20_2025-12-07_07-54-51/exp_log.txt")
+HRALORA = _read_log(f"{_BASE}/Ours/alternating-training-warm20-double-rank-int-noniid-20_2025-12-07_07-54-51/exp_log.txt")
 
 
 
