@@ -72,7 +72,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
    - **comparison / ablations:** run the matching scripts in `scripts/experiments/`, e.g. `run-cifar100-iid.sh`, `run-cifar100-iid-ablation.sh`, `run-cifar100-non-iid-20.sh`, etc.
    
 2. **Fig. 1 (Accuracy vs. trainable parameters)**  
-   Produces the scatter plot of test accuracy (%) vs. number of trainable parameters for method comparison (FedIT, Straggler, Exclusive, LoKr, FFA-LoRA, LEGEND, Fed-HeLLo, HRALoRA). Uses data hardcoded in the script; no log paths. Run as-is:
+   Produces the scatter plot of test accuracy (%) vs. number of trainable parameters for method comparison (FedIT, Straggler, Exclusive, LoKr, FFA-LoRA, LEGEND, Fed-HeLLo, HRALoRA). Data obtained from the experiments are hardcoded in the script; no log paths. Run as-is:
 
    ```bash
    python scripts/figures/fig-param.py
@@ -90,7 +90,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
    Output (by default): `figures/layer-rank.pdf` (allocated rank for selected layers over rounds). To also produce the subfigures (a) and (b), uncomment the blocks in the script that save `fim_mean_std.pdf` (FIM mean ± std per layer) and `rank_mean_std.pdf` (rank mean ± std per layer). The script also contains commented code for `layer-fim.pdf` (FIM per layer over rounds); uncomment that block if needed.
 
 4. **Fig. 5.**  
-   Produces the bar chart of accuracy/parameter ratio for different methods. Uses data hardcoded in the script. Run as-is:
+   Produces the bar chart of accuracy/parameter ratio for different methods. Use log or data obtained from the experiments in the script. Run as-is:
 
    ```bash
    python scripts/figures/fig-param-performance-ratio.py
@@ -100,7 +100,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
    Output: `figures/ratio_grouped_histogram.pdf` and `cifar_train_plot-diff-method.pdf`.
 
 5. **Fig. 6**  
-   Produces the plot of accuracy vs LoRA rank. Uses data hardcoded in the script (no log paths). Run as-is:
+   Produces the plot of accuracy vs LoRA rank. Use log or data obtained from the experiments in the script. Run as-is:
 
    ```bash
    python scripts/figures/fig-rank.py

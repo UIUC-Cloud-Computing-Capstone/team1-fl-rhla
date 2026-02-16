@@ -99,9 +99,8 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations) are in `scr
 
 ```
 
-**Output:** Logs are written under `log/`, in a path derived from dataset, model, method, and config name (e.g. `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`). Each run directory contains `exp_log.txt`.
+**Output:** Logs are written under `log/`, in a path derived from dataset, model, method, and config name (e.g. `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`). Each run directory contains `exp_log.txt`. Output example of different methods on CIFAR100 dataset can be found in `results/example_log/cifar100_vit_lora/`.
 
-Output example of different methods on CIFAR100 dataset can be found in `results/example_log/cifar100_vit_lora/`.
 ---
 
 ## Codebase overview
