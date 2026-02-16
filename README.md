@@ -75,30 +75,33 @@ bash scripts/experiments/run-cifar100-Ours.sh
 
 Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations) are in `scripts/experiments/`; run any `run-*.sh` from the project root.
 
-**Output:** Logs are written under `log/`, in a path derived from dataset, model, method, and config name (e.g. `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`). Each run directory contains `exp_log.txt`.
-
 #### Script list:
 ```
 # CIFAR100:
+- `run-cifar100-iid.sh`
+- `run-cifar100-non-iid-10.sh`
+- `run-cifar100-non-iid-20.sh`
+- `run-cifar100-100client-10select-iid.sh`
+- `run-cifar100-100client-10select-non-iid-10.sh`
+- `run-cifar100-100client-10select-non-iid-20.sh`
+- `run-cifar100-iid-ablation.sh`
+- `run-cifar100-non-iid-10-ablation.sh`
+- `run-cifar100-non-iid-20-ablation.sh`
 - `run-cifar100-smoke-test.sh`
 - `run-cifar100-Ours.sh`
-- `run-cifar100-non-iid-20.sh`
-- `run-cifar100-non-iid-20-ablation.sh`
-- `run-cifar100-non-iid-10.sh`
-- `run-cifar100-non-iid-10-ablation.sh`
-- `run-cifar100-iid.sh`
-- `run-cifar100-iid-ablation.sh`
-- `run-cifar100-100client-10select-non-iid-20.sh`
-- `run-cifar100-100client-10select-non-iid-10.sh`
-- `run-cifar100-100client-10select-iid.sh`
 
 # LEDGAR:
-- `run-ledgar-non-iid-20.sh`
-- `run-ledgar-non-iid-20-ablation.sh`
-- `run-ledgar-non-iid-10.sh`
-- `run-ledgar-non-iid-10-ablation.sh`
 - `run-ledgar-iid.sh`
+- `run-ledgar-non-iid-10.sh`
+- `run-ledgar-non-iid-20.sh`
+- `run-ledgar-non-iid-10-ablation.sh`
+- `run-ledgar-non-iid-20-ablation.sh`
+
 ```
+
+**Output:** Logs are written under `log/`, in a path derived from dataset, model, method, and config name (e.g. `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`). Each run directory contains `exp_log.txt`.
+
+Output example of different methods on CIFAR100 dataset can be found in `results/example_log/cifar100_vit_lora/`.
 ---
 
 ## Codebase overview
