@@ -20,7 +20,7 @@ HRALoRA has two core components:
 
 **Install:**
 
-Estimated times for install: may take one to a few minutes as conda is slow. (TODO replace with uv)
+Estimated times for install: may take one to a few minutes as conda is slow.
 
 ```bash
 conda env create --name env.fl --file=setup/environment-final.yml
@@ -65,7 +65,7 @@ See [REPRODUCTION.md](REPRODUCTION.md) for troubleshooting if you run into issue
 
 #### Rank Utilizer
 
-TODO Youye: add estimated times for run
+The running time around 1 hour using an Nvidia H100 GPU.
 
 To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/experiments/`. For example, our method on CIFAR-100:
 

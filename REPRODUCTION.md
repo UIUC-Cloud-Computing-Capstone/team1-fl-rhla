@@ -69,9 +69,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
      ```bash
      bash scripts/experiments/run-cifar100-Ours.sh
      ```
-   - **Baselines / ablations:** run the matching scripts in `scripts/experiments/`, e.g. `run-cifar100-FedHello.sh`, `run-cifar100-FlexLoRA.sh`, `run-cifar100-HetLoRA.sh`, `run-cifar100-iid.sh`, `run-cifar100-non-iid-10.sh`, `run-cifar100-non-iid-20.sh`, etc.
-
-   TODO better to have a list of description for these scripts
+   - **comparison / ablations:** run the matching scripts in `scripts/experiments/`, e.g. `run-cifar100-iid.sh`, `run-cifar100-iid-ablation.sh`, `run-cifar100-non-iid-20.sh`, etc.
    
 2. **Fig. 1 (Accuracy vs. trainable parameters)**  
    Produces the scatter plot of test accuracy (%) vs. number of trainable parameters for method comparison (FedIT, Straggler, Exclusive, LoKr, FFA-LoRA, LEGEND, Fed-HeLLo, HRALoRA). Uses data hardcoded in the script; no log paths. Run as-is:
