@@ -65,7 +65,7 @@ See [REPRODUCTION.md](REPRODUCTION.md) for troubleshooting if you run into issue
 
 #### Rank Utilizer
 
-The running time around 1 hour using an Nvidia H100 GPU.
+Estimated times for fine-tune: around 1 hour using an Nvidia H100 GPU.
 
 To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/experiments/`. For example, our method on CIFAR-100:
 
@@ -73,10 +73,32 @@ To utilize the rank budget to fine-tune the model, run one of the scripts in `sc
 bash scripts/experiments/run-cifar100-Ours.sh
 ```
 
-Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations, baselines) are in `scripts/experiments/`; run any `run-*.sh` from the project root.
+Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations) are in `scripts/experiments/`; run any `run-*.sh` from the project root.
 
 **Output:** Logs are written under `log/`, in a path derived from dataset, model, method, and config name (e.g. `log/<dataset>/<model>/<method>/<config_stem>_<timestamp>/`). Each run directory contains `exp_log.txt`.
 
+#### Script list:
+```
+# CIFAR100:
+- `run-cifar100-smoke-test.sh`
+- `run-cifar100-Ours.sh`
+- `run-cifar100-non-iid-20.sh`
+- `run-cifar100-non-iid-20-ablation.sh`
+- `run-cifar100-non-iid-10.sh`
+- `run-cifar100-non-iid-10-ablation.sh`
+- `run-cifar100-iid.sh`
+- `run-cifar100-iid-ablation.sh`
+- `run-cifar100-100client-10select-non-iid-20.sh`
+- `run-cifar100-100client-10select-non-iid-10.sh`
+- `run-cifar100-100client-10select-iid.sh`
+
+# LEDGAR:
+- `run-ledgar-non-iid-20.sh`
+- `run-ledgar-non-iid-20-ablation.sh`
+- `run-ledgar-non-iid-10.sh`
+- `run-ledgar-non-iid-10-ablation.sh`
+- `run-ledgar-iid.sh`
+```
 ---
 
 ## Codebase overview
