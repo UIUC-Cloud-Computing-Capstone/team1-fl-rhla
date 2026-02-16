@@ -639,8 +639,8 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
     
     This function is called when t >= fim_prior_epoch and t % fim_every_iter == 0. It computes
     the Fisher Information Matrix, clusters layers by importance, and assigns layers (and
-    optionally per-layer ranks) to each user group. Layers with lower FIM values are more
-    likely to be selected for training (inverse relationship with importance).
+    optionally per-layer ranks) to each user group. Layers with higher FIM values are more
+    likely to be selected for training.
     
     Predefined probability-based assignment is handled by update_block_ids_list_predefined,
     not by this function.
@@ -676,7 +676,7 @@ def update_block_ids_list(args, dataset_fim, net_glob, t):
     
     Note:
         - Uses GPU lock to prevent concurrent FIM computation
-        - Layers with lower FIM values are more likely to be selected
+        - Layers with lower FIM values are less likely to be selected
         - All selected layer lists are sorted for consistency
     """
 
@@ -783,9 +783,9 @@ def get_observed_probability(cluster_labels):
                       The probabilities sum to 1.0.
     
     Cluster Label Mapping:
-        - Label 0: Probability = 1/27 (lowest importance, highest selection probability)
+        - Label 0: Probability = 1/27 (lowest importance, lowest selection probability)
         - Label 1: Probability = 2/27 (medium importance, medium selection probability)  
-        - Label 2: Probability = 1/9 (highest importance, lowest selection probability)
+        - Label 2: Probability = 1/9 (highest importance, highest selection probability)
     
     Algorithm:
         1. Map each cluster label to its corresponding fraction string
@@ -804,8 +804,7 @@ def get_observed_probability(cluster_labels):
         [0.333, 0.333, 0.333]  # All equal probabilities
     
     Note:
-        - The inverse relationship between importance and selection probability is intentional
-        - Layers with lower FIM values (less important) are more likely to be selected
+        - Layers with higher FIM values (more important) are more likely to be selected
         - This encourages training of less critical layers to improve overall model robustness
         - The function assumes cluster labels are in the range [0, 2]
     """
