@@ -1,0 +1,1616 @@
+./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/FlexLoRA/FlexLoRA-iid_2025-12-17_08-42-35
+############ Case 0 ############
+--------------- data setup ---------------------------------
+length of dataset:60000
+num. of training data:50000
+num. of testing data:10000
+num. of users:20
+average num. of samples per user:2500
+--------------- log path -----------------------------------
+./log/cifar100/google/vit-base-patch16-224-in21k/ffm_fedavg/experiments/cifar100_vit_lora/FlexLoRA/FlexLoRA-iid_2025-12-17_08-42-35
+--------------- model setup --------------------------------
+model dim: 22185032
+--------------- training... --------------------------------
+Round: 0/200
+Total local training loss is: 4.562056541442871
+Total local training loss is: 4.609533309936523
+Total local training loss is: 4.556915283203125
+Total local training loss is: 4.542308807373047
+Total local training loss is: 4.57922887802124
+{'accuracy': 0.0384}
+t   0: train_loss = 4.570, norm = 113.800, test_acc = 0.038
+Round: 1/200
+Total local training loss is: 4.346774101257324
+Total local training loss is: 4.3016438484191895
+Total local training loss is: 4.286581993103027
+Total local training loss is: 4.300483226776123
+Total local training loss is: 4.323459625244141
+{'accuracy': 0.1247}
+t   1: train_loss = 4.312, norm = 78.470, test_acc = 0.125
+Round: 2/200
+Total local training loss is: 3.866838216781616
+Total local training loss is: 3.8405838012695312
+Total local training loss is: 3.895937442779541
+Total local training loss is: 3.8521461486816406
+Total local training loss is: 3.8828723430633545
+{'accuracy': 0.2201}
+t   2: train_loss = 3.868, norm = 81.190, test_acc = 0.220
+Round: 3/200
+Total local training loss is: 3.5456063747406006
+Total local training loss is: 3.522239923477173
+Total local training loss is: 3.5367813110351562
+Total local training loss is: 3.5328516960144043
+Total local training loss is: 3.533818006515503
+{'accuracy': 0.306}
+t   3: train_loss = 3.534, norm = 81.365, test_acc = 0.306
+Round: 4/200
+Total local training loss is: 3.2701809406280518
+Total local training loss is: 3.26003360748291
+Total local training loss is: 3.241926431655884
+Total local training loss is: 3.2949790954589844
+Total local training loss is: 3.2833237648010254
+{'accuracy': 0.3741}
+t   4: train_loss = 3.270, norm = 91.112, test_acc = 0.374
+Round: 5/200
+Total local training loss is: 3.030468463897705
+Total local training loss is: 3.0977277755737305
+Total local training loss is: 2.9962925910949707
+Total local training loss is: 3.0273025035858154
+Total local training loss is: 3.0123190879821777
+{'accuracy': 0.4399}
+t   5: train_loss = 3.033, norm = 84.339, test_acc = 0.440
+Round: 6/200
+Total local training loss is: 2.8619701862335205
+Total local training loss is: 2.825941562652588
+Total local training loss is: 2.8202970027923584
+Total local training loss is: 2.8740391731262207
+Total local training loss is: 2.84450101852417
+{'accuracy': 0.4918}
+t   6: train_loss = 2.845, norm = 82.669, test_acc = 0.492
+Round: 7/200
+Total local training loss is: 2.6862869262695312
+Total local training loss is: 2.658351182937622
+Total local training loss is: 2.677640199661255
+Total local training loss is: 2.7161617279052734
+Total local training loss is: 2.6381547451019287
+{'accuracy': 0.5378}
+t   7: train_loss = 2.675, norm = 86.614, test_acc = 0.538
+Round: 8/200
+Total local training loss is: 2.478262424468994
+Total local training loss is: 2.537515878677368
+Total local training loss is: 2.489353895187378
+Total local training loss is: 2.514840841293335
+Total local training loss is: 2.464959144592285
+{'accuracy': 0.5748}
+t   8: train_loss = 2.497, norm = 86.128, test_acc = 0.575
+Round: 9/200
+Total local training loss is: 2.3306448459625244
+Total local training loss is: 2.3986828327178955
+Total local training loss is: 2.3265440464019775
+Total local training loss is: 2.4003210067749023
+Total local training loss is: 2.363138437271118
+{'accuracy': 0.5984}
+t   9: train_loss = 2.364, norm = 74.738, test_acc = 0.598
+Round: 10/200
+Total local training loss is: 2.2775871753692627
+Total local training loss is: 2.2903316020965576
+Total local training loss is: 2.203685760498047
+Total local training loss is: 2.2267112731933594
+Total local training loss is: 2.3373448848724365
+{'accuracy': 0.6173}
+t  10: train_loss = 2.267, norm = 91.330, test_acc = 0.617
+Round: 11/200
+Total local training loss is: 2.2050817012786865
+Total local training loss is: 2.196915626525879
+Total local training loss is: 2.200549840927124
+Total local training loss is: 2.1989943981170654
+Total local training loss is: 2.2294459342956543
+{'accuracy': 0.6377}
+t  11: train_loss = 2.206, norm = 78.906, test_acc = 0.638
+Round: 12/200
+Total local training loss is: 2.062678575515747
+Total local training loss is: 2.174342632293701
+Total local training loss is: 2.128479480743408
+Total local training loss is: 2.101531505584717
+Total local training loss is: 2.126595973968506
+{'accuracy': 0.6533}
+t  12: train_loss = 2.119, norm = 76.628, test_acc = 0.653
+Round: 13/200
+Total local training loss is: 2.141512632369995
+Total local training loss is: 2.0707128047943115
+Total local training loss is: 2.112896203994751
+Total local training loss is: 2.0415313243865967
+Total local training loss is: 1.976488471031189
+{'accuracy': 0.6635}
+t  13: train_loss = 2.069, norm = 71.762, test_acc = 0.663
+Round: 14/200
+Total local training loss is: 2.0076138973236084
+Total local training loss is: 1.9776742458343506
+Total local training loss is: 1.9833875894546509
+Total local training loss is: 2.103541612625122
+Total local training loss is: 2.0677239894866943
+{'accuracy': 0.6789}
+t  14: train_loss = 2.028, norm = 86.074, test_acc = 0.679
+Round: 15/200
+Total local training loss is: 1.9547202587127686
+Total local training loss is: 1.89437997341156
+Total local training loss is: 1.92087721824646
+Total local training loss is: 1.9432989358901978
+Total local training loss is: 1.961924433708191
+{'accuracy': 0.6899}
+t  15: train_loss = 1.935, norm = 91.296, test_acc = 0.690
+Round: 16/200
+Total local training loss is: 1.8285459280014038
+Total local training loss is: 1.92495596408844
+Total local training loss is: 1.8223391771316528
+Total local training loss is: 1.9074355363845825
+Total local training loss is: 1.9132325649261475
+{'accuracy': 0.7013}
+t  16: train_loss = 1.879, norm = 88.400, test_acc = 0.701
+Round: 17/200
+Total local training loss is: 1.814810037612915
+Total local training loss is: 1.8475379943847656
+Total local training loss is: 1.8665555715560913
+Total local training loss is: 1.8786344528198242
+Total local training loss is: 1.892195701599121
+{'accuracy': 0.7125}
+t  17: train_loss = 1.860, norm = 68.657, test_acc = 0.713
+Round: 18/200
+Total local training loss is: 1.7807427644729614
+Total local training loss is: 1.7794145345687866
+Total local training loss is: 1.8271397352218628
+Total local training loss is: 1.7879880666732788
+Total local training loss is: 1.764824390411377
+{'accuracy': 0.7106}
+t  18: train_loss = 1.788, norm = 83.457, test_acc = 0.711
+Round: 19/200
+Total local training loss is: 1.8402189016342163
+Total local training loss is: 1.8523895740509033
+Total local training loss is: 1.783636212348938
+Total local training loss is: 1.7891111373901367
+Total local training loss is: 1.8153419494628906
+{'accuracy': 0.7179}
+t  19: train_loss = 1.816, norm = 74.392, test_acc = 0.718
+Round: 20/200
+Total local training loss is: 1.7879592180252075
+Total local training loss is: 1.6782139539718628
+Total local training loss is: 1.8397809267044067
+Total local training loss is: 1.7583580017089844
+Total local training loss is: 1.8004639148712158
+{'accuracy': 0.7299}
+t  20: train_loss = 1.773, norm = 82.142, test_acc = 0.730
+Round: 21/200
+Total local training loss is: 1.7094873189926147
+Total local training loss is: 1.7140792608261108
+Total local training loss is: 1.781322956085205
+Total local training loss is: 1.754401445388794
+Total local training loss is: 1.799848198890686
+{'accuracy': 0.7353}
+t  21: train_loss = 1.752, norm = 92.313, test_acc = 0.735
+Round: 22/200
+Total local training loss is: 1.6342593431472778
+Total local training loss is: 1.656732439994812
+Total local training loss is: 1.7219104766845703
+Total local training loss is: 1.7028613090515137
+Total local training loss is: 1.7167860269546509
+{'accuracy': 0.7408}
+t  22: train_loss = 1.687, norm = 85.349, test_acc = 0.741
+Round: 23/200
+Total local training loss is: 1.7356523275375366
+Total local training loss is: 1.6604896783828735
+Total local training loss is: 1.6733115911483765
+Total local training loss is: 1.6375200748443604
+Total local training loss is: 1.6405328512191772
+{'accuracy': 0.7494}
+t  23: train_loss = 1.670, norm = 89.736, test_acc = 0.749
+Round: 24/200
+Total local training loss is: 1.63239586353302
+Total local training loss is: 1.712072491645813
+Total local training loss is: 1.6922402381896973
+Total local training loss is: 1.6327614784240723
+Total local training loss is: 1.6953797340393066
+{'accuracy': 0.7496}
+t  24: train_loss = 1.673, norm = 97.858, test_acc = 0.750
+Round: 25/200
+Total local training loss is: 1.6144990921020508
+Total local training loss is: 1.5681755542755127
+Total local training loss is: 1.6311280727386475
+Total local training loss is: 1.6442148685455322
+Total local training loss is: 1.6272728443145752
+{'accuracy': 0.7565}
+t  25: train_loss = 1.617, norm = 95.004, test_acc = 0.756
+Round: 26/200
+Total local training loss is: 1.569691777229309
+Total local training loss is: 1.6236668825149536
+Total local training loss is: 1.6280938386917114
+Total local training loss is: 1.5439482927322388
+Total local training loss is: 1.5926569700241089
+{'accuracy': 0.7567}
+t  26: train_loss = 1.592, norm = 86.077, test_acc = 0.757
+Round: 27/200
+Total local training loss is: 1.578148365020752
+Total local training loss is: 1.6077232360839844
+Total local training loss is: 1.6064730882644653
+Total local training loss is: 1.5838018655776978
+Total local training loss is: 1.5620968341827393
+{'accuracy': 0.7609}
+t  27: train_loss = 1.588, norm = 86.977, test_acc = 0.761
+Round: 28/200
+Total local training loss is: 1.6102550029754639
+Total local training loss is: 1.4980883598327637
+Total local training loss is: 1.6059486865997314
+Total local training loss is: 1.590084433555603
+Total local training loss is: 1.5381027460098267
+{'accuracy': 0.7664}
+t  28: train_loss = 1.568, norm = 91.938, test_acc = 0.766
+Round: 29/200
+Total local training loss is: 1.554761528968811
+Total local training loss is: 1.5083376169204712
+Total local training loss is: 1.6673309803009033
+Total local training loss is: 1.5958203077316284
+Total local training loss is: 1.6749874353408813
+{'accuracy': 0.766}
+t  29: train_loss = 1.600, norm = 100.936, test_acc = 0.766
+Round: 30/200
+Total local training loss is: 1.5439900159835815
+Total local training loss is: 1.4670103788375854
+Total local training loss is: 1.4554730653762817
+Total local training loss is: 1.5720818042755127
+Total local training loss is: 1.5692217350006104
+{'accuracy': 0.7677}
+t  30: train_loss = 1.522, norm = 95.557, test_acc = 0.768
+Round: 31/200
+Total local training loss is: 1.6270440816879272
+Total local training loss is: 1.493736982345581
+Total local training loss is: 1.4869900941848755
+Total local training loss is: 1.5469658374786377
+Total local training loss is: 1.5233845710754395
+{'accuracy': 0.7731}
+t  31: train_loss = 1.536, norm = 90.689, test_acc = 0.773
+Round: 32/200
+Total local training loss is: 1.5605896711349487
+Total local training loss is: 1.5662683248519897
+Total local training loss is: 1.494869351387024
+Total local training loss is: 1.5140331983566284
+Total local training loss is: 1.4891560077667236
+{'accuracy': 0.7741}
+t  32: train_loss = 1.525, norm = 76.974, test_acc = 0.774
+Round: 33/200
+Total local training loss is: 1.487892746925354
+Total local training loss is: 1.5570026636123657
+Total local training loss is: 1.4925801753997803
+Total local training loss is: 1.4693580865859985
+Total local training loss is: 1.48802649974823
+{'accuracy': 0.7773}
+t  33: train_loss = 1.499, norm = 89.413, test_acc = 0.777
+Round: 34/200
+Total local training loss is: 1.4203473329544067
+Total local training loss is: 1.4592188596725464
+Total local training loss is: 1.6072754859924316
+Total local training loss is: 1.4974937438964844
+Total local training loss is: 1.4725898504257202
+{'accuracy': 0.7794}
+t  34: train_loss = 1.491, norm = 97.854, test_acc = 0.779
+Round: 35/200
+Total local training loss is: 1.5099856853485107
+Total local training loss is: 1.4568475484848022
+Total local training loss is: 1.4782519340515137
+Total local training loss is: 1.4603298902511597
+Total local training loss is: 1.4657931327819824
+{'accuracy': 0.7804}
+t  35: train_loss = 1.474, norm = 92.101, test_acc = 0.780
+Round: 36/200
+Total local training loss is: 1.5038498640060425
+Total local training loss is: 1.4920752048492432
+Total local training loss is: 1.375618815422058
+Total local training loss is: 1.4426287412643433
+Total local training loss is: 1.4557206630706787
+{'accuracy': 0.7848}
+t  36: train_loss = 1.454, norm = 98.220, test_acc = 0.785
+Round: 37/200
+Total local training loss is: 1.4637962579727173
+Total local training loss is: 1.430397868156433
+Total local training loss is: 1.4032323360443115
+Total local training loss is: 1.5010987520217896
+Total local training loss is: 1.428698182106018
+{'accuracy': 0.7862}
+t  37: train_loss = 1.445, norm = 92.830, test_acc = 0.786
+Round: 38/200
+Total local training loss is: 1.4577090740203857
+Total local training loss is: 1.4385530948638916
+Total local training loss is: 1.421749472618103
+Total local training loss is: 1.4516682624816895
+Total local training loss is: 1.4021618366241455
+{'accuracy': 0.787}
+t  38: train_loss = 1.434, norm = 78.526, test_acc = 0.787
+Round: 39/200
+Total local training loss is: 1.3692468404769897
+Total local training loss is: 1.3845537900924683
+Total local training loss is: 1.340638279914856
+Total local training loss is: 1.3908032178878784
+Total local training loss is: 1.3971259593963623
+{'accuracy': 0.7906}
+t  39: train_loss = 1.376, norm = 97.131, test_acc = 0.791
+Round: 40/200
+Total local training loss is: 1.4503226280212402
+Total local training loss is: 1.4127209186553955
+Total local training loss is: 1.3496661186218262
+Total local training loss is: 1.5287858247756958
+Total local training loss is: 1.417838454246521
+{'accuracy': 0.789}
+t  40: train_loss = 1.432, norm = 90.011, test_acc = 0.789
+Round: 41/200
+Total local training loss is: 1.4219273328781128
+Total local training loss is: 1.392511248588562
+Total local training loss is: 1.3924155235290527
+Total local training loss is: 1.3286608457565308
+Total local training loss is: 1.3747512102127075
+{'accuracy': 0.7932}
+t  41: train_loss = 1.382, norm = 106.245, test_acc = 0.793
+Round: 42/200
+Total local training loss is: 1.467178225517273
+Total local training loss is: 1.3729387521743774
+Total local training loss is: 1.4752886295318604
+Total local training loss is: 1.4867784976959229
+Total local training loss is: 1.379085659980774
+{'accuracy': 0.7932}
+t  42: train_loss = 1.436, norm = 101.908, test_acc = 0.793
+Round: 43/200
+Total local training loss is: 1.5787595510482788
+Total local training loss is: 1.4383562803268433
+Total local training loss is: 1.3996734619140625
+Total local training loss is: 1.3837850093841553
+Total local training loss is: 1.3217508792877197
+{'accuracy': 0.7947}
+t  43: train_loss = 1.424, norm = 110.008, test_acc = 0.795
+Round: 44/200
+Total local training loss is: 1.4363975524902344
+Total local training loss is: 1.3663654327392578
+Total local training loss is: 1.3513667583465576
+Total local training loss is: 1.4114447832107544
+Total local training loss is: 1.4086413383483887
+{'accuracy': 0.7981}
+t  44: train_loss = 1.395, norm = 92.043, test_acc = 0.798
+Round: 45/200
+Total local training loss is: 1.410721778869629
+Total local training loss is: 1.326108455657959
+Total local training loss is: 1.416029453277588
+Total local training loss is: 1.339436650276184
+Total local training loss is: 1.304150104522705
+{'accuracy': 0.7962}
+t  45: train_loss = 1.359, norm = 113.435, test_acc = 0.796
+Round: 46/200
+Total local training loss is: 1.3637861013412476
+Total local training loss is: 1.3875935077667236
+Total local training loss is: 1.399736762046814
+Total local training loss is: 1.3037437200546265
+Total local training loss is: 1.3987631797790527
+{'accuracy': 0.7966}
+t  46: train_loss = 1.371, norm = 94.915, test_acc = 0.797
+Round: 47/200
+Total local training loss is: 1.318062663078308
+Total local training loss is: 1.3541290760040283
+Total local training loss is: 1.3811770677566528
+Total local training loss is: 1.3426146507263184
+Total local training loss is: 1.3334879875183105
+{'accuracy': 0.7995}
+t  47: train_loss = 1.346, norm = 92.381, test_acc = 0.799
+Round: 48/200
+Total local training loss is: 1.2830924987792969
+Total local training loss is: 1.5008807182312012
+Total local training loss is: 1.3391172885894775
+Total local training loss is: 1.2968072891235352
+Total local training loss is: 1.382883071899414
+{'accuracy': 0.7976}
+t  48: train_loss = 1.361, norm = 96.064, test_acc = 0.798
+Round: 49/200
+Total local training loss is: 1.2898199558258057
+Total local training loss is: 1.390134334564209
+Total local training loss is: 1.2961591482162476
+Total local training loss is: 1.357343077659607
+Total local training loss is: 1.345521330833435
+{'accuracy': 0.8003}
+t  49: train_loss = 1.336, norm = 91.644, test_acc = 0.800
+Round: 50/200
+Total local training loss is: 1.4142311811447144
+Total local training loss is: 1.424026608467102
+Total local training loss is: 1.383466124534607
+Total local training loss is: 1.2701900005340576
+Total local training loss is: 1.2764859199523926
+{'accuracy': 0.8021}
+t  50: train_loss = 1.354, norm = 104.058, test_acc = 0.802
+Round: 51/200
+Total local training loss is: 1.3174892663955688
+Total local training loss is: 1.3800585269927979
+Total local training loss is: 1.3857922554016113
+Total local training loss is: 1.3532036542892456
+Total local training loss is: 1.3366390466690063
+{'accuracy': 0.8029}
+t  51: train_loss = 1.355, norm = 99.249, test_acc = 0.803
+Round: 52/200
+Total local training loss is: 1.3722076416015625
+Total local training loss is: 1.3246904611587524
+Total local training loss is: 1.3937348127365112
+Total local training loss is: 1.276516079902649
+Total local training loss is: 1.3303239345550537
+{'accuracy': 0.8046}
+t  52: train_loss = 1.339, norm = 112.463, test_acc = 0.805
+Round: 53/200
+Total local training loss is: 1.2921117544174194
+Total local training loss is: 1.279829978942871
+Total local training loss is: 1.332798957824707
+Total local training loss is: 1.349837064743042
+Total local training loss is: 1.33054518699646
+{'accuracy': 0.8039}
+t  53: train_loss = 1.317, norm = 96.867, test_acc = 0.804
+Round: 54/200
+Total local training loss is: 1.3398642539978027
+Total local training loss is: 1.4116954803466797
+Total local training loss is: 1.3471604585647583
+Total local training loss is: 1.3219271898269653
+Total local training loss is: 1.3343168497085571
+{'accuracy': 0.8045}
+t  54: train_loss = 1.351, norm = 102.443, test_acc = 0.804
+Round: 55/200
+Total local training loss is: 1.3006083965301514
+Total local training loss is: 1.3513067960739136
+Total local training loss is: 1.242263674736023
+Total local training loss is: 1.317250370979309
+Total local training loss is: 1.3068102598190308
+{'accuracy': 0.8047}
+t  55: train_loss = 1.304, norm = 107.652, test_acc = 0.805
+Round: 56/200
+Total local training loss is: 1.255415916442871
+Total local training loss is: 1.3301823139190674
+Total local training loss is: 1.3004132509231567
+Total local training loss is: 1.2494887113571167
+Total local training loss is: 1.2632672786712646
+{'accuracy': 0.8051}
+t  56: train_loss = 1.280, norm = 115.917, test_acc = 0.805
+Round: 57/200
+Total local training loss is: 1.3049248456954956
+Total local training loss is: 1.3994518518447876
+Total local training loss is: 1.2668349742889404
+Total local training loss is: 1.2348371744155884
+Total local training loss is: 1.2969801425933838
+{'accuracy': 0.8087}
+t  57: train_loss = 1.301, norm = 98.894, test_acc = 0.809
+Round: 58/200
+Total local training loss is: 1.329990267753601
+Total local training loss is: 1.2525397539138794
+Total local training loss is: 1.1962900161743164
+Total local training loss is: 1.2753305435180664
+Total local training loss is: 1.3773821592330933
+{'accuracy': 0.8087}
+t  58: train_loss = 1.286, norm = 93.757, test_acc = 0.809
+Round: 59/200
+Total local training loss is: 1.3360657691955566
+Total local training loss is: 1.2877910137176514
+Total local training loss is: 1.2283012866973877
+Total local training loss is: 1.3130955696105957
+Total local training loss is: 1.322701096534729
+{'accuracy': 0.8117}
+t  59: train_loss = 1.298, norm = 92.443, test_acc = 0.812
+Round: 60/200
+Total local training loss is: 1.3802324533462524
+Total local training loss is: 1.3101675510406494
+Total local training loss is: 1.3485727310180664
+Total local training loss is: 1.2975239753723145
+Total local training loss is: 1.2456374168395996
+{'accuracy': 0.8138}
+t  60: train_loss = 1.316, norm = 105.539, test_acc = 0.814
+Round: 61/200
+Total local training loss is: 1.26167893409729
+Total local training loss is: 1.3815114498138428
+Total local training loss is: 1.2207622528076172
+Total local training loss is: 1.263237714767456
+Total local training loss is: 1.297143816947937
+{'accuracy': 0.8112}
+t  61: train_loss = 1.285, norm = 112.231, test_acc = 0.811
+Round: 62/200
+Total local training loss is: 1.2331435680389404
+Total local training loss is: 1.2496134042739868
+Total local training loss is: 1.2341811656951904
+Total local training loss is: 1.2340195178985596
+Total local training loss is: 1.2945365905761719
+{'accuracy': 0.8134}
+t  62: train_loss = 1.249, norm = 112.918, test_acc = 0.813
+Round: 63/200
+Total local training loss is: 1.192423701286316
+Total local training loss is: 1.232988953590393
+Total local training loss is: 1.324220061302185
+Total local training loss is: 1.1737598180770874
+Total local training loss is: 1.2817208766937256
+{'accuracy': 0.8098}
+t  63: train_loss = 1.241, norm = 107.661, test_acc = 0.810
+Round: 64/200
+Total local training loss is: 1.3017407655715942
+Total local training loss is: 1.303619384765625
+Total local training loss is: 1.2022743225097656
+Total local training loss is: 1.2945274114608765
+Total local training loss is: 1.3135143518447876
+{'accuracy': 0.8106}
+t  64: train_loss = 1.283, norm = 105.594, test_acc = 0.811
+Round: 65/200
+Total local training loss is: 1.2985563278198242
+Total local training loss is: 1.2864264249801636
+Total local training loss is: 1.2951382398605347
+Total local training loss is: 1.2983230352401733
+Total local training loss is: 1.23140287399292
+{'accuracy': 0.8136}
+t  65: train_loss = 1.282, norm = 116.806, test_acc = 0.814
+Round: 66/200
+Total local training loss is: 1.2407523393630981
+Total local training loss is: 1.272483229637146
+Total local training loss is: 1.2914116382598877
+Total local training loss is: 1.308095932006836
+Total local training loss is: 1.3472330570220947
+{'accuracy': 0.8115}
+t  66: train_loss = 1.292, norm = 107.822, test_acc = 0.811
+Round: 67/200
+Total local training loss is: 1.2455840110778809
+Total local training loss is: 1.2322887182235718
+Total local training loss is: 1.2812225818634033
+Total local training loss is: 1.2454779148101807
+Total local training loss is: 1.235108733177185
+{'accuracy': 0.8158}
+t  67: train_loss = 1.248, norm = 108.416, test_acc = 0.816
+Round: 68/200
+Total local training loss is: 1.197727918624878
+Total local training loss is: 1.1952494382858276
+Total local training loss is: 1.2176964282989502
+Total local training loss is: 1.2044802904129028
+Total local training loss is: 1.2919881343841553
+{'accuracy': 0.8167}
+t  68: train_loss = 1.221, norm = 120.421, test_acc = 0.817
+Round: 69/200
+Total local training loss is: 1.2669596672058105
+Total local training loss is: 1.2157012224197388
+Total local training loss is: 1.226003885269165
+Total local training loss is: 1.2167710065841675
+Total local training loss is: 1.2053444385528564
+{'accuracy': 0.8175}
+t  69: train_loss = 1.226, norm = 114.558, test_acc = 0.818
+Round: 70/200
+Total local training loss is: 1.2354754209518433
+Total local training loss is: 1.253219723701477
+Total local training loss is: 1.2352252006530762
+Total local training loss is: 1.207076072692871
+Total local training loss is: 1.247169017791748
+{'accuracy': 0.8158}
+t  70: train_loss = 1.236, norm = 95.307, test_acc = 0.816
+Round: 71/200
+Total local training loss is: 1.2197380065917969
+Total local training loss is: 1.214241862297058
+Total local training loss is: 1.275512456893921
+Total local training loss is: 1.2288204431533813
+Total local training loss is: 1.2682275772094727
+{'accuracy': 0.8138}
+t  71: train_loss = 1.241, norm = 108.638, test_acc = 0.814
+Round: 72/200
+Total local training loss is: 1.2182457447052002
+Total local training loss is: 1.2085421085357666
+Total local training loss is: 1.3224332332611084
+Total local training loss is: 1.2127169370651245
+Total local training loss is: 1.2167396545410156
+{'accuracy': 0.8192}
+t  72: train_loss = 1.236, norm = 118.456, test_acc = 0.819
+Round: 73/200
+Total local training loss is: 1.19795560836792
+Total local training loss is: 1.2057956457138062
+Total local training loss is: 1.2136807441711426
+Total local training loss is: 1.1373717784881592
+Total local training loss is: 1.264072299003601
+{'accuracy': 0.8162}
+t  73: train_loss = 1.204, norm = 108.702, test_acc = 0.816
+Round: 74/200
+Total local training loss is: 1.3036245107650757
+Total local training loss is: 1.210910677909851
+Total local training loss is: 1.1849725246429443
+Total local training loss is: 1.251674771308899
+Total local training loss is: 1.3196189403533936
+{'accuracy': 0.8165}
+t  74: train_loss = 1.254, norm = 105.556, test_acc = 0.817
+Round: 75/200
+Total local training loss is: 1.2627276182174683
+Total local training loss is: 1.2248520851135254
+Total local training loss is: 1.291634440422058
+Total local training loss is: 1.2494006156921387
+Total local training loss is: 1.2239458560943604
+{'accuracy': 0.8214}
+t  75: train_loss = 1.251, norm = 109.420, test_acc = 0.821
+Round: 76/200
+Total local training loss is: 1.2139047384262085
+Total local training loss is: 1.2921910285949707
+Total local training loss is: 1.2500897645950317
+Total local training loss is: 1.207688808441162
+Total local training loss is: 1.1975823640823364
+{'accuracy': 0.819}
+t  76: train_loss = 1.232, norm = 112.705, test_acc = 0.819
+Round: 77/200
+Total local training loss is: 1.2041583061218262
+Total local training loss is: 1.2428587675094604
+Total local training loss is: 1.160352349281311
+Total local training loss is: 1.224973201751709
+Total local training loss is: 1.1948390007019043
+{'accuracy': 0.8189}
+t  77: train_loss = 1.205, norm = 95.165, test_acc = 0.819
+Round: 78/200
+Total local training loss is: 1.2031468152999878
+Total local training loss is: 1.2092852592468262
+Total local training loss is: 1.1340733766555786
+Total local training loss is: 1.2618813514709473
+Total local training loss is: 1.2216662168502808
+{'accuracy': 0.819}
+t  78: train_loss = 1.206, norm = 108.675, test_acc = 0.819
+Round: 79/200
+Total local training loss is: 1.1826200485229492
+Total local training loss is: 1.2169723510742188
+Total local training loss is: 1.279166579246521
+Total local training loss is: 1.1776188611984253
+Total local training loss is: 1.2380367517471313
+{'accuracy': 0.8233}
+t  79: train_loss = 1.219, norm = 109.452, test_acc = 0.823
+Round: 80/200
+Total local training loss is: 1.1293213367462158
+Total local training loss is: 1.1593906879425049
+Total local training loss is: 1.1906466484069824
+Total local training loss is: 1.1849077939987183
+Total local training loss is: 1.1999214887619019
+{'accuracy': 0.8201}
+t  80: train_loss = 1.173, norm = 119.794, test_acc = 0.820
+Round: 81/200
+Total local training loss is: 1.2709215879440308
+Total local training loss is: 1.1609090566635132
+Total local training loss is: 1.1985489130020142
+Total local training loss is: 1.1674919128417969
+Total local training loss is: 1.2501165866851807
+{'accuracy': 0.8209}
+t  81: train_loss = 1.210, norm = 118.194, test_acc = 0.821
+Round: 82/200
+Total local training loss is: 1.2132200002670288
+Total local training loss is: 1.1964656114578247
+Total local training loss is: 1.1978766918182373
+Total local training loss is: 1.1376080513000488
+Total local training loss is: 1.201966643333435
+{'accuracy': 0.8194}
+t  82: train_loss = 1.189, norm = 122.898, test_acc = 0.819
+Round: 83/200
+Total local training loss is: 1.1593726873397827
+Total local training loss is: 1.216834306716919
+Total local training loss is: 1.2212204933166504
+Total local training loss is: 1.2278709411621094
+Total local training loss is: 1.1578600406646729
+{'accuracy': 0.8212}
+t  83: train_loss = 1.197, norm = 116.541, test_acc = 0.821
+Round: 84/200
+Total local training loss is: 1.1968650817871094
+Total local training loss is: 1.2018855810165405
+Total local training loss is: 1.2152183055877686
+Total local training loss is: 1.1887797117233276
+Total local training loss is: 1.2105417251586914
+{'accuracy': 0.8224}
+t  84: train_loss = 1.203, norm = 106.473, test_acc = 0.822
+Round: 85/200
+Total local training loss is: 1.178419828414917
+Total local training loss is: 1.2462828159332275
+Total local training loss is: 1.173755407333374
+Total local training loss is: 1.2720533609390259
+Total local training loss is: 1.2126929759979248
+{'accuracy': 0.8191}
+t  85: train_loss = 1.217, norm = 124.912, test_acc = 0.819
+Round: 86/200
+Total local training loss is: 1.1687726974487305
+Total local training loss is: 1.233890175819397
+Total local training loss is: 1.2018084526062012
+Total local training loss is: 1.168489694595337
+Total local training loss is: 1.1993180513381958
+{'accuracy': 0.8214}
+t  86: train_loss = 1.194, norm = 114.829, test_acc = 0.821
+Round: 87/200
+Total local training loss is: 1.256653070449829
+Total local training loss is: 1.2272506952285767
+Total local training loss is: 1.0870296955108643
+Total local training loss is: 1.101534128189087
+Total local training loss is: 1.1074007749557495
+{'accuracy': 0.8212}
+t  87: train_loss = 1.156, norm = 106.984, test_acc = 0.821
+Round: 88/200
+Total local training loss is: 1.2492866516113281
+Total local training loss is: 1.148805022239685
+Total local training loss is: 1.1837921142578125
+Total local training loss is: 1.090944528579712
+Total local training loss is: 1.2270814180374146
+{'accuracy': 0.8235}
+t  88: train_loss = 1.180, norm = 114.341, test_acc = 0.824
+Round: 89/200
+Total local training loss is: 1.1678909063339233
+Total local training loss is: 1.2158565521240234
+Total local training loss is: 1.1353881359100342
+Total local training loss is: 1.1778104305267334
+Total local training loss is: 1.0936263799667358
+{'accuracy': 0.8265}
+t  89: train_loss = 1.158, norm = 108.353, test_acc = 0.827
+Round: 90/200
+Total local training loss is: 1.1576370000839233
+Total local training loss is: 1.1858268976211548
+Total local training loss is: 1.2230905294418335
+Total local training loss is: 1.1579049825668335
+Total local training loss is: 1.141260027885437
+{'accuracy': 0.8242}
+t  90: train_loss = 1.173, norm = 117.359, test_acc = 0.824
+Round: 91/200
+Total local training loss is: 1.1268010139465332
+Total local training loss is: 1.0968116521835327
+Total local training loss is: 1.1455259323120117
+Total local training loss is: 1.1600236892700195
+Total local training loss is: 1.1963218450546265
+{'accuracy': 0.8263}
+t  91: train_loss = 1.145, norm = 112.806, test_acc = 0.826
+Round: 92/200
+Total local training loss is: 1.226790428161621
+Total local training loss is: 1.187591314315796
+Total local training loss is: 1.2000292539596558
+Total local training loss is: 1.1298586130142212
+Total local training loss is: 1.1759793758392334
+{'accuracy': 0.8258}
+t  92: train_loss = 1.184, norm = 101.496, test_acc = 0.826
+Round: 93/200
+Total local training loss is: 1.1785361766815186
+Total local training loss is: 1.1535470485687256
+Total local training loss is: 1.1808170080184937
+Total local training loss is: 1.1434561014175415
+Total local training loss is: 1.204409122467041
+{'accuracy': 0.8236}
+t  93: train_loss = 1.172, norm = 113.890, test_acc = 0.824
+Round: 94/200
+Total local training loss is: 1.1177898645401
+Total local training loss is: 1.1067180633544922
+Total local training loss is: 1.2650200128555298
+Total local training loss is: 1.1324615478515625
+Total local training loss is: 1.1835083961486816
+{'accuracy': 0.8261}
+t  94: train_loss = 1.161, norm = 112.497, test_acc = 0.826
+Round: 95/200
+Total local training loss is: 1.1252286434173584
+Total local training loss is: 1.1378173828125
+Total local training loss is: 1.2145460844039917
+Total local training loss is: 1.227523922920227
+Total local training loss is: 1.2263548374176025
+{'accuracy': 0.8229}
+t  95: train_loss = 1.186, norm = 120.652, test_acc = 0.823
+Round: 96/200
+Total local training loss is: 1.145663857460022
+Total local training loss is: 1.1135544776916504
+Total local training loss is: 1.165913701057434
+Total local training loss is: 1.2909644842147827
+Total local training loss is: 1.2006032466888428
+{'accuracy': 0.8284}
+t  96: train_loss = 1.183, norm = 126.230, test_acc = 0.828
+Round: 97/200
+Total local training loss is: 1.1033402681350708
+Total local training loss is: 1.178849697113037
+Total local training loss is: 1.089872121810913
+Total local training loss is: 1.2024400234222412
+Total local training loss is: 1.2134015560150146
+{'accuracy': 0.8232}
+t  97: train_loss = 1.158, norm = 122.007, test_acc = 0.823
+Round: 98/200
+Total local training loss is: 1.2068960666656494
+Total local training loss is: 1.0867366790771484
+Total local training loss is: 1.1513028144836426
+Total local training loss is: 1.094667673110962
+Total local training loss is: 1.0836308002471924
+{'accuracy': 0.8291}
+t  98: train_loss = 1.125, norm = 128.110, test_acc = 0.829
+Round: 99/200
+Total local training loss is: 1.204025387763977
+Total local training loss is: 1.2022438049316406
+Total local training loss is: 1.0927367210388184
+Total local training loss is: 1.172629475593567
+Total local training loss is: 1.1328859329223633
+{'accuracy': 0.8271}
+t  99: train_loss = 1.161, norm = 121.229, test_acc = 0.827
+Round: 100/200
+Total local training loss is: 1.17539644241333
+Total local training loss is: 1.168654441833496
+Total local training loss is: 1.1787501573562622
+Total local training loss is: 1.193064570426941
+Total local training loss is: 1.060192346572876
+{'accuracy': 0.8275}
+t 100: train_loss = 1.155, norm = 108.266, test_acc = 0.828
+Round: 101/200
+Total local training loss is: 1.1863006353378296
+Total local training loss is: 1.1712640523910522
+Total local training loss is: 1.1920421123504639
+Total local training loss is: 1.127687692642212
+Total local training loss is: 1.0075750350952148
+{'accuracy': 0.8311}
+t 101: train_loss = 1.137, norm = 129.233, test_acc = 0.831
+Round: 102/200
+Total local training loss is: 1.2082220315933228
+Total local training loss is: 1.151434063911438
+Total local training loss is: 1.113688349723816
+Total local training loss is: 1.1238248348236084
+Total local training loss is: 1.194549322128296
+{'accuracy': 0.8269}
+t 102: train_loss = 1.158, norm = 126.118, test_acc = 0.827
+Round: 103/200
+Total local training loss is: 1.1279239654541016
+Total local training loss is: 1.1170380115509033
+Total local training loss is: 1.118685245513916
+Total local training loss is: 1.1800700426101685
+Total local training loss is: 1.1570465564727783
+{'accuracy': 0.8287}
+t 103: train_loss = 1.140, norm = 127.202, test_acc = 0.829
+Round: 104/200
+Total local training loss is: 1.1383289098739624
+Total local training loss is: 1.1823493242263794
+Total local training loss is: 1.1023132801055908
+Total local training loss is: 1.1524505615234375
+Total local training loss is: 1.141994595527649
+{'accuracy': 0.829}
+t 104: train_loss = 1.143, norm = 124.734, test_acc = 0.829
+Round: 105/200
+Total local training loss is: 1.168431282043457
+Total local training loss is: 1.1291784048080444
+Total local training loss is: 1.049244999885559
+Total local training loss is: 1.1057335138320923
+Total local training loss is: 1.0673085451126099
+{'accuracy': 0.8306}
+t 105: train_loss = 1.104, norm = 108.904, test_acc = 0.831
+Round: 106/200
+Total local training loss is: 1.1631137132644653
+Total local training loss is: 1.1543631553649902
+Total local training loss is: 1.1634540557861328
+Total local training loss is: 1.1231160163879395
+Total local training loss is: 1.1955724954605103
+{'accuracy': 0.8271}
+t 106: train_loss = 1.160, norm = 101.127, test_acc = 0.827
+Round: 107/200
+Total local training loss is: 1.1620328426361084
+Total local training loss is: 1.204624891281128
+Total local training loss is: 1.1432338953018188
+Total local training loss is: 1.1453807353973389
+Total local training loss is: 1.0554101467132568
+{'accuracy': 0.8299}
+t 107: train_loss = 1.142, norm = 123.634, test_acc = 0.830
+Round: 108/200
+Total local training loss is: 1.1698720455169678
+Total local training loss is: 1.1360175609588623
+Total local training loss is: 1.095861554145813
+Total local training loss is: 1.096832513809204
+Total local training loss is: 1.0812981128692627
+{'accuracy': 0.8285}
+t 108: train_loss = 1.116, norm = 136.401, test_acc = 0.829
+Round: 109/200
+Total local training loss is: 1.1420193910598755
+Total local training loss is: 1.0677475929260254
+Total local training loss is: 1.122337818145752
+Total local training loss is: 1.1247459650039673
+Total local training loss is: 1.127588152885437
+{'accuracy': 0.83}
+t 109: train_loss = 1.117, norm = 118.775, test_acc = 0.830
+Round: 110/200
+Total local training loss is: 1.098677635192871
+Total local training loss is: 1.1460797786712646
+Total local training loss is: 1.139100432395935
+Total local training loss is: 1.0885552167892456
+Total local training loss is: 1.255132794380188
+{'accuracy': 0.8288}
+t 110: train_loss = 1.146, norm = 120.780, test_acc = 0.829
+Round: 111/200
+Total local training loss is: 1.1304610967636108
+Total local training loss is: 1.0822527408599854
+Total local training loss is: 1.1944191455841064
+Total local training loss is: 1.188045859336853
+Total local training loss is: 1.184106469154358
+{'accuracy': 0.8296}
+t 111: train_loss = 1.156, norm = 126.081, test_acc = 0.830
+Round: 112/200
+Total local training loss is: 1.1476291418075562
+Total local training loss is: 1.0724563598632812
+Total local training loss is: 1.1537615060806274
+Total local training loss is: 1.1829259395599365
+Total local training loss is: 1.0693347454071045
+{'accuracy': 0.8294}
+t 112: train_loss = 1.125, norm = 123.232, test_acc = 0.829
+Round: 113/200
+Total local training loss is: 1.117491364479065
+Total local training loss is: 1.1128426790237427
+Total local training loss is: 1.12991201877594
+Total local training loss is: 1.1124022006988525
+Total local training loss is: 1.1568865776062012
+{'accuracy': 0.8296}
+t 113: train_loss = 1.126, norm = 113.197, test_acc = 0.830
+Round: 114/200
+Total local training loss is: 1.1588093042373657
+Total local training loss is: 1.1068334579467773
+Total local training loss is: 1.1073545217514038
+Total local training loss is: 1.0948901176452637
+Total local training loss is: 1.1357853412628174
+{'accuracy': 0.8315}
+t 114: train_loss = 1.121, norm = 129.976, test_acc = 0.832
+Round: 115/200
+Total local training loss is: 1.1472760438919067
+Total local training loss is: 1.05972158908844
+Total local training loss is: 1.106528401374817
+Total local training loss is: 1.0823924541473389
+Total local training loss is: 1.1632368564605713
+{'accuracy': 0.8319}
+t 115: train_loss = 1.112, norm = 108.172, test_acc = 0.832
+Round: 116/200
+Total local training loss is: 1.2001452445983887
+Total local training loss is: 1.115172266960144
+Total local training loss is: 1.1460481882095337
+Total local training loss is: 1.139116644859314
+Total local training loss is: 1.1627599000930786
+{'accuracy': 0.8312}
+t 116: train_loss = 1.153, norm = 103.646, test_acc = 0.831
+Round: 117/200
+Total local training loss is: 1.1822994947433472
+Total local training loss is: 1.1269625425338745
+Total local training loss is: 1.1011748313903809
+Total local training loss is: 1.079319953918457
+Total local training loss is: 1.1358126401901245
+{'accuracy': 0.8291}
+t 117: train_loss = 1.125, norm = 115.619, test_acc = 0.829
+Round: 118/200
+Total local training loss is: 1.0989062786102295
+Total local training loss is: 1.1393342018127441
+Total local training loss is: 1.1048741340637207
+Total local training loss is: 1.14342200756073
+Total local training loss is: 1.1159967184066772
+{'accuracy': 0.8363}
+t 118: train_loss = 1.121, norm = 124.649, test_acc = 0.836
+Round: 119/200
+Total local training loss is: 1.0929629802703857
+Total local training loss is: 1.185744285583496
+Total local training loss is: 1.0752336978912354
+Total local training loss is: 1.062042236328125
+Total local training loss is: 1.1456869840621948
+{'accuracy': 0.8324}
+t 119: train_loss = 1.112, norm = 124.927, test_acc = 0.832
+Round: 120/200
+Total local training loss is: 1.125862956047058
+Total local training loss is: 1.173513650894165
+Total local training loss is: 1.202849268913269
+Total local training loss is: 1.151900053024292
+Total local training loss is: 1.0669655799865723
+{'accuracy': 0.8329}
+t 120: train_loss = 1.144, norm = 148.713, test_acc = 0.833
+Round: 121/200
+Total local training loss is: 1.150369644165039
+Total local training loss is: 1.0771052837371826
+Total local training loss is: 1.1080400943756104
+Total local training loss is: 1.0945467948913574
+Total local training loss is: 1.1183290481567383
+{'accuracy': 0.8312}
+t 121: train_loss = 1.110, norm = 140.860, test_acc = 0.831
+Round: 122/200
+Total local training loss is: 1.1456172466278076
+Total local training loss is: 1.1898926496505737
+Total local training loss is: 1.0941604375839233
+Total local training loss is: 1.1039751768112183
+Total local training loss is: 1.1456516981124878
+{'accuracy': 0.8306}
+t 122: train_loss = 1.136, norm = 132.893, test_acc = 0.831
+Round: 123/200
+Total local training loss is: 1.0819815397262573
+Total local training loss is: 1.0510579347610474
+Total local training loss is: 1.1922662258148193
+Total local training loss is: 1.1221275329589844
+Total local training loss is: 1.0744911432266235
+{'accuracy': 0.8319}
+t 123: train_loss = 1.104, norm = 123.760, test_acc = 0.832
+Round: 124/200
+Total local training loss is: 1.0858150720596313
+Total local training loss is: 1.1348313093185425
+Total local training loss is: 1.0672762393951416
+Total local training loss is: 1.1052221059799194
+Total local training loss is: 1.1289695501327515
+{'accuracy': 0.8307}
+t 124: train_loss = 1.104, norm = 143.994, test_acc = 0.831
+Round: 125/200
+Total local training loss is: 1.095197319984436
+Total local training loss is: 1.0936189889907837
+Total local training loss is: 1.0712426900863647
+Total local training loss is: 1.0624109506607056
+Total local training loss is: 1.0790667533874512
+{'accuracy': 0.8324}
+t 125: train_loss = 1.080, norm = 134.233, test_acc = 0.832
+Round: 126/200
+Total local training loss is: 1.0857819318771362
+Total local training loss is: 1.146923542022705
+Total local training loss is: 1.123785138130188
+Total local training loss is: 1.1061408519744873
+Total local training loss is: 1.1256061792373657
+{'accuracy': 0.8311}
+t 126: train_loss = 1.118, norm = 130.264, test_acc = 0.831
+Round: 127/200
+Total local training loss is: 1.1678709983825684
+Total local training loss is: 1.0520968437194824
+Total local training loss is: 1.1078053712844849
+Total local training loss is: 1.1088697910308838
+Total local training loss is: 1.047458291053772
+{'accuracy': 0.8312}
+t 127: train_loss = 1.097, norm = 134.749, test_acc = 0.831
+Round: 128/200
+Total local training loss is: 1.045111894607544
+Total local training loss is: 1.061028003692627
+Total local training loss is: 1.09251070022583
+Total local training loss is: 1.0985678434371948
+Total local training loss is: 1.0620547533035278
+{'accuracy': 0.8282}
+t 128: train_loss = 1.072, norm = 125.417, test_acc = 0.828
+Round: 129/200
+Total local training loss is: 1.133521318435669
+Total local training loss is: 1.0871663093566895
+Total local training loss is: 1.1252732276916504
+Total local training loss is: 1.1327625513076782
+Total local training loss is: 1.0960469245910645
+{'accuracy': 0.8298}
+t 129: train_loss = 1.115, norm = 136.729, test_acc = 0.830
+Round: 130/200
+Total local training loss is: 1.0605741739273071
+Total local training loss is: 1.1249327659606934
+Total local training loss is: 1.0588220357894897
+Total local training loss is: 1.0930577516555786
+Total local training loss is: 1.0690422058105469
+{'accuracy': 0.8337}
+t 130: train_loss = 1.081, norm = 116.510, test_acc = 0.834
+Round: 131/200
+Total local training loss is: 1.0866297483444214
+Total local training loss is: 1.0278598070144653
+Total local training loss is: 1.1316094398498535
+Total local training loss is: 1.0051592588424683
+Total local training loss is: 1.0104200839996338
+{'accuracy': 0.8316}
+t 131: train_loss = 1.052, norm = 130.929, test_acc = 0.832
+Round: 132/200
+Total local training loss is: 1.0685760974884033
+Total local training loss is: 1.131998896598816
+Total local training loss is: 1.0827399492263794
+Total local training loss is: 1.1838237047195435
+Total local training loss is: 1.1106430292129517
+{'accuracy': 0.8335}
+t 132: train_loss = 1.116, norm = 129.656, test_acc = 0.834
+Round: 133/200
+Total local training loss is: 1.0239351987838745
+Total local training loss is: 1.095633625984192
+Total local training loss is: 1.0835052728652954
+Total local training loss is: 1.1233136653900146
+Total local training loss is: 0.980396032333374
+{'accuracy': 0.8359}
+t 133: train_loss = 1.061, norm = 143.285, test_acc = 0.836
+Round: 134/200
+Total local training loss is: 1.0921696424484253
+Total local training loss is: 1.0901343822479248
+Total local training loss is: 1.111708402633667
+Total local training loss is: 1.1563042402267456
+Total local training loss is: 1.1063637733459473
+{'accuracy': 0.8357}
+t 134: train_loss = 1.111, norm = 153.252, test_acc = 0.836
+Round: 135/200
+Total local training loss is: 1.171576738357544
+Total local training loss is: 1.1135667562484741
+Total local training loss is: 1.019188642501831
+Total local training loss is: 1.1449693441390991
+Total local training loss is: 1.1507412195205688
+{'accuracy': 0.833}
+t 135: train_loss = 1.120, norm = 133.668, test_acc = 0.833
+Round: 136/200
+Total local training loss is: 1.0620173215866089
+Total local training loss is: 1.1485892534255981
+Total local training loss is: 1.1035959720611572
+Total local training loss is: 1.1278331279754639
+Total local training loss is: 1.11296808719635
+{'accuracy': 0.8323}
+t 136: train_loss = 1.111, norm = 146.320, test_acc = 0.832
+Round: 137/200
+Total local training loss is: 1.08082914352417
+Total local training loss is: 1.0855822563171387
+Total local training loss is: 1.1749815940856934
+Total local training loss is: 1.1364166736602783
+Total local training loss is: 1.1234112977981567
+{'accuracy': 0.8327}
+t 137: train_loss = 1.120, norm = 110.304, test_acc = 0.833
+Round: 138/200
+Total local training loss is: 1.0945988893508911
+Total local training loss is: 1.0911788940429688
+Total local training loss is: 1.0263638496398926
+Total local training loss is: 1.0761440992355347
+Total local training loss is: 1.1149276494979858
+{'accuracy': 0.8335}
+t 138: train_loss = 1.081, norm = 129.985, test_acc = 0.834
+Round: 139/200
+Total local training loss is: 1.0803759098052979
+Total local training loss is: 1.003407597541809
+Total local training loss is: 1.081027626991272
+Total local training loss is: 1.0769082307815552
+Total local training loss is: 1.1263548135757446
+{'accuracy': 0.8346}
+t 139: train_loss = 1.074, norm = 132.422, test_acc = 0.835
+Round: 140/200
+Total local training loss is: 1.116705060005188
+Total local training loss is: 1.0847463607788086
+Total local training loss is: 1.1101605892181396
+Total local training loss is: 0.9921727180480957
+Total local training loss is: 1.0700229406356812
+{'accuracy': 0.8356}
+t 140: train_loss = 1.075, norm = 136.477, test_acc = 0.836
+Round: 141/200
+Total local training loss is: 1.1124836206436157
+Total local training loss is: 1.050583004951477
+Total local training loss is: 1.040963053703308
+Total local training loss is: 1.0874409675598145
+Total local training loss is: 1.0521546602249146
+{'accuracy': 0.8345}
+t 141: train_loss = 1.069, norm = 144.745, test_acc = 0.835
+Round: 142/200
+Total local training loss is: 1.0357086658477783
+Total local training loss is: 1.0950030088424683
+Total local training loss is: 1.125143051147461
+Total local training loss is: 1.0969301462173462
+Total local training loss is: 1.0598081350326538
+{'accuracy': 0.8342}
+t 142: train_loss = 1.083, norm = 144.528, test_acc = 0.834
+Round: 143/200
+Total local training loss is: 1.0658894777297974
+Total local training loss is: 1.081074595451355
+Total local training loss is: 1.0020090341567993
+Total local training loss is: 1.1186374425888062
+Total local training loss is: 1.010731816291809
+{'accuracy': 0.8351}
+t 143: train_loss = 1.056, norm = 158.344, test_acc = 0.835
+Round: 144/200
+Total local training loss is: 1.1083093881607056
+Total local training loss is: 1.064119815826416
+Total local training loss is: 1.0513277053833008
+Total local training loss is: 1.0692061185836792
+Total local training loss is: 1.040700078010559
+{'accuracy': 0.8337}
+t 144: train_loss = 1.067, norm = 142.578, test_acc = 0.834
+Round: 145/200
+Total local training loss is: 1.0965285301208496
+Total local training loss is: 1.0351080894470215
+Total local training loss is: 1.0195996761322021
+Total local training loss is: 1.0693650245666504
+Total local training loss is: 0.997745156288147
+{'accuracy': 0.8335}
+t 145: train_loss = 1.044, norm = 132.893, test_acc = 0.834
+Round: 146/200
+Total local training loss is: 1.073830246925354
+Total local training loss is: 1.0332921743392944
+Total local training loss is: 1.1429387331008911
+Total local training loss is: 1.0864118337631226
+Total local training loss is: 1.139303207397461
+{'accuracy': 0.8353}
+t 146: train_loss = 1.095, norm = 149.004, test_acc = 0.835
+Round: 147/200
+Total local training loss is: 1.1096689701080322
+Total local training loss is: 1.073872447013855
+Total local training loss is: 1.117628812789917
+Total local training loss is: 1.0613936185836792
+Total local training loss is: 1.0778906345367432
+{'accuracy': 0.8341}
+t 147: train_loss = 1.088, norm = 161.787, test_acc = 0.834
+Round: 148/200
+Total local training loss is: 1.0823071002960205
+Total local training loss is: 1.0211621522903442
+Total local training loss is: 1.0935255289077759
+Total local training loss is: 1.1367945671081543
+Total local training loss is: 1.0952390432357788
+{'accuracy': 0.835}
+t 148: train_loss = 1.086, norm = 138.769, test_acc = 0.835
+Round: 149/200
+Total local training loss is: 1.03360116481781
+Total local training loss is: 1.0202142000198364
+Total local training loss is: 1.1053906679153442
+Total local training loss is: 1.100358009338379
+Total local training loss is: 1.1084481477737427
+{'accuracy': 0.8346}
+t 149: train_loss = 1.074, norm = 148.586, test_acc = 0.835
+Round: 150/200
+Total local training loss is: 1.0446339845657349
+Total local training loss is: 1.0970433950424194
+Total local training loss is: 1.0075050592422485
+Total local training loss is: 1.058871865272522
+Total local training loss is: 1.0466176271438599
+{'accuracy': 0.8355}
+t 150: train_loss = 1.051, norm = 155.277, test_acc = 0.836
+Round: 151/200
+Total local training loss is: 1.058722734451294
+Total local training loss is: 1.0685393810272217
+Total local training loss is: 1.0651918649673462
+Total local training loss is: 1.1176475286483765
+Total local training loss is: 1.01321542263031
+{'accuracy': 0.8363}
+t 151: train_loss = 1.065, norm = 119.894, test_acc = 0.836
+Round: 152/200
+Total local training loss is: 1.069664716720581
+Total local training loss is: 1.08085298538208
+Total local training loss is: 1.0868182182312012
+Total local training loss is: 1.1216906309127808
+Total local training loss is: 1.032173991203308
+{'accuracy': 0.8386}
+t 152: train_loss = 1.078, norm = 137.848, test_acc = 0.839
+Round: 153/200
+Total local training loss is: 1.0977442264556885
+Total local training loss is: 1.0665441751480103
+Total local training loss is: 1.0913623571395874
+Total local training loss is: 1.0536506175994873
+Total local training loss is: 1.0880401134490967
+{'accuracy': 0.8355}
+t 153: train_loss = 1.079, norm = 157.340, test_acc = 0.836
+Round: 154/200
+Total local training loss is: 1.0833743810653687
+Total local training loss is: 1.0529907941818237
+Total local training loss is: 1.0079232454299927
+Total local training loss is: 1.0828062295913696
+Total local training loss is: 1.0756593942642212
+{'accuracy': 0.8345}
+t 154: train_loss = 1.061, norm = 141.814, test_acc = 0.835
+Round: 155/200
+Total local training loss is: 1.0715104341506958
+Total local training loss is: 1.0491957664489746
+Total local training loss is: 1.098778486251831
+Total local training loss is: 1.0948693752288818
+Total local training loss is: 1.0199781656265259
+{'accuracy': 0.8357}
+t 155: train_loss = 1.067, norm = 146.743, test_acc = 0.836
+Round: 156/200
+Total local training loss is: 1.0133776664733887
+Total local training loss is: 1.0871869325637817
+Total local training loss is: 1.0621055364608765
+Total local training loss is: 1.0824918746948242
+Total local training loss is: 1.0432934761047363
+{'accuracy': 0.8379}
+t 156: train_loss = 1.058, norm = 136.240, test_acc = 0.838
+Round: 157/200
+Total local training loss is: 1.0515897274017334
+Total local training loss is: 1.1523356437683105
+Total local training loss is: 1.0441136360168457
+Total local training loss is: 1.12447988986969
+Total local training loss is: 1.0829044580459595
+{'accuracy': 0.8369}
+t 157: train_loss = 1.091, norm = 108.714, test_acc = 0.837
+Round: 158/200
+Total local training loss is: 1.1139750480651855
+Total local training loss is: 1.0890625715255737
+Total local training loss is: 1.1269077062606812
+Total local training loss is: 1.038134217262268
+Total local training loss is: 1.1006931066513062
+{'accuracy': 0.8375}
+t 158: train_loss = 1.094, norm = 118.858, test_acc = 0.838
+Round: 159/200
+Total local training loss is: 1.0643775463104248
+Total local training loss is: 1.0559327602386475
+Total local training loss is: 1.002966046333313
+Total local training loss is: 1.076200246810913
+Total local training loss is: 1.0994863510131836
+{'accuracy': 0.8353}
+t 159: train_loss = 1.060, norm = 128.383, test_acc = 0.835
+Round: 160/200
+Total local training loss is: 1.0573995113372803
+Total local training loss is: 1.0239181518554688
+Total local training loss is: 1.0313209295272827
+Total local training loss is: 1.0423376560211182
+Total local training loss is: 1.1120103597640991
+{'accuracy': 0.8341}
+t 160: train_loss = 1.053, norm = 140.162, test_acc = 0.834
+Round: 161/200
+Total local training loss is: 1.040376901626587
+Total local training loss is: 1.071580171585083
+Total local training loss is: 1.0576282739639282
+Total local training loss is: 1.0329991579055786
+Total local training loss is: 1.0924853086471558
+{'accuracy': 0.8352}
+t 161: train_loss = 1.059, norm = 165.242, test_acc = 0.835
+Round: 162/200
+Total local training loss is: 1.103101372718811
+Total local training loss is: 1.073018193244934
+Total local training loss is: 1.0510541200637817
+Total local training loss is: 1.0811829566955566
+Total local training loss is: 1.0286356210708618
+{'accuracy': 0.8357}
+t 162: train_loss = 1.067, norm = 144.212, test_acc = 0.836
+Round: 163/200
+Total local training loss is: 1.0030792951583862
+Total local training loss is: 1.0647635459899902
+Total local training loss is: 1.0545445680618286
+Total local training loss is: 1.014458417892456
+Total local training loss is: 1.0701502561569214
+{'accuracy': 0.8339}
+t 163: train_loss = 1.041, norm = 150.843, test_acc = 0.834
+Round: 164/200
+Total local training loss is: 1.089758038520813
+Total local training loss is: 1.0325411558151245
+Total local training loss is: 1.0445783138275146
+Total local training loss is: 1.0363439321517944
+Total local training loss is: 1.0253182649612427
+{'accuracy': 0.8377}
+t 164: train_loss = 1.046, norm = 160.009, test_acc = 0.838
+Round: 165/200
+Total local training loss is: 1.056841254234314
+Total local training loss is: 1.0319923162460327
+Total local training loss is: 1.028805136680603
+Total local training loss is: 1.0898158550262451
+Total local training loss is: 1.05096435546875
+{'accuracy': 0.8353}
+t 165: train_loss = 1.052, norm = 138.716, test_acc = 0.835
+Round: 166/200
+Total local training loss is: 1.004717230796814
+Total local training loss is: 1.0129138231277466
+Total local training loss is: 1.097387671470642
+Total local training loss is: 1.0608375072479248
+Total local training loss is: 1.1098397970199585
+{'accuracy': 0.8379}
+t 166: train_loss = 1.057, norm = 153.721, test_acc = 0.838
+Round: 167/200
+Total local training loss is: 1.0741322040557861
+Total local training loss is: 0.9931422472000122
+Total local training loss is: 1.0832661390304565
+Total local training loss is: 1.0209490060806274
+Total local training loss is: 1.0413223505020142
+{'accuracy': 0.8366}
+t 167: train_loss = 1.043, norm = 128.382, test_acc = 0.837
+Round: 168/200
+Total local training loss is: 1.1422394514083862
+Total local training loss is: 1.0823365449905396
+Total local training loss is: 1.0601874589920044
+Total local training loss is: 1.0507464408874512
+Total local training loss is: 1.0393441915512085
+{'accuracy': 0.8365}
+t 168: train_loss = 1.075, norm = 130.235, test_acc = 0.837
+Round: 169/200
+Total local training loss is: 1.0760747194290161
+Total local training loss is: 1.0392239093780518
+Total local training loss is: 1.0296483039855957
+Total local training loss is: 1.0998798608779907
+Total local training loss is: 1.1095235347747803
+{'accuracy': 0.8323}
+t 169: train_loss = 1.071, norm = 182.732, test_acc = 0.832
+Round: 170/200
+Total local training loss is: 1.0163261890411377
+Total local training loss is: 1.0235517024993896
+Total local training loss is: 1.0603982210159302
+Total local training loss is: 1.0436872243881226
+Total local training loss is: 0.9951311945915222
+{'accuracy': 0.8355}
+t 170: train_loss = 1.028, norm = 168.115, test_acc = 0.836
+Round: 171/200
+Total local training loss is: 1.035706877708435
+Total local training loss is: 1.0475291013717651
+Total local training loss is: 1.0492403507232666
+Total local training loss is: 1.0371925830841064
+Total local training loss is: 1.0782220363616943
+{'accuracy': 0.8371}
+t 171: train_loss = 1.050, norm = 128.441, test_acc = 0.837
+Round: 172/200
+Total local training loss is: 1.0316861867904663
+Total local training loss is: 1.0635576248168945
+Total local training loss is: 1.1051100492477417
+Total local training loss is: 0.9904364347457886
+Total local training loss is: 1.0255953073501587
+{'accuracy': 0.8359}
+t 172: train_loss = 1.043, norm = 103.276, test_acc = 0.836
+Round: 173/200
+Total local training loss is: 1.0936640501022339
+Total local training loss is: 1.0510042905807495
+Total local training loss is: 1.0419467687606812
+Total local training loss is: 1.028894305229187
+Total local training loss is: 1.079357385635376
+{'accuracy': 0.835}
+t 173: train_loss = 1.059, norm = 160.231, test_acc = 0.835
+Round: 174/200
+Total local training loss is: 1.0509135723114014
+Total local training loss is: 1.064231276512146
+Total local training loss is: 1.158788800239563
+Total local training loss is: 1.0207815170288086
+Total local training loss is: 0.9866334795951843
+{'accuracy': 0.8347}
+t 174: train_loss = 1.056, norm = 157.690, test_acc = 0.835
+Round: 175/200
+Total local training loss is: 1.0775965452194214
+Total local training loss is: 1.0539416074752808
+Total local training loss is: 0.9732784032821655
+Total local training loss is: 1.034982681274414
+Total local training loss is: 1.1206692457199097
+{'accuracy': 0.8381}
+t 175: train_loss = 1.052, norm = 125.640, test_acc = 0.838
+Round: 176/200
+Total local training loss is: 1.0199172496795654
+Total local training loss is: 1.0230512619018555
+Total local training loss is: 1.0047274827957153
+Total local training loss is: 1.0206151008605957
+Total local training loss is: 1.0282903909683228
+{'accuracy': 0.8381}
+t 176: train_loss = 1.019, norm = 146.800, test_acc = 0.838
+Round: 177/200
+Total local training loss is: 1.0934234857559204
+Total local training loss is: 0.9863752722740173
+Total local training loss is: 1.0365601778030396
+Total local training loss is: 0.9774135947227478
+Total local training loss is: 1.0505037307739258
+{'accuracy': 0.8339}
+t 177: train_loss = 1.029, norm = 149.577, test_acc = 0.834
+Round: 178/200
+Total local training loss is: 1.1018694639205933
+Total local training loss is: 1.0823026895523071
+Total local training loss is: 0.9890445470809937
+Total local training loss is: 1.0542560815811157
+Total local training loss is: 1.151867151260376
+{'accuracy': 0.8342}
+t 178: train_loss = 1.076, norm = 126.406, test_acc = 0.834
+Round: 179/200
+Total local training loss is: 1.0382015705108643
+Total local training loss is: 1.0252933502197266
+Total local training loss is: 1.1039581298828125
+Total local training loss is: 1.0927971601486206
+Total local training loss is: 1.1144063472747803
+{'accuracy': 0.8377}
+t 179: train_loss = 1.075, norm = 164.823, test_acc = 0.838
+Round: 180/200
+Total local training loss is: 1.0519949197769165
+Total local training loss is: 1.006764531135559
+Total local training loss is: 1.073462724685669
+Total local training loss is: 1.0111223459243774
+Total local training loss is: 1.007114291191101
+{'accuracy': 0.8353}
+t 180: train_loss = 1.030, norm = 136.972, test_acc = 0.835
+Round: 181/200
+Total local training loss is: 0.9893506169319153
+Total local training loss is: 0.9719493389129639
+Total local training loss is: 1.132141351699829
+Total local training loss is: 1.0358272790908813
+Total local training loss is: 1.0571836233139038
+{'accuracy': 0.8354}
+t 181: train_loss = 1.037, norm = 165.242, test_acc = 0.835
+Round: 182/200
+Total local training loss is: 1.0184686183929443
+Total local training loss is: 1.059076189994812
+Total local training loss is: 1.0507858991622925
+Total local training loss is: 0.993101954460144
+Total local training loss is: 0.9924800992012024
+{'accuracy': 0.8336}
+t 182: train_loss = 1.023, norm = 169.662, test_acc = 0.834
+Round: 183/200
+Total local training loss is: 1.0629409551620483
+Total local training loss is: 1.0164384841918945
+Total local training loss is: 1.040462851524353
+Total local training loss is: 1.0259907245635986
+Total local training loss is: 1.047357201576233
+{'accuracy': 0.8369}
+t 183: train_loss = 1.039, norm = 174.720, test_acc = 0.837
+Round: 184/200
+Total local training loss is: 1.0517375469207764
+Total local training loss is: 1.0105223655700684
+Total local training loss is: 1.033582329750061
+Total local training loss is: 0.9664725661277771
+Total local training loss is: 1.0617529153823853
+{'accuracy': 0.8354}
+t 184: train_loss = 1.025, norm = 170.385, test_acc = 0.835
+Round: 185/200
+Total local training loss is: 1.0754185914993286
+Total local training loss is: 1.004772663116455
+Total local training loss is: 0.9868878722190857
+Total local training loss is: 1.044213056564331
+Total local training loss is: 1.0477806329727173
+{'accuracy': 0.8373}
+t 185: train_loss = 1.032, norm = 165.609, test_acc = 0.837
+Round: 186/200
+Total local training loss is: 1.0171730518341064
+Total local training loss is: 1.031377911567688
+Total local training loss is: 1.027097225189209
+Total local training loss is: 1.007529377937317
+Total local training loss is: 1.0657634735107422
+{'accuracy': 0.84}
+t 186: train_loss = 1.030, norm = 147.612, test_acc = 0.840
+Round: 187/200
+Total local training loss is: 1.0382471084594727
+Total local training loss is: 1.0576303005218506
+Total local training loss is: 0.9681094288825989
+Total local training loss is: 1.0557504892349243
+Total local training loss is: 1.093238353729248
+{'accuracy': 0.8382}
+t 187: train_loss = 1.043, norm = 156.427, test_acc = 0.838
+Round: 188/200
+Total local training loss is: 1.0453360080718994
+Total local training loss is: 1.0843608379364014
+Total local training loss is: 1.0152320861816406
+Total local training loss is: 1.0569226741790771
+Total local training loss is: 1.023149847984314
+{'accuracy': 0.8347}
+t 188: train_loss = 1.045, norm = 114.644, test_acc = 0.835
+Round: 189/200
+Total local training loss is: 0.9453594088554382
+Total local training loss is: 1.003583550453186
+Total local training loss is: 1.0866080522537231
+Total local training loss is: 1.014954924583435
+Total local training loss is: 0.9835784435272217
+{'accuracy': 0.8392}
+t 189: train_loss = 1.007, norm = 164.320, test_acc = 0.839
+Round: 190/200
+Total local training loss is: 1.0515031814575195
+Total local training loss is: 1.012635588645935
+Total local training loss is: 1.0882927179336548
+Total local training loss is: 1.0112484693527222
+Total local training loss is: 1.0391637086868286
+{'accuracy': 0.8394}
+t 190: train_loss = 1.041, norm = 168.552, test_acc = 0.839
+Round: 191/200
+Total local training loss is: 1.0203969478607178
+Total local training loss is: 1.140296459197998
+Total local training loss is: 1.0694878101348877
+Total local training loss is: 1.0162863731384277
+Total local training loss is: 1.0835566520690918
+{'accuracy': 0.8367}
+t 191: train_loss = 1.066, norm = 146.669, test_acc = 0.837
+Round: 192/200
+Total local training loss is: 1.0832276344299316
+Total local training loss is: 1.0096006393432617
+Total local training loss is: 0.9598533511161804
+Total local training loss is: 1.0366120338439941
+Total local training loss is: 1.0240567922592163
+{'accuracy': 0.8359}
+t 192: train_loss = 1.023, norm = 174.880, test_acc = 0.836
+Round: 193/200
+Total local training loss is: 0.9660413861274719
+Total local training loss is: 1.0298515558242798
+Total local training loss is: 1.0207061767578125
+Total local training loss is: 1.0343620777130127
+Total local training loss is: 1.0402463674545288
+{'accuracy': 0.8353}
+t 193: train_loss = 1.018, norm = 170.064, test_acc = 0.835
+Round: 194/200
+Total local training loss is: 0.9915462732315063
+Total local training loss is: 1.0515398979187012
+Total local training loss is: 1.0711510181427002
+Total local training loss is: 1.0337613821029663
+Total local training loss is: 1.0055475234985352
+{'accuracy': 0.8388}
+t 194: train_loss = 1.031, norm = 181.159, test_acc = 0.839
+Round: 195/200
+Total local training loss is: 1.0344557762145996
+Total local training loss is: 1.0437713861465454
+Total local training loss is: 1.032400131225586
+Total local training loss is: 0.9762609004974365
+Total local training loss is: 1.0193345546722412
+{'accuracy': 0.8373}
+t 195: train_loss = 1.021, norm = 176.206, test_acc = 0.837
+Round: 196/200
+Total local training loss is: 1.0556763410568237
+Total local training loss is: 1.0147308111190796
+Total local training loss is: 0.986947774887085
+Total local training loss is: 1.0717437267303467
+Total local training loss is: 0.9852078557014465
+{'accuracy': 0.8347}
+t 196: train_loss = 1.023, norm = 161.918, test_acc = 0.835
+Round: 197/200
+Total local training loss is: 1.0459587574005127
+Total local training loss is: 1.0427753925323486
+Total local training loss is: 1.0462050437927246
+Total local training loss is: 1.0214256048202515
+Total local training loss is: 1.0495795011520386
+{'accuracy': 0.8321}
+t 197: train_loss = 1.041, norm = 190.525, test_acc = 0.832
+Round: 198/200
+Total local training loss is: 1.0553743839263916
+Total local training loss is: 1.048374056816101
+Total local training loss is: 0.9512279033660889
+Total local training loss is: 0.9526203274726868
+Total local training loss is: 1.0656464099884033
+{'accuracy': 0.8364}
+t 198: train_loss = 1.015, norm = 171.776, test_acc = 0.836
+Round: 199/200
+Total local training loss is: 1.0591819286346436
+Total local training loss is: 1.0867031812667847
+Total local training loss is: 1.0340076684951782
+Total local training loss is: 1.0200417041778564
+Total local training loss is: 1.0312169790267944
+{'accuracy': 0.8394}
+t 199: train_loss = 1.046, norm = 198.911, test_acc = 0.839
+repeated Accuracy scores: [0.84]
+avg of the Accuracy scores 0.84
+Training ended: 2025-12-17 10:33:02.960407

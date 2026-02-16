@@ -10,11 +10,11 @@ _LOG = _PROJECT_ROOT / "log"
 def _read_log(rel_path: str) -> str:
     return (_LOG / rel_path).read_text(encoding="utf-8", errors="ignore")
 
-_BASE = "cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar100_vit_lora"
+_BASE = "results/example_log/cifar100_vit_lora"
 
 # non-iid 10
 # FEDIT = _read_log(f"{_BASE}/FedIT/FedIT-noniid-pat_10_dir_2025-11-28_15-04-28/exp_log.txt")
-# FLEXLORA  = _read_log(f"log/{_BASE}/FlexLoRA/FlexLoRA-noniid-pat_10_dir_2025-12-17_10-33-08/exp_log.txt")
+# FLEXLORA  = _read_log(f"{_BASE}/FlexLoRA/FlexLoRA-noniid-pat_10_dir_2025-12-17_10-33-08/exp_log.txt")
 # HETLORA = _read_log(f"{_BASE}/HetLoRA/HetLoRA-noniid-pat_10_dir_2025-12-16_05-10-20/exp_log.txt")
 # LEGEND = _read_log(f"{_BASE}/LEGEND/LEGEND-noniid-10_2025-11-28_22-12-22/exp_log.txt")
 # FEDHELLO = _read_log(f"{_BASE}/FedHello/FedHello_noniid-pat_10_dir-noprior-s50-e50_2025-11-28_11-29-31/exp_log.txt")
@@ -30,7 +30,7 @@ _BASE = "cifar100/facebook/deit-small-patch16-224/ffm_fedavg/experiments/cifar10
 
 # non-iid 20
 FEDIT = _read_log(f"{_BASE}/FedIT/FedIT-noniid-pat_20_dir_2025-11-25_13-32-44/exp_log.txt")
-FLEXLORA  = _read_log(f"{_BASE}/FlexLoRA/FlexLoRA-noniid-pat_20_dir_2025-12-17_20-03-54/exp_log.txt")  # under log/log/
+FLEXLORA  = _read_log(f"{_BASE}/FlexLoRA/FlexLoRA-noniid-pat_20_dir_2025-12-17_20-03-54/exp_log.txt")  
 HETLORA = _read_log(f"{_BASE}/HetLoRA/HetLoRA-noniid-pat_20_dir_2025-12-17_00-26-22/exp_log.txt")
 LEGEND = _read_log(f"{_BASE}/LEGEND/LEGEND-noniid-20_2025-11-25_20-38-24/exp_log.txt")
 FEDHELLO = _read_log(f"{_BASE}/FedHello/FedHello_noniid-pat_20_dir-noprior-s50-e50_2025-11-25_10-00-05/exp_log.txt")
