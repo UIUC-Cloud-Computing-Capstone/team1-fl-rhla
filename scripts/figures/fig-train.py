@@ -68,5 +68,5 @@ plt.grid(True, linewidth=1.5)
 
 plt.tight_layout()
 os.makedirs(FIGURES_DIR, exist_ok=True)
-plt.savefig(os.path.join("cifar_train_plot.pdf"), format="pdf", bbox_inches="tight")
+plt.savefig(os.path.join(FIGURES_DIR, "cifar_train_plot.pdf"), format="pdf", bbox_inches="tight")
 plt.show()
