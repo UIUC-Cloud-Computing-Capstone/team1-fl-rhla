@@ -65,13 +65,13 @@ See [REPRODUCTION.md](REPRODUCTION.md) for troubleshooting if you run into issue
 
 #### Rank Utilizer
 
-Estimated times for fine-tune: around 1 hour using an Nvidia H100 GPU.
-
 To utilize the rank budget to fine-tune the model, run one of the scripts in `scripts/experiments/`. For example, our method on CIFAR-100:
 
 ```bash
 bash scripts/experiments/run-cifar100-Ours.sh
 ```
+
+Estimated times for fine-tune: around 1 hour for each setting using an Nvidia H100 GPU. `scripts/experiments/run-cifar100-Ours.sh` consists of three settings (iid data, non-iid data with 10 classes per client, non-iid data with 20 classes per client).
 
 Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations) are in `scripts/experiments/`; run any `run-*.sh` from the project root.
 
