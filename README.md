@@ -117,7 +117,8 @@ Other experiment scripts (CIFAR-100, LEDGAR, IID/non-IID, ablations) are in `scr
 ├── figures/        # Generated PDF figures (from scripts/figures/*.py)
 ├── log/            # Training and experiment logs (created at runtime)
 ├── models/         # Model layer reference files (BERTlayerName, ViTLayerName)
-├── results/        # Log results of TABLE V in the paper.
+├── results/        # Some diagram and log results in the paper.
+│   └── example_log/   # Log results of TABLE V and ablation experiments in the paper.
 ├── setup/         # Environment and tool config (environment-final.yml, accelerate_default_config.yaml)
 ├── scripts/        # Run and figure scripts
 │   ├── experiments/   # Experiment run scripts (CIFAR-100, LEDGAR, baselines, ablations)

@@ -71,7 +71,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
      ```
    - **comparison / ablations:** run the matching scripts in `scripts/experiments/`, e.g. `run-cifar100-iid.sh`, `run-cifar100-iid-ablation.sh`, `run-cifar100-non-iid-20.sh`, etc.
    
-2. **Table V (PEFT performance on CIFAR100 with 20 Clients)**
+2. **Table V (PEFT performance on CIFAR100 with 20 Clients)**  
    Run the scripts below to obtain the logs of PEFT performance for different methods on CIFAR100 dataset with 20 clients.
      ```bash
      bash scripts/experiments/run-cifar100-iid.sh
@@ -79,7 +79,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
      bash scripts/experiments/run-cifar100-non-iid-20.sh
      ```
 
-3. **Table VI (PEFT performance on CIFAR100 with 100 Clients)**
+3. **Table VI (PEFT performance on CIFAR100 with 100 Clients)**  
    Run the scripts below to obtain the logs of PEFT performance for different methods on CIFAR100 dataset with 100 clients.
      ```bash
      bash scripts/experiments/run-cifar100-100client-10select-iid.sh
@@ -87,7 +87,7 @@ To reproduce results in **tables and figures** (Table V - VIII, Fig. 1, 3, 5, 6)
      bash scripts/experiments/run-cifar100-100client-10select-non-iid-20.sh
      ```
 
-4. **Table VII (PEFT performance on LEDGAR with 20 Clients)**
+4. **Table VII (PEFT performance on LEDGAR with 20 Clients)**  
    Run the scripts below to obtain the logs of PEFT performance for different methods on LEDGAR dataset with 20 clients.
      ```bash
      bash scripts/experiments/run-ledgar-iid.sh
