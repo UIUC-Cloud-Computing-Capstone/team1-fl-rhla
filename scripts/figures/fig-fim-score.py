@@ -107,7 +107,6 @@ plt.show()
 # # Layer Rank Plot
 # # --------------------------------------------------------------------
 
-rounds
 layer_1 = [row[1] for row in rank_2d]
 layer_7 = [row[7] for row in rank_2d]
 layer_5 = [row[5] for row in rank_2d]
@@ -116,7 +115,6 @@ layer_5 = [row[5] for row in rank_2d]
 layer_1.pop(-1)
 layer_7.pop(-1)
 layer_5.pop(-1)
-rounds.pop(-1)
 plt.figure(figsize=(12,6))   # square plot
 
 plt.plot(rounds, layer_1, marker='o', linewidth=3, markersize=13, label="Layer-1")
@@ -138,7 +136,7 @@ plt.savefig(os.path.join(FIGURES_DIR, "layer-rank.pdf"), format="pdf", bbox_inch
 plt.show()
 
 # --------------------------------------------------------------------
-# 🔵 1) FIM Mean ± Std Plot
+# FIM Mean ± Std Plot
 # --------------------------------------------------------------------
 
 #%% fim and rank bar
@@ -193,7 +191,7 @@ plt.savefig(os.path.join(FIGURES_DIR, "fim_mean_std.pdf"), format="pdf", bbox_in
 plt.show()
 
 # --------------------------------------------------------------------
-# 🔵 2) Rank Mean ± Std Plot
+# Rank Mean ± Std Plot
 # --------------------------------------------------------------------
 plt.figure(figsize=(12, 6))
 
