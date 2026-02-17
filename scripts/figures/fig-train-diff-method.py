@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 # Paths relative to project root (script at scripts/figures/)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -122,5 +123,5 @@ plt.xlim(-2,70)
 plt.grid(True, linewidth=1.5)
 
 plt.tight_layout()
-plt.savefig("cifar_train_plot-diff-method.pdf", format="pdf", bbox_inches="tight")
+plt.savefig(os.path.join("cifar_train_plot-diff-method.pdf"), format="pdf", bbox_inches="tight")
 plt.show()
