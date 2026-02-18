@@ -41,6 +41,7 @@ cp setup/accelerate_default_config.yaml ~/.cache/huggingface/accelerate/default_
 ```
 
 **Verify:** Run `bash scripts/experiments/run-cifar100-smoke-test.sh` (this is smoke test: 1 round of training with 2 clients).
+Alternatively, the smoke test can be run using Docker, as described in [docker/REPRODUCTION.md](docker/README.md).
 
 ### 🚀 Running the Code
 
