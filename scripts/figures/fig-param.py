@@ -65,42 +65,71 @@ for i, name in enumerate(methods):
         # Under the marker, centered
         ax.text(
             x,
-            y - dy_down,
+            y - 0.65,
             name,
-            fontsize=20,
+            fontsize=25,
             fontweight="bold",
-            ha="center",
+            ha="left",
             va="top"
         )
     elif name == "Straggler":
         # Down-right
         ax.text(
-            x + dx,
-            y - dy_down,
+            x ,
+            y - 0.6,
             name,
-            fontsize=20,
+            fontsize=25,
             fontweight="bold",
             ha="left",
             va="top"
         )
     elif name == "LEGEND" :
-        # Top-left
         ax.text(
-            x + dx,
-            y + dy_up,
+            x - 180_000,
+            y - 0.79,
             name,
-            fontsize=20,
+            fontsize=25,
             fontweight="bold",
             ha="right",
+            va="center"
+        )
+    elif name == "Exclusive":
+        ax.text(
+            x + 140_000,
+            y + dy_up,
+            name,
+            fontsize=25,
+            fontweight="bold",
+            ha="right",
+            va="bottom"
+        )
+    elif name == "HRALoRA":
+        ax.text(
+            x + 140_000,
+            y + dy_up,
+            name,
+            fontsize=25,
+            fontweight="bold",
+            ha="right",
+            va="bottom"
+        )
+    elif name == "Fed-HeLLo":
+        ax.text(
+            x + 140_000,
+            y + dy_up,
+            name,
+            fontsize=25,
+            fontweight="bold",
+            ha="center",
             va="bottom"
         )
     else:
         # Default: top-right
         ax.text(
-            x + dx,
+            x ,
             y + dy_up,
             name,
-            fontsize=20,
+            fontsize=25,
             fontweight="bold",
             ha="left",
             va="bottom"
